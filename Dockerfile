@@ -19,6 +19,10 @@ WORKDIR /wasm
 COPY Cargo.toml Cargo.lock ./
 COPY crates/ ./crates/
 
+# wasm-pack runs cargo metadata which resolves the entire workspace.
+# The workspace root lists src-tauri as a member, so create a stub.
+RUN mkdir -p src-tauri && printf '[package]\nname = "stub"\nversion = "0.0.0"\nedition = "2021"\n' > src-tauri/Cargo.toml
+
 # Build WASM crate into node_modules location
 RUN mkdir -p node_modules && \
     cd crates/drive-wasm && \
