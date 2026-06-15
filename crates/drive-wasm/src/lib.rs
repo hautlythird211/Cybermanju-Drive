@@ -1,15 +1,15 @@
-pub mod crypto;
 pub mod compression;
-pub mod types;
-pub mod sync;
+pub mod crypto;
 pub mod drive;
+pub mod sync;
+pub mod types;
 
 use wasm_bindgen::prelude::*;
 
-pub use crypto::*;
 pub use compression::*;
-pub use sync::*;
+pub use crypto::*;
 pub use drive::*;
+pub use sync::*;
 
 #[wasm_bindgen(start)]
 pub fn init() {

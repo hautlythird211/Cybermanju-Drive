@@ -10,8 +10,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::RwLock;
 use tantivy::{
-    collector::{Count, TopDocs}, query::QueryParser, schema::*, Index, IndexReader, IndexWriter,
-    ReloadPolicy, TantivyDocument,
+    collector::{Count, TopDocs},
+    query::QueryParser,
+    schema::*,
+    Index, IndexReader, IndexWriter, ReloadPolicy, TantivyDocument,
 };
 
 /// Search result item

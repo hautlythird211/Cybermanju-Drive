@@ -109,7 +109,15 @@ jobs:
       - name: Type check
         run: npx vue-tsc --noEmit
 
-      - name: Build WASM
+      - name: Install wasm-pack
+        uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: "latest"
+
+      - name: Build WASM crate (Rust)
+        run: npm run wasm:build-rust
+
+      - name: Build WASM frontend (Vite)
         run: npm run build:wasm
 
       - name: Upload WASM artifacts

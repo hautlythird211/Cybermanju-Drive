@@ -15,7 +15,12 @@ impl SyncEngine {
         }
     }
 
-    pub fn add_file(&mut self, path: &str, size_bytes: u64, backend: &str) -> Result<JsValue, JsValue> {
+    pub fn add_file(
+        &mut self,
+        path: &str,
+        size_bytes: u64,
+        backend: &str,
+    ) -> Result<JsValue, JsValue> {
         let backend_type = parse_backend_type(backend)?;
         let entry = SyncFileEntry::new(path.to_string(), size_bytes, backend_type);
         self.state.entries.push(entry.clone());
@@ -26,7 +31,10 @@ impl SyncEngine {
     }
 
     pub fn mark_synced(&mut self, file_id: &str) -> Result<(), JsValue> {
-        let entry = self.state.entries.iter_mut()
+        let entry = self
+            .state
+            .entries
+            .iter_mut()
             .find(|e| e.id == file_id)
             .ok_or_else(|| JsValue::from_str("File not found in sync state"))?;
         entry.status = SyncStatus::Done;
@@ -36,7 +44,10 @@ impl SyncEngine {
     }
 
     pub fn mark_error(&mut self, file_id: &str, error: &str) -> Result<(), JsValue> {
-        let entry = self.state.entries.iter_mut()
+        let entry = self
+            .state
+            .entries
+            .iter_mut()
             .find(|e| e.id == file_id)
             .ok_or_else(|| JsValue::from_str("File not found in sync state"))?;
         entry.status = SyncStatus::Error;
@@ -45,7 +56,10 @@ impl SyncEngine {
     }
 
     pub fn mark_changed(&mut self, file_id: &str) -> Result<(), JsValue> {
-        let entry = self.state.entries.iter_mut()
+        let entry = self
+            .state
+            .entries
+            .iter_mut()
             .find(|e| e.id == file_id)
             .ok_or_else(|| JsValue::from_str("File not found in sync state"))?;
         entry.local_changes += 1;
@@ -54,7 +68,10 @@ impl SyncEngine {
     }
 
     pub fn remove_file(&mut self, file_id: &str) -> Result<(), JsValue> {
-        let idx = self.state.entries.iter()
+        let idx = self
+            .state
+            .entries
+            .iter()
             .position(|e| e.id == file_id)
             .ok_or_else(|| JsValue::from_str("File not found in sync state"))?;
         let removed = self.state.entries.remove(idx);
@@ -74,19 +91,25 @@ impl SyncEngine {
     }
 
     pub fn get_pending_count(&self) -> u32 {
-        self.state.entries.iter()
+        self.state
+            .entries
+            .iter()
             .filter(|e| matches!(e.status, SyncStatus::Idle | SyncStatus::Scanning))
             .count() as u32
     }
 
     pub fn get_error_count(&self) -> u32 {
-        self.state.entries.iter()
+        self.state
+            .entries
+            .iter()
             .filter(|e| matches!(e.status, SyncStatus::Error))
             .count() as u32
     }
 
     pub fn get_synced_count(&self) -> u32 {
-        self.state.entries.iter()
+        self.state
+            .entries
+            .iter()
             .filter(|e| matches!(e.status, SyncStatus::Done | SyncStatus::Completed))
             .count() as u32
     }

@@ -4,7 +4,7 @@ use chacha20poly1305::{
 };
 use hkdf::Hkdf;
 use hmac::{Hmac, Mac};
-use ml_dsa::{Generate, KeyExport, Keypair, MlDsa65, SigningKey, Signer, VerifyingKey};
+use ml_dsa::{Generate, KeyExport, Keypair, MlDsa65, Signer, SigningKey, VerifyingKey};
 use sha2::Sha512;
 use wasm_bindgen::prelude::*;
 use x25519_dalek::{PublicKey, StaticSecret};
@@ -82,8 +82,7 @@ pub fn hkdf_derive(secret: &[u8], salt: &[u8], info: &[u8], length: usize) -> Ve
 
 #[wasm_bindgen]
 pub fn hmac_sha512(key: &[u8], data: &[u8]) -> Vec<u8> {
-    let mut mac =
-        <HmacSha512 as Mac>::new_from_slice(key).expect("HMAC key should be valid");
+    let mut mac = <HmacSha512 as Mac>::new_from_slice(key).expect("HMAC key should be valid");
     mac.update(data);
     mac.finalize().into_bytes().to_vec()
 }

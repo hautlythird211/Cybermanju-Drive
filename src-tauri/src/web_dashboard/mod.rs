@@ -86,14 +86,13 @@ pub const ALLOWED_ORIGINS: &[&str] = &[
 
 /// Load an existing JWT secret from the database, or generate and persist a new one.
 fn load_or_create_jwt_secret(db: &RedbDb) -> [u8; 32] {
-    let tx = db.begin_write().expect("Failed to start write txn for JWT secret");
+    let tx = db
+        .begin_write()
+        .expect("Failed to start write txn for JWT secret");
     let mut table = tx
         .open_table(META_TABLE)
         .expect("Failed to open meta table");
-    if let Some(existing) = table
-        .get("jwt_secret")
-        .expect("Failed to read JWT secret")
-    {
+    if let Some(existing) = table.get("jwt_secret").expect("Failed to read JWT secret") {
         let val = existing.value();
         let mut secret = [0u8; 32];
         let bytes = hex::decode(val).unwrap_or_default();
@@ -639,14 +638,10 @@ pub fn handle_request(
         }
 
         // ─── File versions ────────────────────────────────────────
-        ["api", "files", id, "versions"] if method == "GET" => {
-            list_file_versions(db, id, origin)
-        }
+        ["api", "files", id, "versions"] if method == "GET" => list_file_versions(db, id, origin),
 
         // ─── Audit log ────────────────────────────────────────────
-        ["api", "audit-log"] if method == "GET" => {
-            list_all_json(db, AUDIT_LOG_TABLE, origin)
-        }
+        ["api", "audit-log"] if method == "GET" => list_all_json(db, AUDIT_LOG_TABLE, origin),
 
         // ─── Encrypt file ─────────────────────────────────────────
         ["api", "files", id, "encrypt"] if method == "POST" => {
@@ -656,9 +651,7 @@ pub fn handle_request(
         }
 
         // ─── Decrypt file ─────────────────────────────────────────
-        ["api", "files", id, "decrypt"] if method == "POST" => {
-            decrypt_file_via_api(db, id, origin)
-        }
+        ["api", "files", id, "decrypt"] if method == "POST" => decrypt_file_via_api(db, id, origin),
 
         // ─── OAuth proxy callback ─────────────────────────────────
         ["api", "oauth", "callback"] if method == "GET" => {
