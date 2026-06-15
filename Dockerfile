@@ -1,30 +1,35 @@
 # ═══════════════════════════════════════════════════════════════════════
 # Cybermanju Drive — Multi-stage Docker Build
 #
-# Stage 1: Build Vue 3 frontend (Node.js)
+# Stage 1: Build Vue 3 frontend (Node.js) + WASM crate
 # Stage 2: Build standalone Rust web server (no Tauri/GTK deps)
 # Stage 3: Minimal Alpine runtime
 # ═══════════════════════════════════════════════════════════════════════
 
-# ─── Stage 1: Frontend Build ──────────────────────────────────────────
+# ─── Stage 1: Frontend + WASM Build ──────────────────────────────────
 FROM node:20-alpine AS frontend-builder
+
+RUN apk add --no-cache cargo rust rustfmt
 
 WORKDIR /app
 
-# Install dependencies first (layer caching)
-COPY package.json package-lock.json* ./
-RUN npm install --frozen-lockfile 2>/dev/null || npm install
+# Copy workspace Cargo files first for dep caching
+COPY Cargo.toml Cargo.lock ./
+COPY crates/drive-wasm/ ./crates/drive-wasm/
 
-# Copy frontend source and build for web deployment (no Tauri)
-COPY index.html ./
-COPY tsconfig.json tsconfig.node.json env.d.ts ./
-COPY vite.config.wasm.ts ./
+# Set up WASM target and install wasm-pack binary via npm
+RUN rustup target add wasm32-unknown-unknown && \
+    npm install -g wasm-pack@0.15.0
+
+# Build WASM crate
+RUN npm run wasm:build-rust
+
+# Copy and install frontend deps, then build
+COPY package.json package-lock.json* index.html tsconfig.json tsconfig.node.json env.d.ts vite.config.wasm.ts ./
 COPY public/ ./public/
 COPY keymaps/ ./keymaps/
 COPY src/ ./src/
-
-# DOCKER_BUILD=true tells vite.config.wasm.ts to use base: "/" instead of
-# the GitHub Pages prefix "/cybermanju-drive/"
+RUN npm install --frozen-lockfile 2>/dev/null || npm install
 RUN DOCKER_BUILD=true npm run build:wasm
 
 # ─── Stage 2: Rust Backend Build ─────────────────────────────────────

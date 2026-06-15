@@ -23,7 +23,7 @@
     "clean": "rm -rf dist src-tauri/target cybermanju.db tantivy_index",
     "db:reset": "rm -f cybermanju.db tantivy_index",
     "build:wasm": "vite build --mode production --config vite.config.wasm.ts --outDir dist-wasm",
-    "wasm:build-rust": "cd crates/drive-wasm && wasm-pack build --target web --out-dir ../../node_modules/cybermanju-drive-wasm",
+    "wasm:build-rust": "cd crates/drive-wasm && wasm-pack build --target bundler --out-dir ../../node_modules/cybermanju-drive-wasm",
     "wasm:dev": "npm run wasm:build-rust && vite --config vite.config.wasm.ts",
     "wasm:build": "npm run wasm:build-rust && npm run build:wasm"
   },
