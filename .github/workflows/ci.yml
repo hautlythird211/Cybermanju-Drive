@@ -109,6 +109,11 @@ jobs:
       - name: Type check
         run: npx vue-tsc --noEmit
 
+      - name: Install WASM system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wasi-libc
+
       - name: Install wasm-pack
         uses: jetli/wasm-pack-action@v0.4.0
         with:
@@ -116,6 +121,8 @@ jobs:
 
       - name: Build WASM crate (Rust)
         run: npm run wasm:build-rust
+        env:
+          C_INCLUDE_PATH: /usr/include/wasm32-wasi
 
       - name: Build WASM frontend (Vite)
         run: npm run build:wasm
