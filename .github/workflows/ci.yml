@@ -177,7 +177,8 @@ jobs:
             libjavascriptcoregtk-4.1-dev \
             pkg-config \
             build-essential \
-            libssl-dev
+            libssl-dev \
+            xdg-utils
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
@@ -255,6 +256,9 @@ jobs:
         with:
           name: dist-linux-deb
           path: artifacts
+
+      - name: Ensure artifacts directory exists
+        run: mkdir -p artifacts
 
       - name: Install Flatpak
         run: |
@@ -376,7 +380,7 @@ jobs:
 
       - name: Install Rust targets
         run: |
-          rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+          rustup target add aarch64-linux-android i686-linux-android x86_64-linux-android
 
       - name: Install Android NDK
         run: sdkmanager "ndk;26.1.10909125"
@@ -389,6 +393,11 @@ jobs:
 
       - name: Initialize Android project
         run: npm run tauri android init
+
+      - name: Remove armeabi-v7a from Gradle config
+        run: |
+          sed -i 's/", "armeabi-v7a"//g; s/"armeabi-v7a", //g' \
+            src-tauri/gen/android/app/build.gradle.kts || true
 
       - name: Build Android APK
         run: npm run tauri android build

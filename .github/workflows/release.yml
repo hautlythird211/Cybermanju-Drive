@@ -145,7 +145,8 @@ jobs:
             build-essential \
             libssl-dev \
             libfuse2 \
-            rpm-build
+            rpm-build \
+            xdg-utils
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -230,6 +231,9 @@ jobs:
         with:
           name: release-linux-deb
           path: artifacts
+
+      - name: Ensure artifacts directory exists
+        run: mkdir -p artifacts
 
       - name: Install Flatpak
         run: |
@@ -401,13 +405,18 @@ jobs:
 
       - name: Install Rust targets
         run: |
-          rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+          rustup target add aarch64-linux-android i686-linux-android x86_64-linux-android
 
       - name: Install cargo-ndk
         run: cargo install cargo-ndk
 
       - name: Initialize Android project
         run: npx tauri android init
+
+      - name: Remove armeabi-v7a from Gradle config
+        run: |
+          sed -i 's/", "armeabi-v7a"//g; s/"armeabi-v7a", //g' \
+            src-tauri/gen/android/app/build.gradle.kts || true
 
       - name: Build Android APK
         run: npx tauri android build
