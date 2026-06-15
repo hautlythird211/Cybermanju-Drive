@@ -10,7 +10,8 @@ use wasm_bindgen::prelude::*;
 use x25519_dalek::{PublicKey, StaticSecret};
 
 use ml_kem::{DecapsulationKey1024, EncapsulationKey1024, MlKem1024};
-use ml_kem::{Decapsulate, Encapsulate};
+use ml_kem::kem::{Decapsulate, Encapsulate, Kem};
+use ml_kem::kem::Ciphertext;
 
 type HmacSha512 = Hmac<Sha512>;
 
@@ -191,7 +192,11 @@ pub fn ml_kem1024_generate_keypair() -> Result<js_sys::Object, JsValue> {
 
 #[wasm_bindgen]
 pub fn ml_kem1024_encapsulate(public_key: &[u8]) -> Result<js_sys::Object, JsValue> {
-    let ek = EncapsulationKey1024::from_byte_slice(public_key)
+    use core::convert::TryInto;
+    let pk_array: <EncapsulationKey1024 as ml_kem::KeySizeUser>::Key = public_key
+        .try_into()
+        .map_err(|_| JsValue::from_str("Invalid ML-KEM-1024 public key"))?;
+    let ek = EncapsulationKey1024::new(&pk_array)
         .map_err(|e| JsValue::from_str(&format!("Invalid ML-KEM-1024 public key: {:?}", e)))?;
     let (ciphertext, shared_secret) = ek.encapsulate();
     let obj = js_sys::Object::new();
@@ -210,9 +215,13 @@ pub fn ml_kem1024_encapsulate(public_key: &[u8]) -> Result<js_sys::Object, JsVal
 
 #[wasm_bindgen]
 pub fn ml_kem1024_decapsulate(secret_key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, JsValue> {
-    let dk = DecapsulationKey1024::from_byte_slice(secret_key)
-        .map_err(|e| JsValue::from_str(&format!("Invalid ML-KEM-1024 secret key: {:?}", e)))?;
-    let ct = <ml_kem::Ciphertext as ml_kem::array::Array>::try_from_slice(ciphertext)
+    use core::convert::TryInto;
+    let seed: ml_kem::Seed = secret_key
+        .try_into()
+        .map_err(|_| JsValue::from_str("Invalid ML-KEM-1024 secret key"))?;
+    let dk = DecapsulationKey1024::from_seed(seed);
+    let ct: Ciphertext<MlKem1024> = ciphertext
+        .try_into()
         .map_err(|_| JsValue::from_str("Invalid ML-KEM-1024 ciphertext"))?;
     let shared_secret = dk.decapsulate(&ct);
     Ok(shared_secret.to_vec())
