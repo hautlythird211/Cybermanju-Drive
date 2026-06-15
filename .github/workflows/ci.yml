@@ -115,7 +115,9 @@ jobs:
           sudo apt-get install -y wasi-libc
 
       - name: Install wasm-pack
-        run: cargo install wasm-pack --locked
+        uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: "0.13.1"
 
       - name: Build WASM crate (Rust)
         run: npm run wasm:build-rust
