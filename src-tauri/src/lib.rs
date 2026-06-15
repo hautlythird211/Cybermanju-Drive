@@ -79,14 +79,24 @@ pub fn run() {
     // Sync state for progress tracking and cancellation
     let sync_state = Arc::new(sync_cmd::SyncState::new());
 
-    // ─── Start Web Dashboard (localhost-only, JWT-authenticated) ────────
-    let dashboard = std::sync::Arc::new(web_dashboard::WebDashboard::new(
+    // ─── Start Web Dashboard ────────────────────────────────────────────
+    // Bind to 0.0.0.0 when DOCKER_MODE env var is set (NAS/container access).
+    // Otherwise bind to 127.0.0.1 for local-only security (Tauri desktop).
+    let dashboard_bind = if std::env::var("DOCKER_MODE").is_ok() {
+        tracing::info!("DOCKER_MODE detected — binding web dashboard to 0.0.0.0");
+        "0.0.0.0"
+    } else {
+        "127.0.0.1"
+    };
+    let dashboard = std::sync::Arc::new(web_dashboard::WebDashboard::new_with_bind_addr(
         web_dashboard::DEFAULT_PORT,
         "cybermanju.db",
+        dashboard_bind,
     ));
     match dashboard.start() {
         Ok(()) => tracing::info!(
-            "Web Dashboard started on port {} (localhost only, JWT auth)",
+            "Web Dashboard started on {}:{} (JWT auth)",
+            dashboard_bind,
             web_dashboard::DEFAULT_PORT
         ),
         Err(e) => tracing::error!("Failed to start Web Dashboard: {}", e),
@@ -215,6 +225,8 @@ pub fn run() {
             versions::snapshot_all_versions,
             // Parent index rebuild
             files::rebuild_parent_index,
+            // Duplicate detection
+            commands::duplicates::find_duplicates,
         ])
         .run(tauri::generate_context!())
         .expect("Fatal error while running Cybermanju Drive — see logs above");

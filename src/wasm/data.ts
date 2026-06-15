@@ -257,6 +257,15 @@ export async function deleteFaceGroup(id: string): Promise<void> {
   await kvSet(KEYS.faceGroups, all.filter(g => g.id !== id))
 }
 
+export async function updateFaceGroup(id: string, updates: Partial<WasmFaceGroup>): Promise<WasmFaceGroup | null> {
+  const all = await listFaceGroups()
+  const idx = all.findIndex(g => g.id === id)
+  if (idx === -1) return null
+  all[idx] = { ...all[idx], ...updates }
+  await kvSet(KEYS.faceGroups, all)
+  return all[idx]
+}
+
 export async function addFileToFaceGroup(groupId: string, fileId: string): Promise<void> {
   const all = await listFaceGroups()
   const g = all.find(g => g.id === groupId)
@@ -335,6 +344,27 @@ export async function getEncryptionStatus(): Promise<{
   }
 }
 
+// ── Locations ───────────────────────────────────────────
+export async function listLocations(): Promise<Array<{ id: string; name: string; path: string; isDefault: boolean; createdAt: string }>> {
+  await init()
+  return (await kvGet(KEYS.locations)) || []
+}
+
+export async function createLocation(data: { name: string; path: string; isDefault?: boolean }): Promise<{ id: string; name: string; path: string; isDefault: boolean; createdAt: string }> {
+  await init()
+  const all = await listLocations()
+  const location = {
+    id: uuid(),
+    name: data.name,
+    path: data.path,
+    isDefault: data.isDefault || false,
+    createdAt: now(),
+  }
+  all.push(location)
+  await kvSet(KEYS.locations, all)
+  return location
+}
+
 // ── Users (for auth) ──────────────────────────────────────
 export async function listUsers(): Promise<Array<{
   id: string; username: string; displayName?: string; role: string; isActive: boolean; createdAt: string
@@ -372,7 +402,7 @@ export async function authenticateUser(username: string, _password: string): Pro
   const accounts = await listAccounts()
   const oauthAccount = accounts.find(a => a.isActive && a.oauthProvider)
   if (oauthAccount) {
-    const token = loadTokenFromStorage(oauthAccount.oauthProvider!)
+    const token = await loadTokenFromStorage(oauthAccount.oauthProvider!)
     if (token) {
       return {
         userId: oauthAccount.id,

@@ -4,6 +4,7 @@ pub mod batch;
 pub mod collections;
 pub mod compression;
 pub mod dashboard;
+pub mod duplicates;
 pub mod encryption;
 pub mod faces;
 pub mod files;

@@ -260,6 +260,7 @@ function runBoot() {
     } else {
       setTimeout(() => {
         phase.value = 'ready'
+        sessionStorage.setItem('hasBooted', 'true')
         terminalHistory.value = [
           'System ready. Type HELP for commands.',
           '',
@@ -303,6 +304,10 @@ function stopAnimations() {
 }
 
 onMounted(() => {
+  if (sessionStorage.getItem('hasBooted')) {
+    phase.value = 'ready'
+    return
+  }
   cursorTimer = setInterval(() => { showCursor.value = !showCursor.value }, 500)
   currentQuote.value = quotes[Math.floor(Math.random() * quotes.length)]
   startBuddhaAnimation()

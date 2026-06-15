@@ -26,3 +26,16 @@ export async function probeLz4Ratio(
 ): Promise<number> {
   return withWasm(m => m.compress_lz4_probe_ratio(data))
 }
+
+export async function compressZstd(
+  data: Uint8Array,
+  level: number = 3
+): Promise<Uint8Array> {
+  return withWasm(m => m.compress_zstd(data, level))
+}
+
+export async function decompressZstd(
+  data: Uint8Array
+): Promise<Uint8Array> {
+  return withWasm(m => m.decompress_zstd(data))
+}

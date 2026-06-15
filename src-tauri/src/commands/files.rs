@@ -113,7 +113,42 @@ pub fn create_folder(
     Ok(folder)
 }
 
+/// Recursively trash all children of a folder.
+fn trash_children(db: &crate::db::Database, parent_id: &str) -> Result<(), String> {
+    use std::collections::VecDeque;
+    let mut queue = VecDeque::new();
+    queue.push_back(parent_id.to_string());
+
+    while let Some(current_id) = queue.pop_front() {
+        let child_ids = db.list_by_parent(&current_id).map_err(|e| e.to_string())?;
+        for child_id in child_ids {
+            // Read child node
+            let tx_read = db.begin_read().map_err(|e| e.to_string())?;
+            let table_read = tx_read
+                .open_table(crate::db::Database::get_files_table())
+                .map_err(|e| e.to_string())?;
+            let child_node: Option<FileNode> = table_read
+                .get(child_id.as_str())
+                .map_err(|e| e.to_string())?
+                .and_then(|val| serde_json::from_str::<FileNode>(val.value()).ok());
+            drop(tx_read);
+
+            if let Some(node) = child_node {
+                if node.file_type == "folder" {
+                    queue.push_back(child_id.clone());
+                }
+                db.trash_file(&child_id, &node, None)
+                    .map_err(|e| e.to_string())?;
+                db.remove_from_parent_index(&child_id, &current_id)
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Delete a file or folder by its ID (soft-delete to trash).
+/// Recursively trashes all child files when deleting a folder.
 #[tauri::command]
 pub fn delete_file(file_id: String, state: State<'_, AppState>) -> Result<bool, String> {
     let db = state.db.write().map_err(|e| e.to_string())?;
@@ -131,6 +166,11 @@ pub fn delete_file(file_id: String, state: State<'_, AppState>) -> Result<bool, 
     drop(tx_read);
 
     let node = file_node.ok_or_else(|| format!("File not found: {}", file_id))?;
+
+    // If it's a folder, recursively trash all children first
+    if node.file_type == "folder" {
+        trash_children(&db, &file_id)?;
+    }
 
     // Move to trash
     db.trash_file(&file_id, &node, None)

@@ -334,37 +334,74 @@ export async function authenticateWithPopup(
   })
 }
 
-const TOKEN_STORE_KEY = 'cybermanju:oauth:tokens'
+const DB_NAME = 'CybermanjuDrive'
+const DB_VERSION = 1
+const STORE_NAME = 'oauth_tokens'
 
-export function saveTokenToStorage(token: OAuthToken): void {
-  try {
-    const stored = JSON.parse(localStorage.getItem(TOKEN_STORE_KEY) || '{}')
-    stored[token.provider] = token
-    localStorage.setItem(TOKEN_STORE_KEY, JSON.stringify(stored))
-  } catch {
-    console.warn('Failed to save OAuth token to localStorage')
-  }
+function openDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION)
+    request.onsuccess = () => resolve(request.result)
+    request.onerror = () => reject(request.error)
+  })
 }
 
-export function loadTokenFromStorage(provider: OAuthProvider): OAuthToken | null {
-  try {
-    const stored = JSON.parse(localStorage.getItem(TOKEN_STORE_KEY) || '{}')
-    return stored[provider] || null
-  } catch {
-    return null
-  }
+async function saveTokenToIndexedDB(provider: string, token: OAuthToken): Promise<void> {
+  const db = await openDb()
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite')
+    const store = transaction.objectStore(STORE_NAME)
+    const request = store.put(token)
+    request.onsuccess = () => resolve()
+    request.onerror = () => reject(request.error)
+  })
 }
 
-export function removeTokenFromStorage(provider: OAuthProvider): void {
-  try {
-    const stored = JSON.parse(localStorage.getItem(TOKEN_STORE_KEY) || '{}')
-    delete stored[provider]
-    localStorage.setItem(TOKEN_STORE_KEY, JSON.stringify(stored))
-  } catch {
-    console.warn('Failed to remove OAuth token from localStorage')
-  }
+async function loadTokenFromIndexedDB(provider: string): Promise<OAuthToken | null> {
+  const db = await openDb()
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readonly')
+    const store = transaction.objectStore(STORE_NAME)
+    const request = store.get(provider)
+    request.onsuccess = () => resolve(request.result || null)
+    request.onerror = () => reject(request.error)
+  })
 }
 
-export function clearAllTokens(): void {
-  localStorage.removeItem(TOKEN_STORE_KEY)
+async function removeTokenFromIndexedDB(provider: string): Promise<void> {
+  const db = await openDb()
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite')
+    const store = transaction.objectStore(STORE_NAME)
+    const request = store.delete(provider)
+    request.onsuccess = () => resolve()
+    request.onerror = () => reject(request.error)
+  })
+}
+
+async function clearAllTokensFromIndexedDB(): Promise<void> {
+  const db = await openDb()
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite')
+    const store = transaction.objectStore(STORE_NAME)
+    const request = store.clear()
+    request.onsuccess = () => resolve()
+    request.onerror = () => reject(request.error)
+  })
+}
+
+export async function saveTokenToStorage(token: OAuthToken): Promise<void> {
+  await saveTokenToIndexedDB(token.provider, token)
+}
+
+export async function loadTokenFromStorage(provider: OAuthProvider): Promise<OAuthToken | null> {
+  return loadTokenFromIndexedDB(provider)
+}
+
+export async function removeTokenFromStorage(provider: OAuthProvider): Promise<void> {
+  await removeTokenFromIndexedDB(provider)
+}
+
+export async function clearAllTokens(): Promise<void> {
+  await clearAllTokensFromIndexedDB()
 }

@@ -153,11 +153,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, inject } from 'vue'
+import { ref, inject, watch, onMounted } from 'vue'
 import { useAppStore } from '@/stores/app'
 import { isWebMode } from '@/composables/useTauri'
 import { ShortcutsKey } from '@/composables/shortcutsKey'
 import { useTouchConfig, type GestureType, type TouchAction } from '@/composables/useTouchConfig'
+import { kvGet, kvSet } from '@/wasm/storage'
+
+const SETTINGS_KEY = 'wasm:settings'
 
 const store = useAppStore()
 const shortcuts = inject(ShortcutsKey, null)
@@ -323,6 +326,40 @@ async function handleRefresh() {
     store.fetchSyncConfigs(),
   ])
 }
+
+// ── Persist settings to IndexedDB ──────────────────────────────────
+async function loadSettings() {
+  try {
+    const saved = await kvGet<string>(SETTINGS_KEY)
+    if (saved) {
+      const s: any = JSON.parse(saved)
+      if (s.viewMode) store.viewMode = s.viewMode
+      if (s.sidebarCollapsed !== undefined) store.sidebarCollapsed = s.sidebarCollapsed
+      if (s.matrixRainEnabled !== undefined) store.matrixRainEnabled = s.matrixRainEnabled
+      if (s.autoRefreshInterval !== undefined) store.autoRefreshInterval = s.autoRefreshInterval
+      if (s.sortBy) store.sortBy = s.sortBy
+    }
+  } catch {}
+}
+
+function persistSettings() {
+  const data = JSON.stringify({
+    viewMode: store.viewMode,
+    sidebarCollapsed: store.sidebarCollapsed,
+    matrixRainEnabled: store.matrixRainEnabled,
+    autoRefreshInterval: store.autoRefreshInterval,
+    sortBy: store.sortBy,
+  })
+  kvSet(SETTINGS_KEY, data).catch(() => {})
+}
+
+watch(
+  () => [store.viewMode, store.sidebarCollapsed, store.matrixRainEnabled, store.autoRefreshInterval, store.sortBy],
+  persistSettings,
+  { deep: true }
+)
+
+onMounted(loadSettings)
 </script>
 
 <style scoped>

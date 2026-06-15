@@ -33,6 +33,33 @@ pub fn decompress_brotli(data: &[u8]) -> Result<Vec<u8>, JsValue> {
 }
 
 #[wasm_bindgen]
+pub fn compress_zstd(data: &[u8], level: i32) -> Result<Vec<u8>, JsValue> {
+    use std::io::Write;
+    let mut output = Vec::new();
+    let mut encoder = zstd::Encoder::new(&mut output, level)
+        .map_err(|e| JsValue::from_str(&format!("ZSTD compression failed: {}", e)))?;
+    encoder
+        .write_all(data)
+        .map_err(|e| JsValue::from_str(&format!("ZSTD compression failed: {}", e)))?;
+    encoder
+        .finish()
+        .map_err(|e| JsValue::from_str(&format!("ZSTD compression failed: {}", e)))?;
+    Ok(output)
+}
+
+#[wasm_bindgen]
+pub fn decompress_zstd(data: &[u8]) -> Result<Vec<u8>, JsValue> {
+    use std::io::Read;
+    let mut output = Vec::new();
+    let mut decoder = zstd::Decoder::new(data)
+        .map_err(|e| JsValue::from_str(&format!("ZSTD decompression failed: {}", e)))?;
+    decoder
+        .read_to_end(&mut output)
+        .map_err(|e| JsValue::from_str(&format!("ZSTD decompression failed: {}", e)))?;
+    Ok(output)
+}
+
+#[wasm_bindgen]
 pub fn compress_lz4_probe_ratio(data: &[u8]) -> f64 {
     let compressed = lz4_flex::compress_prepend_size(data);
     if data.is_empty() {

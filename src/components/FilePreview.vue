@@ -108,12 +108,14 @@
     </div>
 
     <div class="preview-actions">
+      <button v-if="store.selectedFile.encrypted" class="pa-btn decrypt-btn" @click="handleDecryptPreview" title="DECRYPT TO PREVIEW">[DEC]</button>
       <button class="pa-btn" @click="handleEncrypt" title="ENCRYPT">{{ store.selectedFile.encrypted ? '[DEC]' : '[ENC]' }}</button>
       <button class="pa-btn" @click="handleCompress" title="COMPRESS">[CMP]</button>
       <button class="pa-btn" @click="handleStar" title="STAR">{{ store.selectedFile.isStarred ? '[*]' : '[ ]' }}</button>
       <button class="pa-btn" @click="handleCopyPath" title="COPY PATH">[CP]</button>
       <button class="pa-btn danger" @click="handleDelete" title="DELETE">[DEL]</button>
     </div>
+    <div v-if="decryptError" class="preview-error">{{ decryptError }}</div>
   </aside>
 
   <aside v-else class="file-preview empty-preview">
@@ -125,11 +127,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useAppStore } from '@/stores/app'
 import type { FileNode } from '@/types'
 
 const store = useAppStore()
+
+const decryptError = ref<string | null>(null)
 
 const filteredContextData = computed(() => {
   if (!store.selectedFile?.contextData) return {}
@@ -188,6 +192,17 @@ function handleDelete() {
   if (!store.selectedFile) return
   if (confirm('DELETE "' + store.selectedFile.name + '"?')) {
     store.deleteFile(store.selectedFile.id)
+  }
+}
+
+async function handleDecryptPreview() {
+  if (!store.selectedFile) return
+  decryptError.value = null
+  try {
+    await store.decryptFile(store.selectedFile.id)
+    store.selectFile(store.selectedFile.id)
+  } catch (e) {
+    decryptError.value = 'Decryption failed: no key available or invalid key.'
   }
 }
 </script>
@@ -433,6 +448,25 @@ function handleDelete() {
 .pa-btn.danger:hover {
   background: #FFFFFF;
   color: #000;
+}
+
+.pa-btn.decrypt-btn {
+  border-color: #51cf66;
+  color: #51cf66;
+}
+
+.pa-btn.decrypt-btn:hover {
+  background: #51cf66;
+  color: #000;
+}
+
+.preview-error {
+  padding: 6px 10px;
+  font-size: 9px;
+  font-family: 'Courier New', monospace;
+  color: #ff5f57;
+  border-top: 1px solid #2a2a2a;
+  text-align: center;
 }
 
 .mono { font-family: 'Courier New', monospace; }

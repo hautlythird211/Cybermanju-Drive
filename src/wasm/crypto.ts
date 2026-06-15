@@ -92,6 +92,41 @@ export async function mlDsa65Verify(
   return withWasm(m => m.ml_dsa65_verify(message, signature, publicKey))
 }
 
+export async function mlKem1024GenerateKeypair(): Promise<{
+  publicKey: Uint8Array
+  secretKey: Uint8Array
+}> {
+  return withWasm(m => {
+    const kp = m.ml_kem1024_generate_keypair()
+    return {
+      publicKey: new Uint8Array(kp.publicKey as ArrayBuffer),
+      secretKey: new Uint8Array(kp.secretKey as ArrayBuffer),
+    }
+  })
+}
+
+export async function mlKem1024Encapsulate(
+  publicKey: Uint8Array
+): Promise<{
+  ciphertext: Uint8Array
+  sharedSecret: Uint8Array
+}> {
+  return withWasm(m => {
+    const result = m.ml_kem1024_encapsulate(publicKey)
+    return {
+      ciphertext: new Uint8Array(result.ciphertext as ArrayBuffer),
+      sharedSecret: new Uint8Array(result.sharedSecret as ArrayBuffer),
+    }
+  })
+}
+
+export async function mlKem1024Decapsulate(
+  secretKey: Uint8Array,
+  ciphertext: Uint8Array
+): Promise<Uint8Array> {
+  return withWasm(m => m.ml_kem1024_decapsulate(secretKey, ciphertext))
+}
+
 export async function generateUuid(): Promise<string> {
   return withWasm(m => m.generate_uuid())
 }

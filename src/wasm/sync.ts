@@ -173,11 +173,11 @@ export async function syncFile(
   notifyProgress()
 
   try {
-    const oauthToken = loadTokenFromStorage(_config.backendType as any)
+    const oauthToken = await loadTokenFromStorage(_config.backendType as any)
     let token: OAuthToken | null = null
     if (oauthToken) {
       token = await getValidToken(oauthToken)
-      saveTokenToStorage(token!)
+      await saveTokenToStorage(token!)
     }
 
     const entry: storage.StoredSyncEntry = {
@@ -296,11 +296,11 @@ export async function listRemoteFiles(
   _config: SyncConfig,
   prefix: string
 ): Promise<RemoteFileInfo[]> {
-  const oauthToken = loadTokenFromStorage(_config.backendType as any)
+  const oauthToken = await loadTokenFromStorage(_config.backendType as any)
   if (!oauthToken) return []
 
   const token = await getValidToken(oauthToken)
-  saveTokenToStorage(token)
+  await saveTokenToStorage(token)
 
   if (_config.backendType === 'googleDrive') {
     return listGoogleDriveFiles(token, prefix)

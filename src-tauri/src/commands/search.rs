@@ -74,18 +74,9 @@ pub fn search_files_paginated(
         offset: Some(offset),
     };
 
-    let results = tantivy_index.search(&request).map_err(|e| e.to_string())?;
-
-    // To get total count, search with no limit to get all matching docs
-    let count_request = SearchRequest {
-        query,
-        limit: None,
-        offset: None,
-    };
-    let all_matching = tantivy_index
-        .search(&count_request)
+    let (results, total) = tantivy_index
+        .search_with_count(&request)
         .map_err(|e| e.to_string())?;
-    let total = all_matching.len();
 
     let mapped: Vec<SearchResult> = results
         .into_iter()

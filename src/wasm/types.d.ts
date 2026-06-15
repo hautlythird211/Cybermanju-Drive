@@ -17,6 +17,9 @@ declare module 'cybermanju-drive-wasm' {
   export function ml_dsa65_generate_keypair(): { privateKey: ArrayBuffer; publicKey: ArrayBuffer }
   export function ml_dsa65_sign(message: Uint8Array, privateKey: Uint8Array): Uint8Array
   export function ml_dsa65_verify(message: Uint8Array, signature: Uint8Array, publicKey: Uint8Array): boolean
+  export function ml_kem1024_generate_keypair(): { publicKey: ArrayBuffer; secretKey: ArrayBuffer }
+  export function ml_kem1024_encapsulate(publicKey: Uint8Array): { ciphertext: ArrayBuffer; sharedSecret: ArrayBuffer }
+  export function ml_kem1024_decapsulate(secretKey: Uint8Array, ciphertext: Uint8Array): Uint8Array
 
   // Compression
   export function compress_lz4(data: Uint8Array): Uint8Array
@@ -24,6 +27,8 @@ declare module 'cybermanju-drive-wasm' {
   export function compress_brotli(data: Uint8Array, quality: number): Uint8Array
   export function decompress_brotli(data: Uint8Array): Uint8Array
   export function compress_lz4_probe_ratio(data: Uint8Array): number
+  export function compress_zstd(data: Uint8Array, level: number): Uint8Array
+  export function decompress_zstd(data: Uint8Array): Uint8Array
 
   // SyncEngine
   export class SyncEngine {

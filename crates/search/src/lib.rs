@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::RwLock;
 use tantivy::{
-    collector::TopDocs, query::QueryParser, schema::*, Index, IndexReader, IndexWriter,
+    collector::{Count, TopDocs}, query::QueryParser, schema::*, Index, IndexReader, IndexWriter,
     ReloadPolicy, TantivyDocument,
 };
 
@@ -360,6 +360,69 @@ impl SearchIndex {
             .collect();
 
         Ok(results)
+    }
+
+    /// Search with a single-pass count using Tantivy's Count collector.
+    /// Returns (results, total_count) without doing a second search.
+    pub fn search_with_count(&self, request: &SearchRequest) -> Result<(Vec<SearchResult>, usize)> {
+        let searcher = self.reader.searcher();
+
+        let query_parser = QueryParser::for_index(
+            &self.index,
+            vec![
+                self.file_name_field,
+                self.content_text_field,
+                self.tags_field,
+            ],
+        );
+        let query = query_parser.parse_query(&request.query)?;
+
+        let limit = request.limit.unwrap_or(50);
+        let offset = request.offset.unwrap_or(0);
+        let (top_docs, count) = searcher.search(
+            &query,
+            &(TopDocs::with_limit(limit).and_offset(offset), Count),
+        )?;
+
+        let results = top_docs
+            .iter()
+            .filter_map(|(score, doc_address)| {
+                let doc: TantivyDocument = searcher.doc(*doc_address).ok()?;
+                let fid = doc
+                    .get_first(self.file_id_field)
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let fname = doc
+                    .get_first(self.file_name_field)
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let content = doc
+                    .get_first(self.content_text_field)
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("");
+                let snippet: String = content.chars().take(200).collect();
+
+                let match_type = determine_match_type_from_query(
+                    &doc,
+                    &request.query,
+                    &self.file_name_field,
+                    &self.content_text_field,
+                    &self.tags_field,
+                );
+
+                Some(SearchResult {
+                    file_id: fid,
+                    file_name: fname,
+                    snippet,
+                    match_type,
+                    score: *score as f64,
+                })
+            })
+            .collect();
+
+        Ok((results, count))
     }
 
     /// Get real autocomplete suggestions from the Tantivy term dictionary.

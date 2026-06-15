@@ -9,6 +9,9 @@ use sha2::Sha512;
 use wasm_bindgen::prelude::*;
 use x25519_dalek::{PublicKey, StaticSecret};
 
+use pqcrypto_mlkem::mlkem1024;
+use pqcrypto_traits::kem::{Ciphertext, SharedSecret};
+
 type HmacSha512 = Hmac<Sha512>;
 
 #[wasm_bindgen]
@@ -168,4 +171,50 @@ pub fn ml_dsa65_verify(
         .ok_or_else(|| JsValue::from_str("Failed to decode signature"))?;
 
     Ok(verifying_key.verify(message, &sig).is_ok())
+}
+
+#[wasm_bindgen]
+pub fn ml_kem1024_generate_keypair() -> Result<js_sys::Object, JsValue> {
+    let (pk, sk) = mlkem1024::keypair();
+    let obj = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &obj,
+        &JsValue::from_str("publicKey"),
+        &js_sys::Uint8Array::from(pk.as_bytes()),
+    )?;
+    js_sys::Reflect::set(
+        &obj,
+        &JsValue::from_str("secretKey"),
+        &js_sys::Uint8Array::from(sk.as_bytes()),
+    )?;
+    Ok(obj.into())
+}
+
+#[wasm_bindgen]
+pub fn ml_kem1024_encapsulate(public_key: &[u8]) -> Result<js_sys::Object, JsValue> {
+    let pk = mlkem1024::PublicKey::from_bytes(public_key)
+        .map_err(|e| JsValue::from_str(&format!("Invalid ML-KEM-1024 public key: {}", e)))?;
+    let (shared_secret, ciphertext) = mlkem1024::encapsulate(&pk);
+    let obj = js_sys::Object::new();
+    js_sys::Reflect::set(
+        &obj,
+        &JsValue::from_str("ciphertext"),
+        &js_sys::Uint8Array::from(ciphertext.as_bytes()),
+    )?;
+    js_sys::Reflect::set(
+        &obj,
+        &JsValue::from_str("sharedSecret"),
+        &js_sys::Uint8Array::from(shared_secret.as_bytes()),
+    )?;
+    Ok(obj.into())
+}
+
+#[wasm_bindgen]
+pub fn ml_kem1024_decapsulate(secret_key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>, JsValue> {
+    let sk = mlkem1024::SecretKey::from_bytes(secret_key)
+        .map_err(|e| JsValue::from_str(&format!("Invalid ML-KEM-1024 secret key: {}", e)))?;
+    let ct = mlkem1024::Ciphertext::from_bytes(ciphertext)
+        .map_err(|e| JsValue::from_str(&format!("Invalid ML-KEM-1024 ciphertext: {}", e)))?;
+    let shared_secret = mlkem1024::decapsulate(&sk, &ct);
+    Ok(shared_secret.as_bytes().to_vec())
 }

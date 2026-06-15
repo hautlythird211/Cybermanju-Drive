@@ -458,7 +458,13 @@ async function tryWasmInvoke<T>(cmd: string, args?: Record<string, unknown>): Pr
       }
       case 'rename_face_group': {
         const data = await import('@/wasm/data')
-        return undefined as T
+        const groupId = args?.group_id as string
+        const newName = args?.new_name as string
+        const groups = await data.listFaceGroups()
+        const group = groups.find(g => g.id === groupId)
+        if (!group) throw new Error('Face group not found')
+        const updated = await data.updateFaceGroup(groupId, { name: newName })
+        return updated as unknown as T
       }
 
       // ── Encryption (persisted in IndexedDB) ─────────────
@@ -499,7 +505,8 @@ async function tryWasmInvoke<T>(cmd: string, args?: Record<string, unknown>): Pr
 
       // ── Locations ───────────────────────────────────────
       case 'list_locations': {
-        return [] as unknown as T
+        const data = await import('@/wasm/data')
+        return (await data.listLocations()) as unknown as T
       }
 
       // ── Sync operations via WASM sync ────────────────────

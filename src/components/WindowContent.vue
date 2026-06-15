@@ -91,27 +91,7 @@
     </div>
 
     <!-- Activity Panel -->
-    <div v-if="panelType === 'activity'" class="panel-page">
-      <div class="panel-card">
-        <div class="trash-header">
-          <div class="panel-title">ACTIVITY LOG</div>
-          <button class="panel-btn" @click="store.fetchAuditLog()" title="REFRESH">[R]</button>
-        </div>
-        <p class="panel-hint">FILE OPERATIONS TIMELINE.</p>
-        <div v-if="store.auditLog.length === 0" class="empty-state" style="height:80px;">
-          <Icon icon="svg-spinners:clock" width="18" height="18" class="empty-spinner" />
-          <p class="text-muted">NO RECENT ACTIVITY</p>
-        </div>
-        <div v-else class="activity-list">
-          <div v-for="entry in store.auditLog" :key="entry.id" class="activity-item">
-            <span class="activity-action">{{ entry.action.toUpperCase() }}</span>
-            <span class="activity-entity text-muted">{{ entry.entityType }}</span>
-            <span class="activity-date text-muted">{{ new Date(entry.timestamp).toLocaleString() }}</span>
-            <span v-if="entry.details && Object.keys(entry.details).length" class="activity-detail text-muted">{{ JSON.stringify(entry.details).substring(0, 40) }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <ActivityPanel v-if="panelType === 'activity'" />
 
     <!-- Favorites Panel -->
     <div v-if="panelType === 'favorites'" class="panel-page">
@@ -193,6 +173,11 @@
       </div>
     </div>
 
+    <!-- Storage Dashboard Panel -->
+    <div v-if="panelType === 'storage'" class="panel-page">
+      <StorageDashboard />
+    </div>
+
     <!-- Style Tags Panel -->
     <div v-if="panelType === 'style'" class="panel-page">
       <div class="panel-card">
@@ -214,6 +199,7 @@ import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 import { useWindowManager } from '@/composables/useWindowManager'
 import type { PanelType } from '@/types'
+import ActivityPanel from '@/components/ActivityPanel.vue'
 
 const props = defineProps<{
   panelType: PanelType

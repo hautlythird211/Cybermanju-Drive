@@ -172,10 +172,12 @@
       <div v-if="store.sidebarSection === 'tools'" class="sidebar-section">
         <div class="section-header">TOOLS</div>
         <div class="tools-list">
+          <button class="ql-item" @click="store.currentPanel = 'storage'" aria-label="OPEN STORAGE DASHBOARD">[$] STORAGE DASHBOARD</button>
+          <button class="ql-item" @click="store.currentPanel = 'activity'; store.fetchAuditLog()" aria-label="OPEN AUDIT LOG">[~] AUDIT LOG</button>
+          <button class="ql-item" @click="store.currentPanel = 'code'" aria-label="OPEN CODE INTELLIGENCE">[T] CODE INTELLIGENCE</button>
           <button class="ql-item" @click="store.currentPanel = 'favorites'" aria-label="OPEN FAVORITES">[*] FAVORITES ({{ store.starredFiles.length }})</button>
           <button class="ql-item" @click="store.currentPanel = 'recent'" aria-label="OPEN RECENT FILES">[T] RECENT FILES</button>
           <button class="ql-item" @click="store.currentPanel = 'activity'" aria-label="OPEN ACTIVITY LOG">[~] ACTIVITY LOG</button>
-          <button class="ql-item" @click="store.currentPanel = 'storage'" aria-label="OPEN STORAGE DASHBOARD">[$] STORAGE</button>
           <button class="ql-item" @click="store.currentPanel = 'settings'" aria-label="OPEN SETTINGS">[@] SETTINGS</button>
           <button class="ql-item" @click="store.currentPanel = 'trash'" aria-label="OPEN TRASH">[%] TRASH</button>
         </div>

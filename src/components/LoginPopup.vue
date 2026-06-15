@@ -149,10 +149,10 @@ async function handleOAuth(provider: OAuthProvider) {
     await initWasm()
 
     // Try to load existing token first
-    const existingToken = oauth.loadTokenFromStorage(provider)
+    const existingToken = await oauth.loadTokenFromStorage(provider)
     if (existingToken) {
       const validToken = await oauth.getValidToken(existingToken)
-      oauth.saveTokenToStorage(validToken)
+      if (validToken) oauth.saveTokenToStorage(validToken)
 
       // Create/update account in IndexedDB
       const data = await import('@/wasm/data')

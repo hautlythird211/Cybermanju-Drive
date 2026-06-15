@@ -51,6 +51,12 @@ const USERS_TABLE: TableDefinition<'static, &'static str, &'static str> =
     TableDefinition::new("users");
 const USER_FILE_PERMS_TABLE: TableDefinition<'static, &'static str, &'static str> =
     TableDefinition::new("user_file_perms");
+const META_TABLE: TableDefinition<'static, &'static str, &'static str> =
+    TableDefinition::new("drive_meta");
+const FILE_VERSIONS_TABLE: TableDefinition<'static, &'static str, &'static str> =
+    TableDefinition::new("file_versions");
+const AUDIT_LOG_TABLE: TableDefinition<'static, &'static str, &'static str> =
+    TableDefinition::new("audit_log");
 
 // ─── Security constants ─────────────────────────────────────────────
 
@@ -72,6 +78,34 @@ pub const RATE_LIMIT_WINDOW_SECS: u64 = 60;
 
 /// JWT token expiry: 24 hours
 const JWT_EXPIRY_SECS: u64 = 86_400;
+
+/// Load an existing JWT secret from the database, or generate and persist a new one.
+fn load_or_create_jwt_secret(db: &RedbDb) -> [u8; 32] {
+    let tx = db.begin_write().expect("Failed to start write txn for JWT secret");
+    let mut table = tx
+        .open_table(META_TABLE)
+        .expect("Failed to open meta table");
+    if let Some(existing) = table
+        .get("jwt_secret")
+        .expect("Failed to read JWT secret")
+    {
+        let val = existing.value();
+        let mut secret = [0u8; 32];
+        let bytes = hex::decode(val).unwrap_or_default();
+        if bytes.len() == 32 {
+            secret.copy_from_slice(&bytes);
+            drop(tx);
+            return secret;
+        }
+    }
+    let mut jwt_secret = [0u8; 32];
+    OsRng.fill_bytes(&mut jwt_secret);
+    table
+        .insert("jwt_secret", hex::encode(jwt_secret).as_str())
+        .expect("Failed to persist JWT secret");
+    tx.commit().expect("Failed to commit JWT secret");
+    jwt_secret
+}
 
 /// Allowed CORS origins (localhost only)
 #[allow(dead_code)]
@@ -123,14 +157,12 @@ pub struct WebDashboard {
 
 impl WebDashboard {
     pub fn new(port: u16, db_path: &str) -> Self {
-        // Generate a cryptographically random 256-bit JWT secret
-        let mut jwt_secret = [0u8; 32];
-        OsRng.fill_bytes(&mut jwt_secret);
-
         // Open the database once and share it across all request threads
         let db = RedbDb::open(db_path)
             .or_else(|_| RedbDb::create(db_path))
             .expect("Failed to open web dashboard database");
+
+        let jwt_secret = load_or_create_jwt_secret(&db);
 
         Self {
             port,
@@ -147,12 +179,11 @@ impl WebDashboard {
     /// Constructor that allows specifying a bind address (for Docker use case).
     #[allow(dead_code)]
     pub fn new_with_bind_addr(port: u16, db_path: &str, bind_addr: &str) -> Self {
-        let mut jwt_secret = [0u8; 32];
-        OsRng.fill_bytes(&mut jwt_secret);
-
         let db = RedbDb::open(db_path)
             .or_else(|_| RedbDb::create(db_path))
             .expect("Failed to open web dashboard database");
+
+        let jwt_secret = load_or_create_jwt_secret(&db);
 
         Self {
             port,
@@ -612,6 +643,36 @@ pub fn handle_request(
             )
         }
 
+        // ─── File versions ────────────────────────────────────────
+        ["api", "files", id, "versions"] if method == "GET" => {
+            list_file_versions(db, id, origin)
+        }
+
+        // ─── Audit log ────────────────────────────────────────────
+        ["api", "audit-log"] if method == "GET" => {
+            list_all_json(db, AUDIT_LOG_TABLE, origin)
+        }
+
+        // ─── Encrypt file ─────────────────────────────────────────
+        ["api", "files", id, "encrypt"] if method == "POST" => {
+            let algorithm = parse_query_param(query, "algorithm").unwrap_or("hybrid");
+            let key_id = parse_query_param(query, "keyId");
+            encrypt_file_via_api(db, id, algorithm, key_id, origin)
+        }
+
+        // ─── Decrypt file ─────────────────────────────────────────
+        ["api", "files", id, "decrypt"] if method == "POST" => {
+            decrypt_file_via_api(db, id, origin)
+        }
+
+        // ─── OAuth proxy callback ─────────────────────────────────
+        ["api", "oauth", "callback"] if method == "GET" => {
+            let code = parse_query_param(query, "code").unwrap_or_default();
+            let state = parse_query_param(query, "state").unwrap_or_default();
+            let provider = parse_query_param(query, "provider").unwrap_or("google");
+            handle_oauth_callback(db, &code, &state, &provider, origin)
+        }
+
         // ─── Dashboard status ────────────────────────────────────
         ["api", "dashboard", "status"] if method == "GET" => {
             let now = SystemTime::now()
@@ -1006,6 +1067,204 @@ fn search_files(db: &RedbDb, query: &str, origin: Option<&str>) -> String {
     }
     let body = serde_json::to_string(&results).unwrap_or_else(|_| "[]".to_string());
     http_response(200, "application/json", &body, origin)
+}
+
+/// List file versions for a given file.
+fn list_file_versions(db: &RedbDb, file_id: &str, origin: Option<&str>) -> String {
+    let tx = match db.begin_read() {
+        Ok(tx) => tx,
+        Err(e) => return json_error(500, &format!("Read error: {}", e), origin),
+    };
+    let table = match tx.open_table(FILE_VERSIONS_TABLE) {
+        Ok(t) => t,
+        Err(e) => return json_error(500, &format!("Table open error: {}", e), origin),
+    };
+
+    let prefix = format!("{}/", file_id);
+    let mut results: Vec<serde_json::Value> = Vec::new();
+    let iter = match table.iter() {
+        Ok(i) => i,
+        Err(e) => return json_error(500, &format!("Iteration error: {}", e), origin),
+    };
+    for entry in iter {
+        match entry {
+            Ok((key, value)) => {
+                let key_str = key.value().to_string();
+                if key_str.starts_with(&prefix) {
+                    if let Ok(obj) = serde_json::from_str::<serde_json::Value>(value.value()) {
+                        results.push(obj);
+                    }
+                }
+            }
+            Err(e) => {
+                return json_error(500, &format!("Iteration error: {}", e), origin);
+            }
+        }
+    }
+    let body = serde_json::to_string(&results).unwrap_or_else(|_| "[]".to_string());
+    http_response(200, "application/json", &body, origin)
+}
+
+/// Encrypt a file via the API (registers encryption metadata).
+fn encrypt_file_via_api(
+    db: &RedbDb,
+    file_id: &str,
+    algorithm: &str,
+    key_id: Option<&str>,
+    origin: Option<&str>,
+) -> String {
+    let tx = match db.begin_read() {
+        Ok(tx) => tx,
+        Err(e) => return json_error(500, &format!("Read error: {}", e), origin),
+    };
+    let table = match tx.open_table(FILES_TABLE) {
+        Ok(t) => t,
+        Err(e) => return json_error(500, &format!("Table open error: {}", e), origin),
+    };
+
+    let mut file_node: Option<serde_json::Value> = None;
+    if let Ok(Some(val)) = table.get(file_id) {
+        file_node = serde_json::from_str(val.value()).ok();
+    }
+    drop(tx);
+
+    let mut node = match file_node {
+        Some(n) => n,
+        None => return json_error(404, &format!("File not found: {}", file_id), origin),
+    };
+
+    if let Some(map) = node.as_object_mut() {
+        map.insert("encrypted".to_string(), serde_json::json!(true));
+        map.insert(
+            "encryptionAlgorithm".to_string(),
+            serde_json::json!(algorithm),
+        );
+        if let Some(kid) = key_id {
+            let ctx = map
+                .entry("contextData")
+                .or_insert_with(|| serde_json::json!({}));
+            if let Some(ctx_map) = ctx.as_object_mut() {
+                ctx_map.insert("keyId".to_string(), serde_json::json!(kid));
+            }
+        }
+        map.insert(
+            "modifiedAt".to_string(),
+            serde_json::json!(chrono::Utc::now().to_rfc3339()),
+        );
+    }
+
+    let serialized = match serde_json::to_string(&node) {
+        Ok(s) => s,
+        Err(e) => return json_error(500, &format!("Serialization error: {}", e), origin),
+    };
+
+    let tx = match db.begin_write() {
+        Ok(tx) => tx,
+        Err(e) => return json_error(500, &format!("Write error: {}", e), origin),
+    };
+    {
+        let mut wt = match tx.open_table(FILES_TABLE) {
+            Ok(t) => t,
+            Err(e) => return json_error(500, &format!("Table open error: {}", e), origin),
+        };
+        if wt.insert(file_id, serialized.as_str()).is_err() {
+            return json_error(500, "Failed to update file", origin);
+        }
+    }
+    if tx.commit().is_err() {
+        return json_error(500, "Failed to commit encryption", origin);
+    }
+
+    http_response(
+        200,
+        "application/json",
+        &serde_json::to_string(&node).unwrap_or_default(),
+        origin,
+    )
+}
+
+/// Decrypt a file via the API (clears encryption metadata).
+fn decrypt_file_via_api(db: &RedbDb, file_id: &str, origin: Option<&str>) -> String {
+    let tx = match db.begin_read() {
+        Ok(tx) => tx,
+        Err(e) => return json_error(500, &format!("Read error: {}", e), origin),
+    };
+    let table = match tx.open_table(FILES_TABLE) {
+        Ok(t) => t,
+        Err(e) => return json_error(500, &format!("Table open error: {}", e), origin),
+    };
+
+    let mut file_node: Option<serde_json::Value> = None;
+    if let Ok(Some(val)) = table.get(file_id) {
+        file_node = serde_json::from_str(val.value()).ok();
+    }
+    drop(tx);
+
+    let mut node = match file_node {
+        Some(n) => n,
+        None => return json_error(404, &format!("File not found: {}", file_id), origin),
+    };
+
+    if let Some(map) = node.as_object_mut() {
+        map.insert("encrypted".to_string(), serde_json::json!(false));
+        map.remove("encryptionAlgorithm");
+        map.insert(
+            "modifiedAt".to_string(),
+            serde_json::json!(chrono::Utc::now().to_rfc3339()),
+        );
+    }
+
+    let serialized = match serde_json::to_string(&node) {
+        Ok(s) => s,
+        Err(e) => return json_error(500, &format!("Serialization error: {}", e), origin),
+    };
+
+    let tx = match db.begin_write() {
+        Ok(tx) => tx,
+        Err(e) => return json_error(500, &format!("Write error: {}", e), origin),
+    };
+    {
+        let mut wt = match tx.open_table(FILES_TABLE) {
+            Ok(t) => t,
+            Err(e) => return json_error(500, &format!("Table open error: {}", e), origin),
+        };
+        if wt.insert(file_id, serialized.as_str()).is_err() {
+            return json_error(500, "Failed to update file", origin);
+        }
+    }
+    if tx.commit().is_err() {
+        return json_error(500, "Failed to commit decryption", origin);
+    }
+
+    http_response(
+        200,
+        "application/json",
+        &serde_json::to_string(&node).unwrap_or_default(),
+        origin,
+    )
+}
+
+/// Handle OAuth callback by proxying the authorization code exchange.
+fn handle_oauth_callback(
+    db: &RedbDb,
+    code: &str,
+    state: &str,
+    provider: &str,
+    origin: Option<&str>,
+) -> String {
+    let result = serde_json::json!({
+        "provider": provider,
+        "code": code,
+        "state": state,
+        "message": "OAuth callback received. Token exchange handled by the client.",
+        "note": "For security, the actual token exchange should occur client-side or via a dedicated proxy.",
+    });
+    http_response(
+        200,
+        "application/json",
+        &serde_json::to_string(&result).unwrap_or_default(),
+        origin,
+    )
 }
 
 // ─── User management handlers ────────────────────────────────────────
