@@ -53,6 +53,10 @@ const USER_FILE_PERMS_TABLE: TableDefinition<'static, &'static str, &'static str
     TableDefinition::new("user_file_perms");
 const META_TABLE: TableDefinition<'static, &'static str, &'static str> =
     TableDefinition::new("drive_meta");
+const FILE_VERSIONS_TABLE: TableDefinition<'static, &'static str, &'static str> =
+    TableDefinition::new("file_versions");
+const AUDIT_LOG_TABLE: TableDefinition<'static, &'static str, &'static str> =
+    TableDefinition::new("audit_log");
 
 // ─── Security constants ─────────────────────────────────────────────
 
@@ -86,28 +90,39 @@ pub const ALLOWED_ORIGINS: &[&str] = &[
 
 /// Load an existing JWT secret from the database, or generate and persist a new one.
 fn load_or_create_jwt_secret(db: &RedbDb) -> [u8; 32] {
-    let tx = db
-        .begin_write()
-        .expect("Failed to start write txn for JWT secret");
-    let mut table = tx
-        .open_table(META_TABLE)
-        .expect("Failed to open meta table");
-    if let Some(existing) = table.get("jwt_secret").expect("Failed to read JWT secret") {
-        let val = existing.value();
-        let mut secret = [0u8; 32];
-        let bytes = hex::decode(val).unwrap_or_default();
-        if bytes.len() == 32 {
-            secret.copy_from_slice(&bytes);
-            drop(tx);
-            return secret;
+    // Check for existing secret in a read transaction first
+    {
+        let tx_read = db
+            .begin_read()
+            .expect("Failed to start read txn for JWT secret");
+        let table = tx_read
+            .open_table(META_TABLE)
+            .expect("Failed to open meta table for read");
+        if let Ok(Some(existing)) = table.get("jwt_secret") {
+            let val = existing.value();
+            let bytes = hex::decode(val).unwrap_or_default();
+            if bytes.len() == 32 {
+                let mut secret = [0u8; 32];
+                secret.copy_from_slice(&bytes);
+                return secret;
+            }
         }
     }
+    // Generate and persist a new secret
     let mut jwt_secret = [0u8; 32];
     OsRng.fill_bytes(&mut jwt_secret);
-    table
-        .insert("jwt_secret", hex::encode(jwt_secret).as_str())
-        .expect("Failed to persist JWT secret");
-    tx.commit().expect("Failed to commit JWT secret");
+    let tx_write = db
+        .begin_write()
+        .expect("Failed to start write txn for JWT secret");
+    {
+        let mut table = tx_write
+            .open_table(META_TABLE)
+            .expect("Failed to open meta table for write");
+        table
+            .insert("jwt_secret", hex::encode(jwt_secret).as_str())
+            .expect("Failed to persist JWT secret");
+    }
+    tx_write.commit().expect("Failed to commit JWT secret");
     jwt_secret
 }
 
@@ -645,9 +660,11 @@ pub fn handle_request(
 
         // ─── Encrypt file ─────────────────────────────────────────
         ["api", "files", id, "encrypt"] if method == "POST" => {
-            let algorithm = parse_query_param(query, "algorithm").unwrap_or("hybrid");
+            let algorithm = parse_query_param(query, "algorithm")
+                .unwrap_or("hybrid")
+                .to_string();
             let key_id = parse_query_param(query, "keyId");
-            encrypt_file_via_api(db, id, algorithm, key_id, origin)
+            encrypt_file_via_api(db, id, &algorithm, key_id.as_deref(), origin)
         }
 
         // ─── Decrypt file ─────────────────────────────────────────
@@ -657,7 +674,9 @@ pub fn handle_request(
         ["api", "oauth", "callback"] if method == "GET" => {
             let code = parse_query_param(query, "code").unwrap_or_default();
             let state = parse_query_param(query, "state").unwrap_or_default();
-            let provider = parse_query_param(query, "provider").unwrap_or("google");
+            let provider = parse_query_param(query, "provider")
+                .unwrap_or("google")
+                .to_string();
             handle_oauth_callback(db, &code, &state, &provider, origin)
         }
 
