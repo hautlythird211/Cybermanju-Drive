@@ -10,7 +10,7 @@
 # ─── Stage 0: WASM Build ────────────────────────────────────────────
 FROM rust:alpine AS wasm-builder
 
-RUN apk add --no-cache musl-dev pkgconf npm
+RUN apk add --no-cache musl-dev pkgconf npm clang lld
 RUN rustup target add wasm32-unknown-unknown && npm install -g wasm-pack@0.15.0
 
 WORKDIR /wasm
