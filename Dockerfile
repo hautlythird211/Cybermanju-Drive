@@ -15,11 +15,12 @@ RUN rustup target add wasm32-unknown-unknown && npm install -g wasm-pack@0.15.0
 
 WORKDIR /wasm
 
-# Copy only the parts needed for the WASM crate
-COPY Cargo.toml Cargo.lock ./
-COPY crates/ ./crates/
-# cargo metadata resolves ALL workspace members; copy src-tauri/Cargo.toml too
-COPY src-tauri/Cargo.toml ./src-tauri/Cargo.toml
+# Copy the WASM crate source
+COPY crates/drive-wasm/ ./crates/drive-wasm/
+
+# Create a standalone workspace Cargo.toml with ONLY the drive-wasm crate
+# (avoids cargo metadata failing on other workspace members like src-tauri)
+RUN printf '[workspace]\nmembers = ["crates/drive-wasm"]\nresolver = "2"\n' > Cargo.toml
 
 # Build WASM crate into node_modules location
 RUN mkdir -p node_modules && \
