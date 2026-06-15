@@ -4,6 +4,7 @@ use tauri::State;
 
 use crate::db::schema::FileNode;
 use crate::db::schema::LooseGroup;
+use crate::sync::models::SyncBackendType as SyncBackendTypeModel;
 use crate::AppState;
 
 /// List all file nodes whose parent_id matches the given parent_path.
@@ -186,7 +187,45 @@ pub fn delete_file(file_id: String, state: State<'_, AppState>) -> Result<bool, 
     db.log_audit("delete", "file", &file_id, None, None)
         .map_err(|e| e.to_string())?;
 
+    // Record deletion in portable DB for cross-platform propagation
+    let _ = record_deletion_in_portable_db(&file_id, &node.name, &db);
+
     Ok(true)
+}
+
+/// Record a deletion event in the portable DB's deletion log.
+fn record_deletion_in_portable_db(
+    file_id: &str,
+    file_name: &str,
+    db: &crate::db::Database,
+) -> Result<(), String> {
+    // Get the portable DB path
+    let pdb_path = match db.get_portable_meta("portable_db_path").ok().flatten() {
+        Some(p) => p,
+        None => return Ok(()), // Portable DB not configured
+    };
+
+    // Get connected platforms
+    let configs = crate::commands::sync::list_sync_configs_inner(db)?;
+    let platforms: Vec<String> = configs
+        .iter()
+        .filter(|c| c.enabled)
+        .map(|c| c.backend_type.to_string())
+        .collect();
+
+    // Try to open portable DB and record deletion
+    match cybermanju_portable_db::PortableDatabase::open(&pdb_path) {
+        Ok(_pdb) => {
+            match cybermanju_portable_db::PortableDatabase::record_deletion(
+                db, file_id, file_name, "local", &platforms,
+            ) {
+                Ok(_) => log::info!("Recorded portable DB deletion for '{}'", file_name),
+                Err(e) => log::warn!("Failed to record portable DB deletion: {}", e),
+            }
+        }
+        Err(e) => log::warn!("Failed to open portable DB for deletion recording: {}", e),
+    }
+    Ok(())
 }
 
 /// Rename a file or folder.

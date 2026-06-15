@@ -1,0 +1,1 @@
+/home/hautly/.cargo/bin/cc

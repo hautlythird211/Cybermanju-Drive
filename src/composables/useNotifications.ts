@@ -2,32 +2,52 @@ import { ref, type Ref } from 'vue'
 
 export type NotificationType = 'success' | 'error' | 'warning' | 'info'
 
+export interface NotificationAction {
+  label: string
+  handler: () => void
+}
+
 export interface Notification {
   id: string
   type: NotificationType
   message: string
   duration: number
   createdAt: number
+  action?: NotificationAction
+  persistent?: boolean
 }
 
 const notifications = ref<Notification[]>([])
 let counter = 0
 
 export function useNotifications() {
-  function notify(type: NotificationType, message: string, duration = 4000) {
+  function notify(
+    type: NotificationType,
+    message: string,
+    duration = 4000,
+    action?: NotificationAction,
+  ) {
     const id = `notify-${++counter}`
-    const n: Notification = { id, type, message, duration, createdAt: Date.now() }
+    const persistent = action !== undefined && duration < 0
+    const n: Notification = {
+      id, type, message, duration, createdAt: Date.now(),
+      action, persistent,
+    }
     notifications.value.push(n)
-    if (duration > 0) {
+    if (duration > 0 && !persistent) {
       setTimeout(() => dismiss(id), duration)
     }
     return id
   }
 
-  function success(message: string) { return notify('success', message) }
+  function success(message: string, duration?: number, action?: NotificationAction) {
+    return notify('success', message, duration, action)
+  }
   function error(message: string) { return notify('error', message) }
   function warning(message: string) { return notify('warning', message) }
-  function info(message: string) { return notify('info', message) }
+  function info(message: string, duration?: number, action?: NotificationAction) {
+    return notify('info', message, duration, action)
+  }
 
   function dismiss(id: string) {
     const idx = notifications.value.findIndex((n: Notification) => n.id === id)

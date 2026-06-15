@@ -1,0 +1,18 @@
+[package]
+name = "cybermanju-portable-db"
+version = "0.1.0"
+edition = "2021"
+description = ".cybermanju portable database — compressed, encrypted, cross-platform file relations & recovery"
+
+[dependencies]
+anyhow = "1"
+blake3 = "1"
+chrono = { version = "0.4", features = ["serde"] }
+cybermanju-compression = { path = "../compression" }
+cybermanju-crypto = { path = "../crypto" }
+cybermanju-db = { path = "../db" }
+cybermanju-types = { path = "../types" }
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4"] }

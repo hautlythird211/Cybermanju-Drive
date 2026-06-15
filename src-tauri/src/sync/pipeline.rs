@@ -14,6 +14,8 @@ use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
+use cybermanju_portable_db::PortableDatabase;
+
 // ===========================================================================
 // SyncPipeline
 // ===========================================================================
@@ -202,6 +204,9 @@ impl SyncPipeline {
             *status = final_status;
         }
 
+        // Sync the .cybermanju file to the backend after all files
+        let _ = self.sync_portable_db_to_backend(state);
+
         Ok(SyncResult {
             files_synced,
             bytes_uploaded: total_bytes_uploaded,
@@ -293,6 +298,9 @@ impl SyncPipeline {
             *status = final_status;
         }
 
+        // Sync the .cybermanju file
+        let _ = self.sync_portable_db_to_backend(state);
+
         Ok(SyncResult {
             files_synced,
             bytes_uploaded: total_bytes_uploaded,
@@ -328,6 +336,9 @@ impl SyncPipeline {
         if let Ok(mut status) = self.progress.status.lock().map_err(|e| e.to_string()) {
             *status = SyncStatus::Done;
         }
+
+        // Sync .cybermanju
+        let _ = self.sync_portable_db_to_backend(state);
 
         Ok(SyncResult {
             files_synced: 1,
@@ -420,7 +431,22 @@ impl SyncPipeline {
         }
         self.create_link(file_id, &remote_url, state)?;
 
-        // 6. Delete raw if configured
+        // 6. Record file relation in portable DB
+        let _ = self.record_file_relation_in_portable_db(
+            file_id,
+            &self.config.backend_type.to_string(),
+            &remote_name,
+            Some(&remote_url),
+            None,
+            state,
+        );
+
+        // 7. Store compressed content for recovery (if compression was used)
+        if self.config.compress_before_upload {
+            let _ = self.store_recovery_content(file_id, &original_path, state);
+        }
+
+        // 8. Delete raw if configured
         if self.config.delete_raw_after_sync {
             if let Ok(mut status) = self.progress.status.lock() {
                 *status = SyncStatus::Cleaning;
@@ -634,5 +660,123 @@ impl SyncPipeline {
             .ok_or_else(|| format!("File not found in DB: {}", file_id))?;
         let node: FileNode = serde_json::from_str(value.value()).map_err(|e| e.to_string())?;
         Ok(node)
+    }
+
+    // -----------------------------------------------------------------------
+    // Portable DB integration
+    // -----------------------------------------------------------------------
+
+    /// Record a file relation in the portable DB after a successful sync.
+    fn record_file_relation_in_portable_db(
+        &self,
+        local_file_id: &str,
+        backend_type: &str,
+        remote_path: &str,
+        remote_url: Option<&str>,
+        remote_file_id: Option<&str>,
+        state: &AppState,
+    ) -> Result<(), String> {
+        // Only record if the portable DB path is configured
+        let db_read = state.db.read().map_err(|e| e.to_string())?;
+        let pdb_path = db_read.get_portable_meta("portable_db_path").ok().flatten();
+        drop(db_read);
+
+        let pdb_path = match pdb_path {
+            Some(p) => p,
+            None => return Ok(()), // Portable DB not configured
+        };
+
+        // Open the portable DB and record the relation
+        match PortableDatabase::open(&pdb_path) {
+            Ok(pdb) => {
+                let db_write = state.db.write().map_err(|e| e.to_string())?;
+                match PortableDatabase::record_file_relation(
+                    &db_write,
+                    local_file_id,
+                    backend_type,
+                    remote_path,
+                    remote_url,
+                    remote_file_id,
+                ) {
+                    Ok(_) => info!(
+                        "Recorded portable DB relation: {} -> {} ({})",
+                        local_file_id, remote_path, backend_type
+                    ),
+                    Err(e) => warn!("Failed to record portable DB relation: {}", e),
+                }
+            }
+            Err(e) => warn!("Failed to open portable DB for relation: {}", e),
+        }
+        Ok(())
+    }
+
+    /// Store compressed content for recovery.
+    fn store_recovery_content(
+        &self,
+        file_id: &str,
+        file_path: &str,
+        state: &AppState,
+    ) -> Result<(), String> {
+        let db_read = state.db.read().map_err(|e| e.to_string())?;
+        let pdb_path = db_read.get_portable_meta("portable_db_path").ok().flatten();
+        let file_name = {
+            let tx = db_read.begin_read().map_err(|e| e.to_string())?;
+            let table = tx
+                .open_table(crate::db::Database::get_files_table())
+                .map_err(|e| e.to_string())?;
+            table
+                .get(file_id)
+                .map_err(|e| e.to_string())?
+                .and_then(|v| serde_json::from_str::<FileNode>(v.value()).ok())
+                .map(|n| n.name)
+                .unwrap_or_else(|| file_id.to_string())
+        };
+        drop(db_read);
+
+        let pdb_path = match pdb_path {
+            Some(p) => p,
+            None => return Ok(()),
+        };
+
+        let data = fs::read(file_path).map_err(|e| format!("Failed to read file: {}", e))?;
+        let mime = infer::get_from_path(file_path)
+            .ok()
+            .flatten()
+            .map(|t| t.mime_type().to_string());
+
+        match PortableDatabase::open(&pdb_path) {
+            Ok(pdb) => {
+                let db_write = state.db.write().map_err(|e| e.to_string())?;
+                match pdb.store_compressed_content(
+                    &db_write,
+                    file_id,
+                    &data,
+                    &file_name,
+                    mime.as_deref(),
+                ) {
+                    Ok(_) => info!("Stored recovery content for file {}", file_id),
+                    Err(e) => warn!("Failed to store recovery content: {}", e),
+                }
+            }
+            Err(e) => warn!("Failed to open portable DB for recovery: {}", e),
+        }
+        Ok(())
+    }
+
+    /// Sync the .cybermanju portable database to the same backend.
+    pub fn sync_portable_db_to_backend(&self, state: &AppState) -> Result<Option<String>, String> {
+        let db_read = state.db.read().map_err(|e| e.to_string())?;
+        let pdb_path = db_read.get_portable_meta("portable_db_path").ok().flatten();
+        drop(db_read);
+
+        let pdb_path = match pdb_path {
+            Some(p) => p,
+            None => return Ok(None),
+        };
+
+        let backend = create_backend(&self.config)?;
+        let pdb = PortableDatabase::open(&pdb_path).map_err(|e| e.to_string())?;
+        let url = pdb.sync_to_backend(backend.as_ref())?;
+        Ok(Some(url))
     }
 }

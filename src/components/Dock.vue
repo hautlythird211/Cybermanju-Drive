@@ -12,6 +12,10 @@
       >
         <div class="dock-icon">
           <Icon :icon="'mdi:' + app.icon" width="18" height="18" class="dock-iconify" />
+          <span
+            v-if="app.panelType === 'trash' && store.trashCount > 0"
+            class="dock-badge"
+          >{{ store.trashCount > 99 ? '99+' : store.trashCount }}</span>
         </div>
         <div class="dock-indicator" v-if="wm.isOpen(app.panelType)">
           <div class="indicator-dot" :class="{ active: isAppActive(app.panelType) }" />
@@ -172,6 +176,7 @@ function handleDockContext(e: MouseEvent, panelType: PanelType) {
   border-radius: 8px;
   transition: all 0.12s;
   border: 1px solid #2a2a2a;
+  position: relative;
 }
 
 .dock-item:hover .dock-icon {
@@ -187,6 +192,26 @@ function handleDockContext(e: MouseEvent, panelType: PanelType) {
 .dock-item.active:hover .dock-icon {
   background: rgba(0, 255, 65, 0.15);
   border-color: rgba(0, 255, 65, 0.3);
+}
+
+.dock-badge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  background: #ff5f57;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 8px;
+  font-weight: 700;
+  min-width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  padding: 0 3px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  pointer-events: none;
 }
 
 .dock-iconify {

@@ -7,10 +7,14 @@
           :key="n.id"
           class="notification-item"
           :class="'notif-' + n.type"
-          @click="dismiss(n.id)"
         >
           <span class="notif-icon">{{ ICONS[n.type] }}</span>
           <span class="notif-msg">{{ n.message }}</span>
+          <button
+            v-if="n.action"
+            class="notif-action-btn"
+            @click.stop="handleAction(n)"
+          >{{ n.action.label }}</button>
           <button class="notif-close" @click.stop="dismiss(n.id)">X</button>
         </div>
       </TransitionGroup>
@@ -19,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { useNotifications, type NotificationType } from '@/composables/useNotifications'
+import { useNotifications, type NotificationType, type Notification } from '@/composables/useNotifications'
 
 const { notifications, dismiss } = useNotifications()
 
@@ -28,6 +32,11 @@ const ICONS: Record<NotificationType, string> = {
   error: '[!]',
   warning: '[?]',
   info: '[*]',
+}
+
+function handleAction(n: Notification) {
+  n.action?.handler()
+  dismiss(n.id)
 }
 </script>
 
@@ -41,7 +50,7 @@ const ICONS: Record<NotificationType, string> = {
   flex-direction: column-reverse;
   gap: 6px;
   pointer-events: none;
-  max-width: 380px;
+  max-width: 400px;
 }
 
 .notification-item {
@@ -56,7 +65,7 @@ const ICONS: Record<NotificationType, string> = {
   font-family: 'Courier New', monospace;
   font-size: 10px;
   font-weight: 600;
-  cursor: pointer;
+  cursor: default;
   pointer-events: auto;
 }
 
@@ -81,6 +90,25 @@ const ICONS: Record<NotificationType, string> = {
 .notif-msg {
   flex: 1;
   line-height: 1.3;
+}
+
+.notif-action-btn {
+  background: #000000;
+  border: 2px solid #000000;
+  color: #FFFFFF;
+  padding: 4px 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+  transition: all 0.1s;
+}
+
+.notif-action-btn:hover {
+  background: #FFFFFF;
+  color: #000000;
 }
 
 .notif-close {

@@ -23,6 +23,7 @@ cybermanju-crypto = { path = "../crates/crypto" }
 cybermanju-compression = { path = "../crates/compression" }
 cybermanju-search = { path = "../crates/search" }
 cybermanju-db = { path = "../crates/db" }
+cybermanju-portable-db = { path = "../crates/portable-db" }
 cybermanju-faces = { path = "../crates/faces" }
 
 # Tauri

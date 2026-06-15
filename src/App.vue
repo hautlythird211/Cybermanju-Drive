@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, provide, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, provide, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useAppStore } from '@/stores/app'
 import { useKeyboardShortcuts, getGlobalShortcuts } from '@/composables/useKeyboardShortcuts'
 import { useShortcuts } from '@/composables/useShortcuts'
@@ -108,6 +108,13 @@ watch(() => store.searchResults, (results) => {
 const confirmVisible = ref(false)
 const confirmMessage = ref('')
 const confirmTitle = ref('CONFIRM')
+let emptyTrashResolve: (() => void) | null = null
+
+const deleteConfirmMessage = computed(() =>
+  store.deleteConfirmVisible
+    ? `MOVE "${store.pendingDeleteFileName || 'FILE'}" TO TRASH?`
+    : confirmMessage.value
+)
 
 const newFolderName = ref('')
 const folderInputRef = ref<HTMLInputElement | null>(null)
@@ -116,6 +123,46 @@ const showUploadDialog = ref(false)
 const mainAreaRef = ref<HTMLElement | null>(null)
 
 useSwipe(mainAreaRef, touchConfig.getSwipeOptions())
+
+// Handle empty-trash confirmation
+function onEmptyTrashEvent() {
+  confirmTitle.value = 'EMPTY TRASH'
+  confirmMessage.value = `PERMANENTLY DELETE ALL ${store.trashItems.length} ITEMS IN TRASH? THIS CANNOT BE UNDONE.`
+  confirmVisible.value = true
+}
+function onEmptyTrashConfirm() {
+  store.emptyTrash()
+  confirmVisible.value = false
+}
+onMounted(() => {
+  window.addEventListener('cybermanju:confirm-empty-trash', onEmptyTrashEvent)
+})
+onUnmounted(() => {
+  window.removeEventListener('cybermanju:confirm-empty-trash', onEmptyTrashEvent)
+})
+
+function handleConfirm() {
+  if (store.deleteConfirmVisible) {
+    store.confirmDeleteAction()
+  } else if (confirmTitle.value === 'EMPTY TRASH') {
+    store.emptyTrash()
+    confirmVisible.value = false
+  } else {
+    confirmVisible.value = false
+  }
+}
+function handleCancel() {
+  if (store.deleteConfirmVisible) {
+    store.cancelDeleteAction()
+  }
+  confirmVisible.value = false
+}
+function handleUpdateVisible(v: boolean) {
+  if (!v) {
+    if (store.deleteConfirmVisible) store.cancelDeleteAction()
+    confirmVisible.value = false
+  }
+}
 
 watch(shortcutOverrides, (v) => {
   localStorage.setItem('cybermanju_keybindings', JSON.stringify(v))
@@ -135,6 +182,12 @@ shortcuts.on('escape', () => {
 shortcuts.on('go_back', () => { navigateInHistory(-1) })
 shortcuts.on('go_forward', () => { navigateInHistory(1) })
 shortcuts.on('open_trash', () => { wm.open('trash'); store.fetchTrashItems() })
+shortcuts.on('undo_delete', () => {
+  if (store.lastDeletedFileId) {
+    store.restoreTrashItem(store.lastDeletedFileId)
+    store.lastDeletedFileId = null
+  }
+})
 shortcuts.on('open_activity', () => { wm.open('activity'); store.fetchAuditLog() })
 shortcuts.on('open_collections', () => { wm.open('collections') })
 shortcuts.on('open_faces', () => { wm.open('faces') })
@@ -227,7 +280,7 @@ ctx.registerContext('file_grid_item', [
   { id: 'permissions', label: 'PERMISSIONS', icon: 'account-group-outline', shortcut: shortcuts.getShortcut('show_permissions'), action: (d) => d?.permissions?.() },
   { id: 'properties', label: 'PROPERTIES', icon: 'information-outline', shortcut: shortcuts.getShortcut('file_properties'), action: (d) => d?.properties?.() },
   { id: 'div3', label: '', divider: true },
-  { id: 'delete', label: 'DELETE', icon: 'close-outline', shortcut: shortcuts.getShortcut('delete'), action: (d) => d?.delete?.() },
+  { id: 'delete', label: 'DELETE', icon: 'close-outline', shortcut: shortcuts.getShortcut('delete'), action: (d) => { const id = d?.fileId; if (id) store.confirmAndDelete(id) } },
 ])
 
 ctx.registerContext('file_grid_bg', [
@@ -479,12 +532,12 @@ function handleLandingLaunch() {
     <CommandPalette />
     <KeyboardShortcutsHelp />
     <ConfirmDialog
-      :visible="confirmVisible"
-      :title="confirmTitle"
-      :message="confirmMessage"
-      @confirm="confirmVisible = false"
-      @cancel="confirmVisible = false"
-      @update:visible="confirmVisible = $event"
+      :visible="confirmVisible || store.deleteConfirmVisible"
+      :title="store.deleteConfirmVisible ? 'CONFIRM DELETE' : confirmTitle"
+      :message="deleteConfirmMessage"
+      @confirm="handleConfirm"
+      @cancel="handleCancel"
+      @update:visible="handleUpdateVisible"
     />
     <LoginPopup />
     <FileUploadDialog

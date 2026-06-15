@@ -36,6 +36,14 @@ const FILE_VERSIONS_TABLE: TableDefinition<'static, &'static str, &'static str> 
     TableDefinition::new("file_versions");
 const SHARE_LINKS_TABLE: TableDefinition<'static, &'static str, &'static str> =
     TableDefinition::new("share_links");
+const FILE_RELATIONS_TABLE: TableDefinition<'static, &'static str, &'static str> =
+    TableDefinition::new("file_relations");
+const DELETION_LOG_TABLE: TableDefinition<'static, &'static str, &'static str> =
+    TableDefinition::new("deletion_log");
+const RECOVERY_STORE_TABLE: TableDefinition<'static, &'static str, &'static str> =
+    TableDefinition::new("recovery_store");
+const PORTABLE_META_TABLE: TableDefinition<'static, &'static str, &'static str> =
+    TableDefinition::new("portable_meta");
 
 pub struct Database {
     db: RedbDatabase,
@@ -62,6 +70,10 @@ impl Database {
             write_txn.open_table(AUDIT_LOG_TABLE)?;
             write_txn.open_table(FILE_VERSIONS_TABLE)?;
             write_txn.open_table(SHARE_LINKS_TABLE)?;
+            write_txn.open_table(FILE_RELATIONS_TABLE)?;
+            write_txn.open_table(DELETION_LOG_TABLE)?;
+            write_txn.open_table(RECOVERY_STORE_TABLE)?;
+            write_txn.open_table(PORTABLE_META_TABLE)?;
         }
         write_txn.commit()?;
         Ok(Self { db })
@@ -122,6 +134,18 @@ impl Database {
     }
     pub fn get_share_links_table() -> TableDefinition<'static, &'static str, &'static str> {
         SHARE_LINKS_TABLE
+    }
+    pub fn get_file_relations_table() -> TableDefinition<'static, &'static str, &'static str> {
+        FILE_RELATIONS_TABLE
+    }
+    pub fn get_deletion_log_table() -> TableDefinition<'static, &'static str, &'static str> {
+        DELETION_LOG_TABLE
+    }
+    pub fn get_recovery_store_table() -> TableDefinition<'static, &'static str, &'static str> {
+        RECOVERY_STORE_TABLE
+    }
+    pub fn get_portable_meta_table() -> TableDefinition<'static, &'static str, &'static str> {
+        PORTABLE_META_TABLE
     }
 
     pub fn log_audit(
@@ -407,6 +431,263 @@ impl Database {
             }
             None => Ok(Vec::new()),
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // Portable Database (`.cybermanju`) operations
+    // -----------------------------------------------------------------------
+
+    pub fn store_file_relation(&self, relation: &cybermanju_types::schema::FileRelation) -> Result<()> {
+        let tx = self.db.begin_write()?;
+        {
+            let mut table = tx.open_table(FILE_RELATIONS_TABLE)?;
+            table.insert(relation.id.as_str(), serde_json::to_string(relation)?.as_str())?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn get_file_relation(&self, relation_id: &str) -> Result<Option<cybermanju_types::schema::FileRelation>> {
+        let tx = self.db.begin_read()?;
+        let table = tx.open_table(FILE_RELATIONS_TABLE)?;
+        match table.get(relation_id)? {
+            Some(v) => Ok(serde_json::from_str(v.value()).ok()),
+            None => Ok(None),
+        }
+    }
+
+    pub fn get_file_relations_for_local(&self, local_file_id: &str) -> Result<Vec<cybermanju_types::schema::FileRelation>> {
+        let tx = self.db.begin_read()?;
+        let table = tx.open_table(FILE_RELATIONS_TABLE)?;
+        let mut relations = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            if let Ok(rel) = serde_json::from_str::<cybermanju_types::schema::FileRelation>(value.value()) {
+                if rel.local_file_id == local_file_id {
+                    relations.push(rel);
+                }
+            }
+        }
+        Ok(relations)
+    }
+
+    pub fn delete_file_relation(&self, relation_id: &str) -> Result<bool> {
+        let tx = self.db.begin_write()?;
+        let removed = {
+            let mut table = tx.open_table(FILE_RELATIONS_TABLE)?;
+            table.remove(relation_id)?.is_some()
+        };
+        tx.commit()?;
+        Ok(removed)
+    }
+
+    pub fn list_all_file_relations(&self) -> Result<Vec<cybermanju_types::schema::FileRelation>> {
+        let tx = self.db.begin_read()?;
+        let table = tx.open_table(FILE_RELATIONS_TABLE)?;
+        let mut relations = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            if let Ok(rel) = serde_json::from_str::<cybermanju_types::schema::FileRelation>(value.value()) {
+                relations.push(rel);
+            }
+        }
+        Ok(relations)
+    }
+
+    pub fn store_deletion_record(&self, record: &cybermanju_types::schema::DeletionRecord) -> Result<()> {
+        let tx = self.db.begin_write()?;
+        {
+            let mut table = tx.open_table(DELETION_LOG_TABLE)?;
+            table.insert(record.id.as_str(), serde_json::to_string(record)?.as_str())?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn get_deletion_record(&self, record_id: &str) -> Result<Option<cybermanju_types::schema::DeletionRecord>> {
+        let tx = self.db.begin_read()?;
+        let table = tx.open_table(DELETION_LOG_TABLE)?;
+        match table.get(record_id)? {
+            Some(v) => Ok(serde_json::from_str(v.value()).ok()),
+            None => Ok(None),
+        }
+    }
+
+    pub fn list_pending_deletions(&self) -> Result<Vec<cybermanju_types::schema::DeletionRecord>> {
+        let tx = self.db.begin_read()?;
+        let table = tx.open_table(DELETION_LOG_TABLE)?;
+        let mut records = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            if let Ok(rec) = serde_json::from_str::<cybermanju_types::schema::DeletionRecord>(value.value()) {
+                if !rec.pending_platforms.is_empty() {
+                    records.push(rec);
+                }
+            }
+        }
+        Ok(records)
+    }
+
+    pub fn list_all_deletion_records(&self) -> Result<Vec<cybermanju_types::schema::DeletionRecord>> {
+        let tx = self.db.begin_read()?;
+        let table = tx.open_table(DELETION_LOG_TABLE)?;
+        let mut records = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            if let Ok(rec) = serde_json::from_str::<cybermanju_types::schema::DeletionRecord>(value.value()) {
+                records.push(rec);
+            }
+        }
+        Ok(records)
+    }
+
+    pub fn update_deletion_record(&self, record: &cybermanju_types::schema::DeletionRecord) -> Result<()> {
+        let tx = self.db.begin_write()?;
+        {
+            let mut table = tx.open_table(DELETION_LOG_TABLE)?;
+            table.insert(record.id.as_str(), serde_json::to_string(record)?.as_str())?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn delete_deletion_record(&self, record_id: &str) -> Result<bool> {
+        let tx = self.db.begin_write()?;
+        let removed = {
+            let mut table = tx.open_table(DELETION_LOG_TABLE)?;
+            table.remove(record_id)?.is_some()
+        };
+        tx.commit()?;
+        Ok(removed)
+    }
+
+    pub fn store_recovery_entry(&self, entry: &cybermanju_types::schema::RecoveryEntry) -> Result<()> {
+        let tx = self.db.begin_write()?;
+        {
+            let mut table = tx.open_table(RECOVERY_STORE_TABLE)?;
+            table.insert(entry.id.as_str(), serde_json::to_string(entry)?.as_str())?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn get_recovery_entry(&self, file_id: &str) -> Result<Option<cybermanju_types::schema::RecoveryEntry>> {
+        let tx = self.db.begin_read()?;
+        let table = tx.open_table(RECOVERY_STORE_TABLE)?;
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            if let Ok(rec) = serde_json::from_str::<cybermanju_types::schema::RecoveryEntry>(value.value()) {
+                if rec.original_file_id == file_id {
+                    return Ok(Some(rec));
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    pub fn list_all_recovery_entries(&self) -> Result<Vec<cybermanju_types::schema::RecoveryEntry>> {
+        let tx = self.db.begin_read()?;
+        let table = tx.open_table(RECOVERY_STORE_TABLE)?;
+        let mut entries = Vec::new();
+        for entry in table.iter()? {
+            let (_, value) = entry?;
+            if let Ok(rec) = serde_json::from_str::<cybermanju_types::schema::RecoveryEntry>(value.value()) {
+                entries.push(rec);
+            }
+        }
+        Ok(entries)
+    }
+
+    pub fn delete_recovery_entry(&self, entry_id: &str) -> Result<bool> {
+        let tx = self.db.begin_write()?;
+        let removed = {
+            let mut table = tx.open_table(RECOVERY_STORE_TABLE)?;
+            table.remove(entry_id)?.is_some()
+        };
+        tx.commit()?;
+        Ok(removed)
+    }
+
+    pub fn set_portable_meta(&self, key: &str, value: &str) -> Result<()> {
+        let tx = self.db.begin_write()?;
+        {
+            let mut table = tx.open_table(PORTABLE_META_TABLE)?;
+            table.insert(key, value)?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn get_portable_meta(&self, key: &str) -> Result<Option<String>> {
+        let tx = self.db.begin_read()?;
+        let table = tx.open_table(PORTABLE_META_TABLE)?;
+        match table.get(key)? {
+            Some(v) => Ok(Some(v.value().to_string())),
+            None => Ok(None),
+        }
+    }
+
+    pub fn get_all_portable_meta(&self) -> Result<Vec<(String, String)>> {
+        let tx = self.db.begin_read()?;
+        let table = tx.open_table(PORTABLE_META_TABLE)?;
+        let mut entries = Vec::new();
+        for entry in table.iter()? {
+            let (k, v) = entry?;
+            entries.push((k.value().to_string(), v.value().to_string()));
+        }
+        Ok(entries)
+    }
+
+    pub fn mark_deletion_propagated(&self, record_id: &str, platform: &str) -> Result<()> {
+        let tx = self.db.begin_write()?;
+        {
+            let table = tx.open_table(DELETION_LOG_TABLE)?;
+            if let Some(v) = table.get(record_id)? {
+                let mut record: cybermanju_types::schema::DeletionRecord =
+                    serde_json::from_str(v.value())?;
+                record.propagated_to.push(platform.to_string());
+                record.pending_platforms.retain(|p| p != platform);
+                drop(table);
+                let mut table = tx.open_table(DELETION_LOG_TABLE)?;
+                table.insert(record_id, serde_json::to_string(&record)?.as_str())?;
+            }
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn update_file_relation_status(
+        &self,
+        local_file_id: &str,
+        backend_type: &str,
+        new_status: &str,
+    ) -> Result<()> {
+        let tx = self.db.begin_write()?;
+        {
+            let table = tx.open_table(FILE_RELATIONS_TABLE)?;
+            let mut to_update = Vec::new();
+            for entry in table.iter()? {
+                let (k, v) = entry?;
+                if let Ok(rel) = serde_json::from_str::<cybermanju_types::schema::FileRelation>(v.value()) {
+                    if rel.local_file_id == local_file_id && rel.backend_type == backend_type {
+                        to_update.push(k.value().to_string());
+                    }
+                }
+            }
+            drop(table);
+            let mut table = tx.open_table(FILE_RELATIONS_TABLE)?;
+            for key in to_update {
+                if let Some(v) = table.get(key.as_str())? {
+                    let mut rel: cybermanju_types::schema::FileRelation =
+                        serde_json::from_str(v.value())?;
+                    rel.status = new_status.to_string();
+                    rel.last_verified_at = Some(chrono::Utc::now().to_rfc3339());
+                    table.insert(key.as_str(), serde_json::to_string(&rel)?.as_str())?;
+                }
+            }
+        }
+        tx.commit()?;
+        Ok(())
     }
 
     pub fn insert_file_with_index(

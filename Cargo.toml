@@ -5,6 +5,7 @@ members = [
     "crates/compression",
     "crates/search",
     "crates/db",
+    "crates/portable-db",
     "crates/web",
     "crates/faces",
     "crates/tests",

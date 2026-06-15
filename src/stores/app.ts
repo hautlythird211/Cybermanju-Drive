@@ -47,6 +47,8 @@ export const useAppStore = defineStore('cybermanju', () => {
   // ── Trash State ────────────────────────────────────────────
   const trashItems = ref<TrashItem[]>([])
   const showTrashPanel = ref(false)
+  let lastDeletedFileId: string | null = null
+  let restoreTimeout: ReturnType<typeof setTimeout> | null = null
 
   // ── Audit State ────────────────────────────────────────────
   const auditLog = ref<AuditEntry[]>([])
@@ -236,16 +238,59 @@ export const useAppStore = defineStore('cybermanju', () => {
     }
   }
 
-  async function deleteFile(fileId: string) {
+  async function deleteFile(fileId: string, silent = false) {
     try {
+      const file = files.value.find(f => f.id === fileId)
       await invoke('delete_file', { fileId })
       files.value = files.value.filter(f => f.id !== fileId)
       if (selectedFileId.value === fileId) selectedFileId.value = null
       selectedFileIds.value = selectedFileIds.value.filter(id => id !== fileId)
-      notifySuccess(`File deleted`)
+
+      if (silent) return
+
+      lastDeletedFileId = fileId
+      if (restoreTimeout) clearTimeout(restoreTimeout)
+      restoreTimeout = setTimeout(() => { lastDeletedFileId = null }, 8000)
+
+      const fileName = file?.name || fileId
+      notify('success', `MOVED "${fileName}" TO TRASH`, 8000, {
+        label: 'UNDO',
+        handler: () => {
+          if (lastDeletedFileId) {
+            restoreTrashItem(lastDeletedFileId)
+            lastDeletedFileId = null
+          }
+        },
+      })
+      await fetchTrashItems()
     } catch (e) {
       notifyError('Failed to delete file', e)
     }
+  }
+
+  async function confirmAndDelete(fileId: string) {
+    lastPendingDeleteId = fileId
+    pendingDeleteFileName = files.value.find(f => f.id === fileId)?.name || null
+    deleteConfirmVisible.value = true
+  }
+
+  const deleteConfirmVisible = ref(false)
+  const lastPendingDeleteId = ref<string | null>(null)
+  const pendingDeleteFileName = ref<string | null>(null)
+
+  function confirmDeleteAction() {
+    if (lastPendingDeleteId.value) {
+      deleteFile(lastPendingDeleteId.value)
+      lastPendingDeleteId.value = null
+      pendingDeleteFileName.value = null
+    }
+    deleteConfirmVisible.value = false
+  }
+
+  function cancelDeleteAction() {
+    lastPendingDeleteId.value = null
+    pendingDeleteFileName.value = null
+    deleteConfirmVisible.value = false
   }
 
   async function renameFile(fileId: string, newName: string) {
@@ -662,7 +707,7 @@ export const useAppStore = defineStore('cybermanju', () => {
     try {
       const count = await invoke<number>('empty_trash')
       trashItems.value = []
-      notifySuccess(`Permanently deleted ${count} items`)
+      notify('info', `PERMANENTLY DELETED ${count} ITEMS`, 4000)
     } catch (e) {
       notifyError('Failed to empty trash', e)
     }
@@ -883,12 +928,15 @@ export const useAppStore = defineStore('cybermanju', () => {
     showEncryptionPanel, showCompressionPanel, showPermissionsPanel, commandPaletteOpen,
     showShortcutsHelp, createFolderPromptOpen, showLoginPopup,
     selectedFileIds, isMultiSelect, users, autoRefreshInterval, sortBy,
+    trashCount: computed(() => trashItems.value.length),
+    deleteConfirmVisible, pendingDeleteFileName, lastPendingDeleteId,
     // Computed
     currentUser, authToken, isAuthenticated, selectedFile, activeAccount, encryptedFiles, compressedFiles,
     starredFiles, folders, currentFolderFiles,
     // Actions
     initialize, selectFile, toggleStar, clearError,
     fetchFiles, getFile, createFolder, deleteFile, renameFile, duplicateFileContext,
+    confirmAndDelete, confirmDeleteAction, cancelDeleteAction,
     searchFiles, loadMoreSearchResults, fetchEncryptionStatus, generateKeypair, listKeys, encryptFile, decryptFile,
     compressFile, decompressFile, fetchCollections, createCollection, addToCollection, removeFromCollection,
     fetchFaceGroups, detectFaces, detectFacesBatch, reclusterFaces,
@@ -917,5 +965,6 @@ export const useAppStore = defineStore('cybermanju', () => {
     rebuildParentIndex,
     notifySuccess,
     notifyError,
+    notify,
   }
 })

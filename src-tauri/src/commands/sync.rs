@@ -41,6 +41,22 @@ impl Default for SyncState {
 // Tauri commands
 // ---------------------------------------------------------------------------
 
+/// Inner helper: list sync configs from a db reference (used by portable_db commands).
+pub fn list_sync_configs_inner(db: &crate::db::Database) -> Result<Vec<SyncConfig>, String> {
+    let tx = db.begin_read().map_err(|e| e.to_string())?;
+    let table = tx
+        .open_table(crate::db::Database::get_sync_configs_table())
+        .map_err(|e| e.to_string())?;
+
+    let mut configs = Vec::new();
+    for entry in table.iter().map_err(|e| e.to_string())? {
+        let (_, value) = entry.map_err(|e| e.to_string())?;
+        let config: SyncConfig = serde_json::from_str(value.value()).map_err(|e| e.to_string())?;
+        configs.push(config);
+    }
+    Ok(configs)
+}
+
 /// List all saved sync configurations.
 #[tauri::command]
 pub fn list_sync_configs(state: State<'_, AppState>) -> Result<Vec<SyncConfig>, String> {

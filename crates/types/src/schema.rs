@@ -184,3 +184,113 @@ impl ShareLink {
         self
     }
 }
+
+// ---------------------------------------------------------------------------
+// Portable Database (`.cybermanju`) types
+// ---------------------------------------------------------------------------
+
+/// Cross-platform file relation tracking.
+/// Maps a local file to its copies on connected backends.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct FileRelation {
+    pub id: String,
+    pub local_file_id: String,
+    pub backend_type: String,
+    pub remote_file_id: Option<String>,
+    pub remote_path: String,
+    pub remote_url: Option<String>,
+    pub synced_at: String,
+    pub last_verified_at: Option<String>,
+    pub status: String, // "active", "deleted", "pending_delete"
+}
+
+/// Tracks cross-platform deletion events for propagation.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DeletionRecord {
+    pub id: String,
+    pub local_file_id: String,
+    pub file_name: String,
+    pub deleted_from: String, // platform where deletion originated
+    pub deleted_at: String,
+    pub deleted_by: Option<String>,
+    pub propagated_to: Vec<String>, // platforms where deletion has been applied
+    pub pending_platforms: Vec<String>, // platforms still needing deletion
+    pub has_compressed_version: bool,
+    pub has_preview: bool,
+    pub recovery_file_id: Option<String>,
+}
+
+/// Recovery entry — references a compressed/preview version stored in the portable DB.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct RecoveryEntry {
+    pub id: String,
+    pub original_file_id: String,
+    pub original_name: String,
+    pub original_mime: Option<String>,
+    pub has_compressed: bool,
+    pub has_preview: bool,
+    pub compressed_hash: Option<String>,
+    pub preview_hash: Option<String>,
+    pub compressed_size: u64,
+    pub preview_size: u64,
+    pub stored_at: String,
+    pub blob_offset_compressed: Option<u64>,
+    pub blob_offset_preview: Option<u64>,
+}
+
+/// Header and metadata for a `.cybermanju` portable database file.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PortableHeader {
+    pub version: String,
+    pub created_at: String,
+    pub last_modified_at: String,
+    pub app_version: String,
+    pub db_hash: String,
+    pub encryption_algorithm: Option<String>,
+    pub compression_algorithm: String,
+    pub key_id: Option<String>,
+    pub total_files: u64,
+    pub total_previews: u64,
+    pub total_relations: u64,
+    pub total_deletions: u64,
+    pub db_size_bytes: u64,
+    pub content_store_size: u64,
+    pub preview_store_size: u64,
+    pub platform_origin: String,
+    pub synced_platforms: Vec<String>,
+}
+
+/// Entry in the portable DB's content store.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContentStoreEntry {
+    pub file_id: String,
+    pub original_hash: String,
+    pub compressed_hash: String,
+    pub compression_layer: String,
+    pub encrypted: bool,
+    pub size_original: u64,
+    pub size_compressed: u64,
+    pub blob_offset: u64,
+    pub blob_length: u64,
+    pub mime_type: Option<String>,
+}
+
+/// Entry in the portable DB's preview store.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PreviewStoreEntry {
+    pub file_id: String,
+    pub original_hash: String,
+    pub preview_hash: String,
+    pub size_bytes: u64,
+    pub blob_offset: u64,
+    pub blob_length: u64,
+    pub width: u32,
+    pub height: u32,
+    pub mime_type: String, // "image/png", "image/jpeg", "video/webm"
+}

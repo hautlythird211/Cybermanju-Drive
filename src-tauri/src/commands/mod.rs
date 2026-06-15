@@ -16,3 +16,4 @@ pub mod sync;
 pub mod trash;
 pub mod users;
 pub mod versions;
+pub mod portable_db;

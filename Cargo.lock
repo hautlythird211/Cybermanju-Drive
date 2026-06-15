@@ -1165,6 +1165,7 @@ dependencies = [
  "cybermanju-crypto",
  "cybermanju-db",
  "cybermanju-faces",
+ "cybermanju-portable-db",
  "cybermanju-search",
  "cybermanju-types",
  "hex",
@@ -1245,6 +1246,23 @@ dependencies = [
  "reqwest 0.12.28",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "cybermanju-portable-db"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "blake3",
+ "chrono",
+ "cybermanju-compression",
+ "cybermanju-crypto",
+ "cybermanju-db",
+ "cybermanju-types",
+ "log",
+ "serde",
+ "serde_json",
+ "uuid",
 ]
 
 [[package]]

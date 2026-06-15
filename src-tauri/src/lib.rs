@@ -16,7 +16,7 @@ use commands::faces as face_cmd;
 use commands::sync as sync_cmd;
 use commands::{
     accounts, audit, batch, collections, dashboard, encryption, files, import as import_cmd, map,
-    search as search_cmd, share, trash, users, versions,
+    portable_db, search as search_cmd, share, trash, users, versions,
 };
 use db::Database;
 use std::sync::{Arc, RwLock};
@@ -47,6 +47,30 @@ pub fn run() {
         }
     };
     tracing::info!("redb database initialized");
+
+    // Initialize .cybermanju portable database
+    let portable_db_path = ".cybermanju";
+    let platform = if std::env::var("DOCKER_MODE").is_ok() {
+        "docker"
+    } else {
+        "local"
+    };
+    match cybermanju_portable_db::PortableDatabase::open_or_create(portable_db_path, platform) {
+        Ok(pdb) => {
+            tracing::info!(
+                ".cybermanju portable database ready at {} ({} files, {} relations)",
+                portable_db_path,
+                pdb.header().total_files,
+                pdb.header().total_relations
+            );
+            // Store the path in the redb database for cross-reference
+            let _ = db.set_portable_meta("portable_db_path", portable_db_path);
+            let _ = db.set_portable_meta("portable_db_origin", platform);
+        }
+        Err(e) => {
+            tracing::error!("Failed to initialize .cybermanju portable database: {}", e);
+        }
+    }
 
     // Initialize Tantivy full-text search index
     let tantivy_index = match search::SearchIndex::new("tantivy_index") {
@@ -227,6 +251,25 @@ pub fn run() {
             files::rebuild_parent_index,
             // Duplicate detection
             commands::duplicates::find_duplicates,
+            // Portable Database (`.cybermanju`)
+            portable_db::init_portable_db,
+            portable_db::get_portable_db_header,
+            portable_db::sync_portable_db,
+            portable_db::record_file_relation,
+            portable_db::get_file_relations,
+            portable_db::list_all_relations,
+            portable_db::record_deletion,
+            portable_db::list_pending_deletions,
+            portable_db::list_all_deletions,
+            portable_db::store_compressed_for_recovery,
+            portable_db::store_preview_for_recovery,
+            portable_db::list_recoverable_files,
+            portable_db::recover_file,
+            portable_db::get_recovery_preview,
+            portable_db::repack_portable_db,
+            portable_db::mark_deletion_propagated,
+            portable_db::get_portable_db_meta,
+            portable_db::delete_recovery_entry,
         ])
         .run(tauri::generate_context!())
         .expect("Fatal error while running Cybermanju Drive — see logs above");

@@ -60,35 +60,7 @@
     </div>
 
     <!-- Trash Panel -->
-    <div v-if="panelType === 'trash'" class="panel-page">
-      <div class="panel-card">
-        <div class="trash-header">
-          <div class="panel-title">TRASH</div>
-          <div class="trash-actions">
-            <button class="panel-btn" @click="store.fetchTrashItems()" title="REFRESH TRASH">[R]</button>
-            <button class="panel-btn panel-btn-danger" @click="store.emptyTrash()" title="EMPTY TRASH">[EMPTY]</button>
-          </div>
-        </div>
-        <p class="panel-hint">DELETED FILES CAN BE RESTORED FROM HERE.</p>
-        <div v-if="store.trashItems.length === 0" class="empty-state" style="height:80px;">
-          <Icon icon="svg-spinners:6-dots-rotate" width="18" height="18" class="empty-spinner" />
-          <p class="text-muted">NO FILES IN TRASH</p>
-        </div>
-        <div v-else class="trash-list">
-          <div v-for="item in store.trashItems" :key="item.id" class="trash-item">
-            <span class="trash-icon">{{ item.originalFile.fileType === 'folder' ? '[+]' : '[=]' }}</span>
-            <div class="trash-info">
-              <span class="trash-name truncate">{{ item.originalFile.name }}</span>
-              <span class="trash-date text-muted">{{ new Date(item.deletedAt).toLocaleDateString() }}</span>
-            </div>
-            <div class="trash-actions">
-              <button class="trash-action-btn" @click="store.restoreTrashItem(item.originalFile.id)" title="RESTORE">[RST]</button>
-              <button class="trash-action-btn danger" @click="store.deleteFromTrash(item.originalFile.id)" title="DELETE PERMANENTLY">[DEL]</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <TrashPanel v-if="panelType === 'trash'" />
 
     <!-- Activity Panel -->
     <ActivityPanel v-if="panelType === 'activity'" />
@@ -200,6 +172,7 @@ import { useAppStore } from '@/stores/app'
 import { useWindowManager } from '@/composables/useWindowManager'
 import type { PanelType } from '@/types'
 import ActivityPanel from '@/components/ActivityPanel.vue'
+import TrashPanel from '@/components/TrashPanel.vue'
 
 const props = defineProps<{
   panelType: PanelType
@@ -509,85 +482,7 @@ function highlightTerms(text: string, query: string): string {
   background: #1a1a1a;
 }
 
-/* Trash styles */
-.trash-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 4px;
-}
 
-.trash-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.trash-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.trash-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-}
-
-.trash-item:hover {
-  border-color: #333;
-  background: #1a1a1a;
-}
-
-.trash-icon {
-  font-size: 10px;
-  flex-shrink: 0;
-  color: #666;
-}
-
-.trash-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.trash-name {
-  font-size: 10px;
-  font-weight: 600;
-  color: #ccc;
-}
-
-.trash-date {
-  font-size: 8px;
-  color: #555 !important;
-}
-
-.trash-action-btn {
-  background: transparent;
-  border: 1px solid #333;
-  color: #888;
-  padding: 1px 6px;
-  font-family: 'Courier New', monospace;
-  font-size: 8px;
-  font-weight: 700;
-  cursor: pointer;
-  border-radius: 3px;
-  transition: all 0.1s;
-}
-
-.trash-action-btn:hover {
-  border-color: #555;
-  color: #e0e0e0;
-}
-
-.trash-action-btn.danger:hover {
-  border-color: #ff5f57;
-  color: #ff5f57;
-}
 
 /* Activity styles */
 .activity-list {
