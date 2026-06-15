@@ -346,7 +346,7 @@ jobs:
             export PATH=\$HOME/.cargo/bin:\$PATH
             cd $GITHUB_WORKSPACE
             npm ci
-            npm run tauri build
+            npm run tauri build -- --bundles deb,rpm
           "
 
       - name: Collect artifacts
@@ -410,8 +410,8 @@ jobs:
       - name: Install wasm-pack
         run: npm install -g wasm-pack@0.15.0
 
-      - name: Build Android APK (skip armv7 + i686 — ort-sys lacks prebuilt)
-        run: npm run tauri android build -- --target aarch64 --target x86_64
+      - name: Build Android APK (aarch64 only — ort-sys lacks prebuilt for others)
+        run: npm run tauri android build -- --target aarch64
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
 
