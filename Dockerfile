@@ -1,13 +1,13 @@
 # ═══════════════════════════════════════════════════════════════════════
 # Cybermanju Drive — Multi-stage Docker Build
 #
-# Stage 0: Build WASM crate (Rust → wasm)
+# Stage 0: Build WASM crate (Rust -> wasm)
 # Stage 1: Build Vue 3 frontend (Node.js)
 # Stage 2: Build standalone Rust web server (no Tauri/GTK deps)
 # Stage 3: Minimal Alpine runtime
 # ═══════════════════════════════════════════════════════════════════════
 
-# ─── Stage 0: WASM Build ────────────────────────────────────────────
+# --- Stage 0: WASM Build --------------------------------------------
 FROM rust:alpine AS wasm-builder
 
 RUN apk add --no-cache musl-dev pkgconf npm clang lld
@@ -27,7 +27,7 @@ RUN mkdir -p node_modules && \
     cd crates/drive-wasm && \
     wasm-pack build --target bundler --out-dir ../../node_modules/cybermanju-drive-wasm
 
-# ─── Stage 1: Frontend Build ──────────────────────────────────────────
+# --- Stage 1: Frontend Build ------------------------------------------
 FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app
@@ -46,7 +46,7 @@ COPY keymaps/ ./keymaps/
 COPY src/ ./src/
 RUN DOCKER_BUILD=true npm run build:wasm
 
-# ─── Stage 2: Rust Backend Build ─────────────────────────────────────
+# --- Stage 2: Rust Backend Build ---------------------------------------
 FROM rust:alpine AS backend-builder
 
 # musl-dev is required for linking on Alpine
@@ -71,7 +71,7 @@ COPY src-tauri/src/web_dashboard/mod.rs ./src/web_dashboard.rs
 # Touch the source to invalidate the cache placeholder
 RUN touch src/web_dashboard.rs && cargo build --release
 
-# ─── Stage 3: Minimal Runtime ────────────────────────────────────────
+# --- Stage 3: Minimal Runtime ------------------------------------------
 FROM alpine:3.21 AS runtime
 
 # ca-certificates for HTTPS, wget for healthcheck
