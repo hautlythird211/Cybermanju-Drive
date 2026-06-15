@@ -42,7 +42,6 @@ jobs:
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: src-tauri
           cache-on-failure: true
 
       - name: Check formatting
@@ -132,7 +131,6 @@ jobs:
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: src-tauri
           cache-on-failure: true
 
       - name: Setup Node.js
@@ -183,7 +181,6 @@ jobs:
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: src-tauri
           cache-on-failure: true
 
       - name: Setup Node.js
@@ -388,7 +385,6 @@ jobs:
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: src-tauri
           cache-on-failure: true
 
       - name: Initialize Android project
