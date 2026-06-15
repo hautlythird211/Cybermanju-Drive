@@ -10,8 +10,10 @@ import { useTouchConfig, type TouchAction } from '@/composables/useTouchConfig'
 import { useWindowManager } from '@/composables/useWindowManager'
 import { defaultKpl, defaultKpd } from '@/keymaps'
 import { ShortcutsKey } from '@/composables/shortcutsKey'
+import { kvGet } from '@/wasm/storage'
 import DesktopShell from '@/components/DesktopShell.vue'
 import LandingPage from '@/components/LandingPage.vue'
+import SetupWizard from '@/components/SetupWizard.vue'
 import CanvasEngine from '@/components/CanvasEngine.vue'
 import NotificationStack from '@/components/NotificationStack.vue'
 import CommandPalette from '@/components/CommandPalette.vue'
@@ -402,18 +404,43 @@ function handleUpload() {
   showUploadDialog.value = true
 }
 
-onMounted(() => {
+const needsSetup = ref<boolean | null>(null)
+
+onMounted(async () => {
   store.currentPanel = 'landing'
   store.initialize()
   window.addEventListener('cybermanju:upload', handleUpload)
+  try {
+    const complete = await kvGet<boolean>('setup_complete')
+    needsSetup.value = !complete
+  } catch {
+    needsSetup.value = true
+  }
 })
+
+function onSetupComplete() {
+  needsSetup.value = false
+  store.currentPanel = 'files'
+  wm.open('files')
+}
+
+function handleLandingLaunch() {
+  if (needsSetup.value !== false) return // null (still loading) or true (wizard shows)
+  store.currentPanel = 'files'
+  wm.open('files')
+}
 </script>
 
 <template>
   <div class="cybermanju-shell">
     <LandingPage
-      v-if="store.currentPanel === 'landing'"
-      @open-app="store.currentPanel = 'files'; wm.open('files')"
+      v-if="store.currentPanel === 'landing' && needsSetup !== true"
+      :key="'landing'"
+      @open-app="handleLandingLaunch"
+    />
+    <SetupWizard
+      v-if="needsSetup === true"
+      @complete="onSetupComplete"
     />
     <template v-else>
       <DesktopShell>
