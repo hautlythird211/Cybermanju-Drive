@@ -27,21 +27,27 @@ modules:
         echo "Extracting: $deb_file"
         mkdir -p deb-extracted
         ar x "$deb_file" --output=deb-extracted
-        # Handle different compression formats (xz, zst, gz)
         data_tar=$(ls deb-extracted/data.tar.* 2>/dev/null | head -1)
         if [ -z "$data_tar" ]; then
           echo "ERROR: No data.tar.* found in deb"
           exit 1
         fi
         echo "Extracting data: $data_tar"
-        tar -xf "$data_tar" -C /
-        # Find and symlink the binary
-        binary_path=$(find /opt -name 'cybermanju-drive' -type f 2>/dev/null | head -1)
+        mkdir -p pkg-root
+        tar -xf "$data_tar" -C pkg-root || tar -xaf "$data_tar" -C pkg-root
+        binary_path=$(find pkg-root -name 'cybermanju-drive' -type f 2>/dev/null | head -1)
+        if [ -z "$binary_path" ]; then
+          echo "Searching in /usr/bin..."
+          if [ -f "pkg-root/usr/bin/cybermanju-drive" ]; then
+            binary_path="pkg-root/usr/bin/cybermanju-drive"
+          fi
+        fi
         if [ -n "$binary_path" ]; then
           mkdir -p /app/bin
-          ln -sf "$binary_path" /app/bin/cybermanju-drive
+          cp "$binary_path" /app/bin/cybermanju-drive
+          chmod +x /app/bin/cybermanju-drive
         else
-          echo "ERROR: Binary not found in /opt"
+          echo "ERROR: Binary not found in deb"
           exit 1
         fi
     sources:

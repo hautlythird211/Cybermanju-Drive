@@ -314,7 +314,8 @@ jobs:
             pkg-config \
             openssl \
             curl \
-            sudo
+            sudo \
+            xdg-utils
 
       - name: Create build user
         run: |
@@ -409,8 +410,8 @@ jobs:
       - name: Install wasm-pack
         run: npm install -g wasm-pack@0.15.0
 
-      - name: Build Android APK (skip armv7 — ort-sys lacks prebuilt for it)
-        run: npm run tauri android build -- --target aarch64 --target x86_64 --target i686
+      - name: Build Android APK (skip armv7 + i686 — ort-sys lacks prebuilt)
+        run: npm run tauri android build -- --target aarch64 --target x86_64
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
 
