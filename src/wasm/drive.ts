@@ -1,4 +1,4 @@
-import { initWasm, getWasm } from './bridge'
+import { initWasm, getWasm, isWasmReady } from './bridge'
 import * as storage from './storage'
 import type { FileNode } from '@/types'
 
@@ -44,12 +44,7 @@ export async function createFolder(
   name: string,
   parentId: string | null
 ): Promise<DriveFile> {
-  await initWasm()
-  const wasm = getWasm()
-  const now = wasm.now_utc()
-  const id = wasm.generate_uuid()
-  const hash = wasm.hash_file_meta(name, 0, now)
-
+  const { id, now, hash } = await wasmHelpers(name, 0)
   const driveFile: DriveFile = {
     id,
     name,
@@ -75,12 +70,7 @@ export async function addFile(
   mimeType = 'application/octet-stream',
   tags: string[] = []
 ): Promise<DriveFile> {
-  await initWasm()
-  const wasm = getWasm()
-  const now = wasm.now_utc()
-  const id = wasm.generate_uuid()
-  const hash = wasm.hash_file_meta(name, data.byteLength, now)
-
+  const { id, now, hash } = await wasmHelpers(name, data.byteLength)
   const driveFile: DriveFile = {
     id,
     name,
@@ -204,6 +194,45 @@ export async function toFileNodes(driveFiles: DriveFile[]): Promise<FileNode[]> 
     createdAt: f.createdAt,
     modifiedAt: f.modifiedAt,
   }))
+}
+
+// JS fallbacks when WASM is unavailable
+function jsGenerateId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+function jsTimestamp(): string {
+  return new Date().toISOString()
+}
+
+async function jsHashFileName(name: string, size: number, _ts: string): Promise<string> {
+  const input = `${name}:${size}:${_ts}`
+  const encoder = new TextEncoder()
+  const data = encoder.encode(input)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+async function wasmHelpers(name: string, size: number): Promise<{ id: string; now: string; hash: string }> {
+  try {
+    await initWasm()
+    if (isWasmReady()) {
+      const wasm = getWasm()
+      const now = wasm.now_utc()
+      const id = wasm.generate_uuid()
+      const hash = wasm.hash_file_meta(name, size, now)
+      return { id, now, hash }
+    }
+  } catch {
+    // WASM unavailable – use JS fallbacks
+  }
+  return {
+    id: jsGenerateId(),
+    now: jsTimestamp(),
+    hash: await jsHashFileName(name, size, jsTimestamp()),
+  }
 }
 
 function toDriveFile(stored: storage.StoredFile): DriveFile {

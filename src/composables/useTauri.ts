@@ -569,8 +569,8 @@ async function tryWasmInvoke<T>(cmd: string, args?: Record<string, unknown>): Pr
         return null // fall through to REST
       }
     }
-  } catch {
-    // WASM not available, fall through
+    } catch (err) {
+    console.warn(`[Web Mode] WASM bridge unavailable for "${cmd}": ${err}. Falling through to REST.`)
   }
   return null
 }
