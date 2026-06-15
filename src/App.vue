@@ -144,48 +144,48 @@ shortcuts.on('go_home', () => { store.currentPanel = 'landing' })
 
 function fileTypeContextMenu(file: any) {
   const base = [
-    { id: 'open', label: 'OPEN', icon: '[>]', shortcut: shortcuts.getShortcut('open'), action: () => file?.select?.() },
-    { id: 'preview', label: 'PREVIEW', icon: '[=]', shortcut: shortcuts.getShortcut('preview'), action: () => file?.preview?.() },
+    { id: 'open', label: 'OPEN', icon: 'arrow-right-bold', shortcut: shortcuts.getShortcut('open'), action: () => file?.select?.() },
+    { id: 'preview', label: 'PREVIEW', icon: 'eye-outline', shortcut: shortcuts.getShortcut('preview'), action: () => file?.preview?.() },
     { id: 'div0', label: '', divider: true },
   ]
   const typeActions: Record<string, any[]> = {
     image: [
-      { id: 'rotate_cw', label: 'ROTATE CW', icon: '[R]', shortcut: shortcuts.getShortcut('rotate_cw'), action: () => file?.rotate?.('cw') },
-      { id: 'rotate_ccw', label: 'ROTATE CCW', icon: '[L]', shortcut: shortcuts.getShortcut('rotate_ccw'), action: () => file?.rotate?.('ccw') },
+      { id: 'rotate_cw', label: 'ROTATE CW', icon: 'rename-outline', shortcut: shortcuts.getShortcut('rotate_cw'), action: () => file?.rotate?.('cw') },
+      { id: 'rotate_ccw', label: 'ROTATE CCW', icon: 'rotate-left', shortcut: shortcuts.getShortcut('rotate_ccw'), action: () => file?.rotate?.('ccw') },
       { id: 'div_i1', label: '', divider: true },
     ],
     audio: [
-      { id: 'play', label: 'PLAY', icon: '[P]', action: () => file?.play?.() },
+      { id: 'play', label: 'PLAY', icon: 'play-outline', action: () => file?.play?.() },
       { id: 'div_a1', label: '', divider: true },
     ],
     video: [
-      { id: 'play', label: 'PLAY', icon: '[P]', action: () => file?.play?.() },
+      { id: 'play', label: 'PLAY', icon: 'play-outline', action: () => file?.play?.() },
       { id: 'div_v1', label: '', divider: true },
     ],
     archive: [
-      { id: 'extract', label: 'EXTRACT HERE', icon: '[X]', action: () => file?.extract?.() },
+      { id: 'extract', label: 'EXTRACT HERE', icon: 'close-outline', action: () => file?.extract?.() },
       { id: 'div_ar1', label: '', divider: true },
     ],
     folder: [
-      { id: 'open_in_new', label: 'OPEN IN NEW TAB', icon: '[T]', action: () => file?.openNew?.() },
+      { id: 'open_in_new', label: 'OPEN IN NEW TAB', icon: 'open-in-new', action: () => file?.openNew?.() },
       { id: 'div_f1', label: '', divider: true },
-      { id: 'paste_into', label: 'PASTE INTO', icon: '[P]', action: () => file?.pasteInto?.() },
+      { id: 'paste_into', label: 'PASTE INTO', icon: 'content-paste', action: () => file?.pasteInto?.() },
       { id: 'div_f2', label: '', divider: true },
     ],
   }
   const ft = file?.fileType || 'file'
   const typeSpecific = typeActions[ft] || []
-  const download = { id: 'download', label: 'DOWNLOAD', icon: '[v]', shortcut: shortcuts.getShortcut('download'), action: () => file?.download?.() }
-  const star = { id: 'star', label: file?.isStarred ? 'UNSTAR' : 'STAR', icon: '[*]', shortcut: shortcuts.getShortcut('star_file'), action: () => file?.star?.() }
-  const rename = { id: 'rename', label: 'RENAME', icon: '[R]', shortcut: shortcuts.getShortcut('rename'), action: () => file?.rename?.() }
-  const duplicate = { id: 'duplicate', label: 'DUPLICATE', icon: '[D]', shortcut: shortcuts.getShortcut('duplicate'), action: () => file?.duplicate?.() }
-  const compress = { id: 'compress', label: 'COMPRESS', icon: '[Z]', shortcut: shortcuts.getShortcut('compress'), action: () => file?.compress?.() }
-  const encrypt = { id: 'encrypt', label: 'ENCRYPT', icon: '[#]', shortcut: shortcuts.getShortcut('encrypt'), action: () => file?.encrypt?.() }
-  const decrypt = { id: 'decrypt', label: 'DECRYPT', icon: '[@]', action: () => file?.decrypt?.() }
-  const decompress = { id: 'decompress', label: 'DECOMPRESS', icon: '[$]', action: () => file?.decompress?.() }
-  const permissions = { id: 'permissions', label: 'PERMISSIONS', icon: '[!]', shortcut: shortcuts.getShortcut('show_permissions'), action: () => file?.permissions?.() }
-  const properties = { id: 'properties', label: 'PROPERTIES', icon: '[i]', shortcut: shortcuts.getShortcut('file_properties'), action: () => file?.properties?.() }
-  const deleteAction = { id: 'delete', label: 'DELETE', icon: '[X]', shortcut: shortcuts.getShortcut('delete'), action: () => file?.delete?.() }
+  const download = { id: 'download', label: 'DOWNLOAD', icon: 'download-outline', shortcut: shortcuts.getShortcut('download'), action: () => file?.download?.() }
+  const star = { id: 'star', label: file?.isStarred ? 'UNSTAR' : 'STAR', icon: 'star-outline', shortcut: shortcuts.getShortcut('star_file'), action: () => file?.star?.() }
+  const rename = { id: 'rename', label: 'RENAME', icon: 'rename-outline', shortcut: shortcuts.getShortcut('rename'), action: () => file?.rename?.() }
+  const duplicate = { id: 'duplicate', label: 'DUPLICATE', icon: 'file-document-outline', shortcut: shortcuts.getShortcut('duplicate'), action: () => file?.duplicate?.() }
+  const compress = { id: 'compress', label: 'COMPRESS', icon: 'zip-box-outline', shortcut: shortcuts.getShortcut('compress'), action: () => file?.compress?.() }
+  const encrypt = { id: 'encrypt', label: 'ENCRYPT', icon: 'lock-outline', shortcut: shortcuts.getShortcut('encrypt'), action: () => file?.encrypt?.() }
+  const decrypt = { id: 'decrypt', label: 'DECRYPT', icon: 'cog-outline', action: () => file?.decrypt?.() }
+  const decompress = { id: 'decompress', label: 'DECOMPRESS', icon: 'harddisk', action: () => file?.decompress?.() }
+  const permissions = { id: 'permissions', label: 'PERMISSIONS', icon: 'account-group-outline', shortcut: shortcuts.getShortcut('show_permissions'), action: () => file?.permissions?.() }
+  const properties = { id: 'properties', label: 'PROPERTIES', icon: 'information-outline', shortcut: shortcuts.getShortcut('file_properties'), action: () => file?.properties?.() }
+  const deleteAction = { id: 'delete', label: 'DELETE', icon: 'close-outline', shortcut: shortcuts.getShortcut('delete'), action: () => file?.delete?.() }
   const transformDivider = { id: 'div_t1', label: '', divider: true }
   const metaDivider = { id: 'div_m1', label: '', divider: true }
   const dangerDivider = { id: 'div_d1', label: '', divider: true }
@@ -210,140 +210,140 @@ function fileTypeContextMenu(file: any) {
 }
 
 ctx.registerContext('file_grid_item', [
-  { id: 'open', label: 'OPEN', icon: '[>]', shortcut: shortcuts.getShortcut('open'), action: (d) => d?.select?.() },
-  { id: 'preview', label: 'PREVIEW', icon: '[=]', shortcut: shortcuts.getShortcut('preview'), action: (d) => d?.preview?.() },
+  { id: 'open', label: 'OPEN', icon: 'arrow-right-bold', shortcut: shortcuts.getShortcut('open'), action: (d) => d?.select?.() },
+  { id: 'preview', label: 'PREVIEW', icon: 'eye-outline', shortcut: shortcuts.getShortcut('preview'), action: (d) => d?.preview?.() },
   { id: 'div0', label: '', divider: true },
-  { id: 'download', label: 'DOWNLOAD', icon: '[v]', shortcut: shortcuts.getShortcut('download'), action: (d) => d?.download?.() },
-  { id: 'star', label: 'STAR', icon: '[*]', shortcut: shortcuts.getShortcut('star_file'), action: (d) => d?.star?.() },
-  { id: 'rename', label: 'RENAME', icon: '[R]', shortcut: shortcuts.getShortcut('rename'), action: (d) => d?.rename?.() },
-  { id: 'duplicate', label: 'DUPLICATE', icon: '[D]', shortcut: shortcuts.getShortcut('duplicate'), action: (d) => d?.duplicate?.() },
+  { id: 'download', label: 'DOWNLOAD', icon: 'download-outline', shortcut: shortcuts.getShortcut('download'), action: (d) => d?.download?.() },
+  { id: 'star', label: 'STAR', icon: 'star-outline', shortcut: shortcuts.getShortcut('star_file'), action: (d) => d?.star?.() },
+  { id: 'rename', label: 'RENAME', icon: 'rename-outline', shortcut: shortcuts.getShortcut('rename'), action: (d) => d?.rename?.() },
+  { id: 'duplicate', label: 'DUPLICATE', icon: 'file-document-outline', shortcut: shortcuts.getShortcut('duplicate'), action: (d) => d?.duplicate?.() },
   { id: 'div1', label: '', divider: true },
-  { id: 'compress', label: 'COMPRESS', icon: '[Z]', shortcut: shortcuts.getShortcut('compress'), action: (d) => d?.compress?.() },
-  { id: 'encrypt', label: 'ENCRYPT', icon: '[#]', shortcut: shortcuts.getShortcut('encrypt'), action: (d) => d?.encrypt?.() },
-  { id: 'decrypt', label: 'DECRYPT', icon: '[@]', action: (d) => d?.decrypt?.() },
+  { id: 'compress', label: 'COMPRESS', icon: 'zip-box-outline', shortcut: shortcuts.getShortcut('compress'), action: (d) => d?.compress?.() },
+  { id: 'encrypt', label: 'ENCRYPT', icon: 'lock-outline', shortcut: shortcuts.getShortcut('encrypt'), action: (d) => d?.encrypt?.() },
+  { id: 'decrypt', label: 'DECRYPT', icon: 'cog-outline', action: (d) => d?.decrypt?.() },
   { id: 'div2', label: '', divider: true },
-  { id: 'permissions', label: 'PERMISSIONS', icon: '[!]', shortcut: shortcuts.getShortcut('show_permissions'), action: (d) => d?.permissions?.() },
-  { id: 'properties', label: 'PROPERTIES', icon: '[i]', shortcut: shortcuts.getShortcut('file_properties'), action: (d) => d?.properties?.() },
+  { id: 'permissions', label: 'PERMISSIONS', icon: 'account-group-outline', shortcut: shortcuts.getShortcut('show_permissions'), action: (d) => d?.permissions?.() },
+  { id: 'properties', label: 'PROPERTIES', icon: 'information-outline', shortcut: shortcuts.getShortcut('file_properties'), action: (d) => d?.properties?.() },
   { id: 'div3', label: '', divider: true },
-  { id: 'delete', label: 'DELETE', icon: '[X]', shortcut: shortcuts.getShortcut('delete'), action: (d) => d?.delete?.() },
+  { id: 'delete', label: 'DELETE', icon: 'close-outline', shortcut: shortcuts.getShortcut('delete'), action: (d) => d?.delete?.() },
 ])
 
 ctx.registerContext('file_grid_bg', [
-  { id: 'new_folder', label: 'NEW FOLDER', icon: '[+]', shortcut: shortcuts.getShortcut('new_folder'), action: () => { store.createFolderPromptOpen = true } },
-  { id: 'paste', label: 'PASTE', icon: '[P]', shortcut: shortcuts.getShortcut('paste'), action: () => {} },
+  { id: 'new_folder', label: 'NEW FOLDER', icon: 'plus', shortcut: shortcuts.getShortcut('new_folder'), action: () => { store.createFolderPromptOpen = true } },
+  { id: 'paste', label: 'PASTE', icon: 'content-paste', shortcut: shortcuts.getShortcut('paste'), action: () => {} },
   { id: 'div1', label: '', divider: true },
   {
-    id: 'sort', label: 'SORT BY', icon: '[S]', submenu: [
-      { id: 'sort_name', label: 'NAME', icon: '[N]', action: () => { (store as any).sortBy = 'name' } },
-      { id: 'sort_date', label: 'DATE', icon: '[D]', action: () => { (store as any).sortBy = 'date' } },
-      { id: 'sort_size', label: 'SIZE', icon: '[S]', action: () => { (store as any).sortBy = 'size' } },
-      { id: 'sort_type', label: 'TYPE', icon: '[T]', action: () => { (store as any).sortBy = 'type' } },
+    id: 'sort', label: 'SORT BY', icon: 'magnify', submenu: [
+      { id: 'sort_name', label: 'NAME', icon: 'sort-alphabetical-ascending', action: () => { (store as any).sortBy = 'name' } },
+      { id: 'sort_date', label: 'DATE', icon: 'calendar', action: () => { (store as any).sortBy = 'date' } },
+      { id: 'sort_size', label: 'SIZE', icon: 'file-settings-outline', action: () => { (store as any).sortBy = 'size' } },
+      { id: 'sort_type', label: 'TYPE', icon: 'file-document-outline', action: () => { (store as any).sortBy = 'type' } },
     ]
   },
   {
-    id: 'view', label: 'VIEW MODE', icon: '[V]', submenu: [
-      { id: 'view_grid', label: 'GRID', icon: '[#]', action: () => { store.currentPanel = 'files'; store.viewMode = 'grid' } },
-      { id: 'view_list', label: 'LIST', icon: '[@]', action: () => { store.currentPanel = 'files'; store.viewMode = 'list' } },
-      { id: 'view_masonry', label: 'MASONRY', icon: '[*]', action: () => { store.currentPanel = 'files'; store.viewMode = 'masonry' } },
+    id: 'view', label: 'VIEW MODE', icon: 'view-grid-outline', submenu: [
+      { id: 'view_grid', label: 'GRID', icon: 'view-grid-outline', action: () => { store.currentPanel = 'files'; store.viewMode = 'grid' } },
+      { id: 'view_list', label: 'LIST', icon: 'cog-outline', action: () => { store.currentPanel = 'files'; store.viewMode = 'list' } },
+      { id: 'view_masonry', label: 'MASONRY', icon: 'star-outline', action: () => { store.currentPanel = 'files'; store.viewMode = 'masonry' } },
     ]
   },
   { id: 'div2', label: '', divider: true },
-  { id: 'select_all', label: 'SELECT ALL', icon: '[A]', shortcut: shortcuts.getShortcut('select_all'), action: () => { store.selectedFileIds = [...store.files.map(f => f.id)] } },
-  { id: 'deselect', label: 'DESELECT', icon: '[C]', shortcut: shortcuts.getShortcut('deselect'), action: () => { store.selectedFileIds = [] } },
+  { id: 'select_all', label: 'SELECT ALL', icon: 'select-all', shortcut: shortcuts.getShortcut('select_all'), action: () => { store.selectedFileIds = [...store.files.map(f => f.id)] } },
+  { id: 'deselect', label: 'DESELECT', icon: 'content-copy', shortcut: shortcuts.getShortcut('deselect'), action: () => { store.selectedFileIds = [] } },
   { id: 'div3', label: '', divider: true },
   {
-    id: 'go_to', label: 'GO TO', icon: '[G]', submenu: [
-      { id: 'go_home', label: 'HOME', icon: '[H]', action: () => { store.currentPanel = 'landing' } },
-      { id: 'go_trash', label: 'TRASH', icon: '[T]', action: () => { wm.open('trash'); store.fetchTrashItems() } },
-      { id: 'go_recent', label: 'RECENT', icon: '[R]', action: () => { wm.open('recent') } },
-      { id: 'go_favorites', label: 'FAVORITES', icon: '[*]', action: () => { wm.open('favorites') } },
+    id: 'go_to', label: 'GO TO', icon: 'arrow-right-bold', submenu: [
+      { id: 'go_home', label: 'HOME', icon: 'home-outline', action: () => { store.currentPanel = 'landing' } },
+      { id: 'go_trash', label: 'TRASH', icon: 'delete-outline', action: () => { wm.open('trash'); store.fetchTrashItems() } },
+      { id: 'go_recent', label: 'RECENT', icon: 'rename-outline', action: () => { wm.open('recent') } },
+      { id: 'go_favorites', label: 'FAVORITES', icon: 'star-outline', action: () => { wm.open('favorites') } },
     ]
   },
   { id: 'div4', label: '', divider: true },
-  { id: 'refresh', label: 'REFRESH', icon: '[R]', shortcut: shortcuts.getShortcut('refresh'), action: () => store.fetchFiles() },
+  { id: 'refresh', label: 'REFRESH', icon: 'rename-outline', shortcut: shortcuts.getShortcut('refresh'), action: () => store.fetchFiles() },
 ])
 
 ctx.registerContext('sidebar_node', [
-  { id: 'open', label: 'OPEN', icon: '[>]', action: (d) => d?.select?.() },
-  { id: 'open_new_tab', label: 'OPEN IN NEW TAB', icon: '[T]', action: (d) => d?.openNewTab?.() },
+  { id: 'open', label: 'OPEN', icon: 'arrow-right-bold', action: (d) => d?.select?.() },
+  { id: 'open_new_tab', label: 'OPEN IN NEW TAB', icon: 'open-in-new', action: (d) => d?.openNewTab?.() },
   { id: 'div1', label: '', divider: true },
-  { id: 'new_subfolder', label: 'NEW SUBFOLDER', icon: '[+]', action: (d) => d?.newSubfolder?.() },
-  { id: 'rename', label: 'RENAME', icon: '[R]', action: (d) => d?.rename?.() },
-  { id: 'duplicate', label: 'DUPLICATE', icon: '[D]', action: (d) => d?.duplicate?.() },
+  { id: 'new_subfolder', label: 'NEW SUBFOLDER', icon: 'plus', action: (d) => d?.newSubfolder?.() },
+  { id: 'rename', label: 'RENAME', icon: 'rename-outline', action: (d) => d?.rename?.() },
+  { id: 'duplicate', label: 'DUPLICATE', icon: 'file-document-outline', action: (d) => d?.duplicate?.() },
   { id: 'div2', label: '', divider: true },
-  { id: 'paste_into', label: 'PASTE INTO', icon: '[P]', action: (d) => d?.pasteInto?.() },
+  { id: 'paste_into', label: 'PASTE INTO', icon: 'content-paste', action: (d) => d?.pasteInto?.() },
   { id: 'div3', label: '', divider: true },
-  { id: 'expand', label: 'EXPAND ALL', icon: '[+]', action: (d) => d?.expandAll?.() },
-  { id: 'collapse', label: 'COLLAPSE ALL', icon: '[-]', action: (d) => d?.collapseAll?.() },
+  { id: 'expand', label: 'EXPAND ALL', icon: 'plus', action: (d) => d?.expandAll?.() },
+  { id: 'collapse', label: 'COLLAPSE ALL', icon: 'minus', action: (d) => d?.collapseAll?.() },
   { id: 'div4', label: '', divider: true },
-  { id: 'delete', label: 'DELETE', icon: '[X]', action: (d) => d?.delete?.() },
+  { id: 'delete', label: 'DELETE', icon: 'close-outline', action: (d) => d?.delete?.() },
 ])
 
 ctx.registerContext('sidebar_bg', [
-  { id: 'new_folder', label: 'NEW FOLDER', icon: '[+]', shortcut: shortcuts.getShortcut('new_folder'), action: () => { store.createFolderPromptOpen = true } },
-  { id: 'refresh', label: 'REFRESH', icon: '[R]', shortcut: shortcuts.getShortcut('refresh'), action: () => store.fetchFiles() },
+  { id: 'new_folder', label: 'NEW FOLDER', icon: 'plus', shortcut: shortcuts.getShortcut('new_folder'), action: () => { store.createFolderPromptOpen = true } },
+  { id: 'refresh', label: 'REFRESH', icon: 'rename-outline', shortcut: shortcuts.getShortcut('refresh'), action: () => store.fetchFiles() },
   { id: 'div1', label: '', divider: true },
-  { id: 'expand', label: 'EXPAND ALL', icon: '[+]', action: () => {} },
-  { id: 'collapse', label: 'COLLAPSE ALL', icon: '[-]', action: () => {} },
+  { id: 'expand', label: 'EXPAND ALL', icon: 'plus', action: () => {} },
+  { id: 'collapse', label: 'COLLAPSE ALL', icon: 'minus', action: () => {} },
   { id: 'div2', label: '', divider: true },
-  { id: 'show_trash', label: 'SHOW TRASH', icon: '[T]', action: () => { wm.open('trash'); store.fetchTrashItems() } },
-  { id: 'show_storage', label: 'STORAGE DASHBOARD', icon: '[@]', action: () => { wm.open('storage') } },
+  { id: 'show_trash', label: 'SHOW TRASH', icon: 'delete-outline', action: () => { wm.open('trash'); store.fetchTrashItems() } },
+  { id: 'show_storage', label: 'STORAGE DASHBOARD', icon: 'cog-outline', action: () => { wm.open('storage') } },
 ])
 
 ctx.registerContext('search_result', [
-  { id: 'open', label: 'OPEN', icon: '[>]', action: (d) => d?.select?.() },
-  { id: 'preview', label: 'PREVIEW', icon: '[=]', action: (d) => d?.preview?.() },
-  { id: 'download', label: 'DOWNLOAD', icon: '[v]', action: (d) => d?.download?.() },
-  { id: 'star', label: 'STAR', icon: '[*]', action: (d) => d?.star?.() },
+  { id: 'open', label: 'OPEN', icon: 'arrow-right-bold', action: (d) => d?.select?.() },
+  { id: 'preview', label: 'PREVIEW', icon: 'eye-outline', action: (d) => d?.preview?.() },
+  { id: 'download', label: 'DOWNLOAD', icon: 'download-outline', action: (d) => d?.download?.() },
+  { id: 'star', label: 'STAR', icon: 'star-outline', action: (d) => d?.star?.() },
   { id: 'div1', label: '', divider: true },
-  { id: 'copy_path', label: 'COPY PATH', icon: '[C]', action: (d) => d?.copyPath?.() },
-  { id: 'show_in_folder', label: 'SHOW IN FOLDER', icon: '[F]', action: (d) => d?.showInFolder?.() },
+  { id: 'copy_path', label: 'COPY PATH', icon: 'content-copy', action: (d) => d?.copyPath?.() },
+  { id: 'show_in_folder', label: 'SHOW IN FOLDER', icon: 'folder-open-outline', action: (d) => d?.showInFolder?.() },
   { id: 'div2', label: '', divider: true },
-  { id: 'properties', label: 'PROPERTIES', icon: '[i]', action: (d) => d?.properties?.() },
+  { id: 'properties', label: 'PROPERTIES', icon: 'information-outline', action: (d) => d?.properties?.() },
 ])
 
 ctx.registerContext('collection_item', [
-  { id: 'open', label: 'OPEN COLLECTION', icon: '[>]', action: (d) => d?.open?.() },
-  { id: 'rename', label: 'RENAME', icon: '[R]', action: (d) => d?.rename?.() },
+  { id: 'open', label: 'OPEN COLLECTION', icon: 'arrow-right-bold', action: (d) => d?.open?.() },
+  { id: 'rename', label: 'RENAME', icon: 'rename-outline', action: (d) => d?.rename?.() },
   { id: 'div1', label: '', divider: true },
-  { id: 'add_files', label: 'ADD FILES', icon: '[+]', action: (d) => d?.addFiles?.() },
-  { id: 'remove_files', label: 'REMOVE FILES', icon: '[-]', action: (d) => d?.removeFiles?.() },
+  { id: 'add_files', label: 'ADD FILES', icon: 'plus', action: (d) => d?.addFiles?.() },
+  { id: 'remove_files', label: 'REMOVE FILES', icon: 'minus', action: (d) => d?.removeFiles?.() },
   { id: 'div2', label: '', divider: true },
-  { id: 'share', label: 'SHARE', icon: '[@]', action: (d) => d?.share?.() },
-  { id: 'delete', label: 'DELETE COLLECTION', icon: '[X]', action: (d) => d?.delete?.() },
+  { id: 'share', label: 'SHARE', icon: 'cog-outline', action: (d) => d?.share?.() },
+  { id: 'delete', label: 'DELETE COLLECTION', icon: 'close-outline', action: (d) => d?.delete?.() },
 ])
 
 ctx.registerContext('face_item', [
-  { id: 'rename', label: 'RENAME', icon: '[R]', action: (d) => d?.rename?.() },
-  { id: 'merge', label: 'MERGE WITH...', icon: '[+]', action: (d) => d?.merge?.() },
+  { id: 'rename', label: 'RENAME', icon: 'rename-outline', action: (d) => d?.rename?.() },
+  { id: 'merge', label: 'MERGE WITH...', icon: 'plus', action: (d) => d?.merge?.() },
   { id: 'div1', label: '', divider: true },
-  { id: 'show_files', label: 'SHOW FILES', icon: '[F]', action: (d) => d?.showFiles?.() },
-  { id: 'delete', label: 'DELETE GROUP', icon: '[X]', action: (d) => d?.delete?.() },
+  { id: 'show_files', label: 'SHOW FILES', icon: 'folder-open-outline', action: (d) => d?.showFiles?.() },
+  { id: 'delete', label: 'DELETE GROUP', icon: 'close-outline', action: (d) => d?.delete?.() },
 ])
 
 ctx.registerContext('trash_item', [
-  { id: 'restore', label: 'RESTORE', icon: '[R]', action: (d) => d?.restore?.() },
+  { id: 'restore', label: 'RESTORE', icon: 'rename-outline', action: (d) => d?.restore?.() },
   { id: 'div1', label: '', divider: true },
-  { id: 'delete_perm', label: 'DELETE PERMANENTLY', icon: '[X]', action: (d) => d?.deletePermanently?.() },
+  { id: 'delete_perm', label: 'DELETE PERMANENTLY', icon: 'close-outline', action: (d) => d?.deletePermanently?.() },
 ])
 
 ctx.registerContext('activity_item', [
-  { id: 'copy_details', label: 'COPY DETAILS', icon: '[C]', action: (d) => d?.copyDetails?.() },
-  { id: 'show_file', label: 'SHOW FILE', icon: '[F]', action: (d) => d?.showFile?.() },
+  { id: 'copy_details', label: 'COPY DETAILS', icon: 'content-copy', action: (d) => d?.copyDetails?.() },
+  { id: 'show_file', label: 'SHOW FILE', icon: 'folder-open-outline', action: (d) => d?.showFile?.() },
 ])
 
 ctx.registerContext('favorite_item', [
-  { id: 'open', label: 'OPEN', icon: '[>]', action: (d) => d?.open?.() },
-  { id: 'unstar', label: 'UNSTAR', icon: '[*]', action: (d) => d?.unstar?.() },
+  { id: 'open', label: 'OPEN', icon: 'arrow-right-bold', action: (d) => d?.open?.() },
+  { id: 'unstar', label: 'UNSTAR', icon: 'star-outline', action: (d) => d?.unstar?.() },
   { id: 'div1', label: '', divider: true },
-  { id: 'show_in_folder', label: 'SHOW IN FOLDER', icon: '[F]', action: (d) => d?.showInFolder?.() },
+  { id: 'show_in_folder', label: 'SHOW IN FOLDER', icon: 'folder-open-outline', action: (d) => d?.showInFolder?.() },
 ])
 
 ctx.registerContext('recent_item', [
-  { id: 'open', label: 'OPEN', icon: '[>]', action: (d) => d?.open?.() },
-  { id: 'star', label: 'STAR', icon: '[*]', action: (d) => d?.star?.() },
+  { id: 'open', label: 'OPEN', icon: 'arrow-right-bold', action: (d) => d?.open?.() },
+  { id: 'star', label: 'STAR', icon: 'star-outline', action: (d) => d?.star?.() },
   { id: 'div1', label: '', divider: true },
-  { id: 'show_in_folder', label: 'SHOW IN FOLDER', icon: '[F]', action: (d) => d?.showInFolder?.() },
+  { id: 'show_in_folder', label: 'SHOW IN FOLDER', icon: 'folder-open-outline', action: (d) => d?.showInFolder?.() },
 ])
 
 const pathHistory = ref<string[]>([])
@@ -423,7 +423,7 @@ onMounted(() => {
       </DesktopShell>
 
       <div v-if="store.lastError" class="error-banner" @click="store.clearError()">
-      <span class="error-icon">[!]</span>
+      <Icon icon="mdi:alert-circle-outline" width="14" height="14" class="error-icon" />
       <span class="error-text">{{ store.lastError }}</span>
       <span class="error-dismiss">X</span>
     </div>

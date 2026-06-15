@@ -73,6 +73,14 @@ img, canvas {
   --scrollbar-track: #0a0a0a;
   --scrollbar-thumb: #2a2a2a;
   --scrollbar-thumb-hover: #3a3a3a;
+
+  --glass-bg: rgba(10, 10, 10, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur: 20px;
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --liquid-start: rgba(0, 255, 65, 0.12);
+  --liquid-mid: rgba(0, 200, 255, 0.08);
+  --liquid-end: rgba(150, 0, 255, 0.06);
 }
 
 ::selection {
@@ -352,4 +360,78 @@ img, canvas {
 @keyframes bw-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
+}
+
+@keyframes liquid-shift {
+  0% { background-position: 0% 50%; }
+  25% { background-position: 100% 0%; }
+  50% { background-position: 100% 100%; }
+  75% { background-position: 0% 100%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes liquid-flow {
+  0% { transform: translateX(-100%) rotate(0deg); opacity: 0.4; }
+  50% { transform: translateX(100%) rotate(180deg); opacity: 0.6; }
+  100% { transform: translateX(300%) rotate(360deg); opacity: 0.4; }
+}
+
+@keyframes glass-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-liquid {
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  overflow: hidden;
+}
+
+.glass-liquid::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    var(--liquid-start) 0%,
+    var(--liquid-mid) 25%,
+    transparent 50%,
+    var(--liquid-mid) 75%,
+    var(--liquid-end) 100%
+  );
+  background-size: 400% 400%;
+  animation: liquid-shift 8s ease-in-out infinite;
+  mix-blend-mode: screen;
+}
+
+.glass-liquid > * {
+  position: relative;
+  z-index: 1;
+}
+
+.section-spinner {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-right: 6px;
+  opacity: 0.6;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }

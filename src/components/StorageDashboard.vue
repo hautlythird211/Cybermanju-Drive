@@ -8,7 +8,7 @@
     </div>
 
     <div class="section">
-      <h3 class="section-title">[SUMMARY] FILE COUNTS</h3>
+      <h3 class="section-title"><Icon icon="svg-spinners:bars-scale" width="12" height="12" class="section-spinner" /> [SUMMARY] FILE COUNTS</h3>
       <div class="stats-grid">
         <div class="stat-card">
           <span class="stat-value">{{ store.files.length }}</span>
@@ -38,7 +38,7 @@
     </div>
 
     <div class="section">
-      <h3 class="section-title">[SIZE] TOTAL BY TYPE</h3>
+      <h3 class="section-title"><Icon icon="svg-spinners:bars-fade" width="12" height="12" class="section-spinner" /> [SIZE] TOTAL BY TYPE</h3>
       <div class="type-breakdown">
         <div v-for="entry in byType" :key="entry.label" class="type-row">
           <span class="type-label">{{ entry.label }}</span>
@@ -62,37 +62,54 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 
 const store = useAppStore()
+const wasmQuota = ref<{ usedBytes: number; fileCount: number; folderCount: number } | null>(null)
+const wasmFiles = ref<any[]>([])
 
+onMounted(async () => {
+  try {
+    const { drive, isWasmReady, initWasm } = await import('@/wasm')
+    await initWasm()
+    if (isWasmReady()) {
+      wasmQuota.value = await drive.getDriveQuota()
+      wasmFiles.value = await drive.getAllDriveFiles()
+    }
+  } catch { /* WASM not available, use store data */ }
+})
+
+const files = computed(() => wasmFiles.value.length > 0 ? wasmFiles.value : store.files)
 const trashCount = computed(() => store.trashItems.length)
 
-const totalSize = computed(() => store.files.reduce((s, f) => s + f.sizeBytes, 0))
+const totalSize = computed(() =>
+  files.value.reduce((s: number, f: any) => s + (f.sizeBytes || f.size || 0), 0)
+)
 
 const totalSizeFormatted = computed(() => formatSize(totalSize.value))
 
 const largestFile = computed(() => {
-  if (store.files.length === 0) return '--'
-  const biggest = [...store.files].sort((a, b) => b.sizeBytes - a.sizeBytes)[0]
-  return `${biggest.name} (${formatSize(biggest.sizeBytes)})`
+  if (files.value.length === 0) return '--'
+  const biggest = [...files.value].sort((a: any, b: any) => (b.sizeBytes || b.size || 0) - (a.sizeBytes || a.size || 0))[0]
+  return `${biggest.name} (${formatSize(biggest.sizeBytes || biggest.size || 0)})`
 })
 
 const avgSizeFormatted = computed(() => {
-  if (store.files.length === 0) return '--'
-  return formatSize(Math.round(totalSize.value / store.files.length))
+  if (files.value.length === 0) return '--'
+  return formatSize(Math.round(totalSize.value / files.value.length))
 })
 
-const gpsCount = computed(() => store.files.filter(f => f.gpsLat).length)
-const faceCount = computed(() => store.files.filter(f => f.faceGroupIds && f.faceGroupIds.length > 0).length)
+const gpsCount = computed(() => files.value.filter((f: any) => f.gpsLat || f.tags?.some((t: string) => t.startsWith('geo:'))).length)
+const faceCount = computed(() => files.value.filter((f: any) => f.faceGroupIds?.length > 0).length)
 
 const byType = computed(() => {
   const groups: Record<string, { totalBytes: number; count: number }> = {}
-  for (const f of store.files) {
+  for (const f of files.value) {
     const type = f.mimeType?.split('/')[0] || f.fileType || 'unknown'
     if (!groups[type]) groups[type] = { totalBytes: 0, count: 0 }
-    groups[type].totalBytes += f.sizeBytes
+    groups[type].totalBytes += f.sizeBytes || f.size || 0
     groups[type].count++
   }
   const total = totalSize.value

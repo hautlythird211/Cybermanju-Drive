@@ -49,6 +49,25 @@
               {{ isRegister ? '[REGISTER]' : '[LOGIN]' }}
             </button>
           </div>
+
+          <div class="oauth-divider">
+            <span class="oauth-divider-text">OR</span>
+          </div>
+
+          <div class="oauth-buttons">
+            <button class="bw-btn oauth-btn" @click="handleOAuth('googleDrive')">
+              [GOOGLE DRIVE]
+            </button>
+            <button class="bw-btn oauth-btn" @click="handleOAuth('googlePhotos')">
+              [GOOGLE PHOTOS]
+            </button>
+            <button class="bw-btn oauth-btn" @click="handleOAuth('github')">
+              [GITHUB]
+            </button>
+            <button class="bw-btn oauth-btn" @click="handleOAuth('gitlab')">
+              [GITLAB]
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -61,6 +80,7 @@ import { useAppStore } from '@/stores/app'
 import { invoke } from '@/composables/useTauri'
 import { useNotifications } from '@/composables/useNotifications'
 import { useFocusTrap } from '@/composables/useFocusTrap'
+import type { OAuthProvider } from '@/wasm'
 
 const store = useAppStore()
 const { notify } = useNotifications()
@@ -93,6 +113,7 @@ async function handleLogin() {
     store.currentUser = result
     store.showLoginPopup = false
     notify('success', `LOGGED IN AS ${result.username}`)
+    store.authToken = result.token
     username.value = ''
     password.value = ''
   } catch (e) {
@@ -118,6 +139,58 @@ async function handleRegister() {
     displayName.value = ''
   } catch (e) {
     errorMsg.value = `REGISTRATION FAILED: ${e instanceof Error ? e.message : String(e)}`
+  }
+}
+
+async function handleOAuth(provider: OAuthProvider) {
+  errorMsg.value = ''
+  try {
+    const { oauth, initWasm } = await import('@/wasm')
+    await initWasm()
+
+    // Try to load existing token first
+    const existingToken = oauth.loadTokenFromStorage(provider)
+    if (existingToken) {
+      const validToken = await oauth.getValidToken(existingToken)
+      oauth.saveTokenToStorage(validToken)
+
+      // Create/update account in IndexedDB
+      const data = await import('@/wasm/data')
+      const account = await data.upsertOAuthAccount(provider, validToken)
+
+      store.currentUser = {
+        userId: account.id,
+        username: account.name,
+        role: 'user',
+        displayName: account.name,
+        token: validToken.accessToken,
+      }
+      store.authToken = validToken.accessToken
+      store.showLoginPopup = false
+      notify('success', `AUTHENTICATED WITH ${provider.toUpperCase()}`)
+      return
+    }
+
+    const token = await oauth.authenticateWithPopup(provider)
+    oauth.saveTokenToStorage(token)
+
+    // Create/update account in IndexedDB from OAuth token
+    const data = await import('@/wasm/data')
+    const account = await data.upsertOAuthAccount(provider, token)
+
+    store.currentUser = {
+      userId: account.id,
+      username: account.name,
+      role: 'user',
+      displayName: account.name,
+      token: token.accessToken,
+    }
+    store.authToken = token.accessToken
+    store.showLoginPopup = false
+    await store.fetchAccounts()
+    notify('success', `AUTHENTICATED WITH ${provider.toUpperCase()}`)
+  } catch (e) {
+    errorMsg.value = `OAUTH FAILED: ${e instanceof Error ? e.message : String(e)}`
   }
 }
 </script>
@@ -255,4 +328,44 @@ async function handleRegister() {
 }
 
 .text-muted { color: rgba(0, 0, 0, 0.5) !important; }
+
+.oauth-divider {
+  display: flex;
+  align-items: center;
+  margin: 12px 0 8px;
+  gap: 8px;
+}
+
+.oauth-divider::before,
+.oauth-divider::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid #000000;
+}
+
+.oauth-divider-text {
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.oauth-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.oauth-btn {
+  font-size: 9px;
+  padding: 4px 6px;
+  text-align: center;
+  background: #000000;
+  color: #FFFFFF;
+  border: 1px solid #000000;
+}
+
+.oauth-btn:hover {
+  background: #FFFFFF;
+  color: #000000;
+}
 </style>

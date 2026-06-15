@@ -13,22 +13,23 @@ pub fn decompress_lz4(data: &[u8]) -> Result<Vec<u8>, JsValue> {
 
 #[wasm_bindgen]
 pub fn compress_brotli(data: &[u8], quality: u32) -> Vec<u8> {
+    let mut output = Vec::new();
+    let mut writer = brotli::CompressorWriter::new(&mut output, 4096, quality, 22);
     use std::io::Write;
-    let mut compressor = brotli::CompressorWriter::new(Vec::new(), 4096, quality, 22);
-    compressor.write_all(data).expect("Brotli write failed");
-    compressor.into_inner()
+    writer.write_all(data).expect("Brotli write failed");
+    drop(writer);
+    output
 }
 
 #[wasm_bindgen]
 pub fn decompress_brotli(data: &[u8]) -> Result<Vec<u8>, JsValue> {
     use std::io::Read;
-    let mut decompressor = brotli::DecompressorWriter::new(Vec::new(), 4096);
-    decompressor
-        .write_all(data)
+    let mut output = Vec::new();
+    let mut reader = brotli::Decompressor::new(data, 4096);
+    reader
+        .read_to_end(&mut output)
         .map_err(|e| JsValue::from_str(&format!("Brotli decompression failed: {}", e)))?;
-    decompressor
-        .into_inner()
-        .map_err(|e| JsValue::from_str(&format!("Brotli finalize failed: {}", e)))
+    Ok(output)
 }
 
 #[wasm_bindgen]

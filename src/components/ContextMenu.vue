@@ -30,7 +30,8 @@
             @mouseenter="onItemHover(i, item)"
             @click="onItemClick(item)"
           >
-            <span class="ctx-icon">{{ item.icon || '' }}</span>
+            <Icon v-if="item.icon" :icon="'mdi:' + item.icon" width="12" height="12" class="ctx-icon" />
+            <span v-else class="ctx-icon"></span>
             <span class="ctx-label">{{ item.label }}</span>
             <span class="ctx-shortcut text-muted">{{ item.shortcut || '' }}</span>
             <span v-if="item.submenu?.length" class="ctx-arrow">^</span>
@@ -55,7 +56,8 @@
                   :aria-disabled="sub.disabled"
                   @click="onItemClick(sub)"
                 >
-                  <span class="ctx-icon">{{ sub.icon || '' }}</span>
+                  <Icon v-if="sub.icon" :icon="'mdi:' + sub.icon" width="12" height="12" class="ctx-icon" />
+                  <span v-else class="ctx-icon"></span>
                   <span class="ctx-label">{{ sub.label }}</span>
                   <span class="ctx-shortcut text-muted">{{ sub.shortcut || '' }}</span>
                 </div>
@@ -70,6 +72,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useContextMenu, type ContextMenuEntry } from '@/composables/useContextMenu'
 
 const ctx = useContextMenu()
@@ -189,15 +192,18 @@ onUnmounted(() => {
 .ctx-menu {
   position: fixed;
   z-index: 9999;
-  background: #000;
-  border: 2px solid #FFFFFF;
+  background: rgba(12, 12, 12, 0.75);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   min-width: 180px;
   max-width: 300px;
   padding: 4px 0;
+  border-radius: 6px;
   font-family: 'Courier New', monospace;
   font-size: 10px;
   color: #FFFFFF;
-  box-shadow: 4px 4px 0 rgba(255,255,255,0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   outline: none;
 }
 
@@ -218,8 +224,8 @@ onUnmounted(() => {
 
 .ctx-item:hover,
 .ctx-focused {
-  background: #FFFFFF;
-  color: #000;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
 }
 
 .ctx-disabled {
@@ -254,7 +260,7 @@ onUnmounted(() => {
 
 .ctx-divider {
   height: 1px;
-  background: rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.06);
   margin: 2px 8px;
 }
 

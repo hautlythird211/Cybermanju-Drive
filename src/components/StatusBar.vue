@@ -2,9 +2,7 @@
   <footer class="statusbar">
     <div class="sb-left">
       <span class="sb-path">{{ store.currentPath }}</span>
-      <div v-if="store.isLoading" class="sb-progress-bar">
-        <div class="sb-progress-fill" />
-      </div>
+      <Icon v-if="store.isLoading" icon="svg-spinners:3-dots-bounce" width="14" height="14" class="sb-spinner" />
     </div>
 
     <div class="sb-center">
@@ -55,6 +53,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 import { isWebMode } from '@/composables/useTauri'
 
@@ -95,24 +94,10 @@ const isSyncActive = computed(() =>
   color: rgba(255,255,255,0.7);
 }
 
-.sb-progress-bar {
-  width: 60px;
-  height: 6px;
-  border: 1px solid #FFFFFF;
+.sb-spinner {
+  display: inline-flex;
+  vertical-align: middle;
   margin-left: 8px;
-  overflow: hidden;
-}
-
-.sb-progress-fill {
-  height: 100%;
-  width: 30%;
-  background: #FFFFFF;
-  animation: sb-progress 1.2s ease-in-out infinite;
-}
-
-@keyframes sb-progress {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(calc(60px * 3.33)); }
 }
 
 .sb-center {

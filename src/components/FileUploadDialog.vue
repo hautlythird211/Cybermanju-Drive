@@ -23,7 +23,10 @@
           <div v-for="(f, idx) in files" :key="idx" class="upload-file-row" :class="{ done: f.status === 'done', error: f.status === 'error' }">
             <span class="uf-name truncate">{{ f.name }}</span>
             <span class="uf-size text-muted">{{ formatSize(f.size) }}</span>
-            <span class="uf-status">{{ f.status === 'uploading' ? 'UPLOADING..' : f.status === 'done' ? 'DONE' : f.status === 'error' ? 'FAILED' : 'PENDING' }}</span>
+            <span class="uf-status">
+              <Icon v-if="f.status === 'uploading'" icon="svg-spinners:3-dots-fade" width="12" height="12" class="uf-spinner" />
+              {{ f.status === 'uploading' ? 'UPLOADING' : f.status === 'done' ? 'DONE' : f.status === 'error' ? 'FAILED' : 'PENDING' }}
+            </span>
             <span v-if="f.error" class="uf-error text-muted">{{ f.error }}</span>
           </div>
         </div>
@@ -39,6 +42,7 @@
 
 <script setup lang="ts">
 import { ref, toRef, computed, watch, nextTick } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 import { invoke } from '@/composables/useTauri'
 import { useFocusTrap } from '@/composables/useFocusTrap'

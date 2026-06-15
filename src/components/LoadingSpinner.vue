@@ -1,12 +1,14 @@
 <template>
-  <div class="loading-spinner" :class="sizeClass" role="status" aria-label="Loading">
-    <div class="spinner-ring"></div>
+  <div class="loading-spinner" role="status" aria-label="Loading">
+    <Icon v-if="size === 'sm'" icon="svg-spinners:eclipse" width="16" height="16" />
+    <Icon v-else-if="size === 'lg'" icon="svg-spinners:180-ring" width="36" height="36" />
+    <Icon v-else icon="svg-spinners:180-ring-with-bg" width="24" height="24" />
     <span v-if="label" class="spinner-label">{{ label }}</span>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { Icon } from '@iconify/vue'
 
 const props = withDefaults(defineProps<{
   size?: 'sm' | 'md' | 'lg'
@@ -14,8 +16,6 @@ const props = withDefaults(defineProps<{
 }>(), {
   size: 'md',
 })
-
-const sizeClass = computed(() => `spinner-${props.size}`)
 </script>
 
 <style scoped>
@@ -27,24 +27,9 @@ const sizeClass = computed(() => `spinner-${props.size}`)
   gap: 8px;
 }
 
-.spinner-ring {
-  border: 3px solid rgba(0, 0, 0, 0.1);
-  border-top-color: #000000;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-
-.spinner-sm .spinner-ring { width: 16px; height: 16px; border-width: 2px; }
-.spinner-md .spinner-ring { width: 24px; height: 24px; border-width: 3px; }
-.spinner-lg .spinner-ring { width: 36px; height: 36px; border-width: 4px; }
-
 .spinner-label {
   font-family: 'Courier New', monospace;
   font-size: 10px;
-  color: rgba(0, 0, 0, 0.5);
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
+  color: rgba(255, 255, 255, 0.5);
 }
 </style>

@@ -31,11 +31,12 @@
     </div>
 
     <div class="empty-state" v-if="geoMarkers.length === 0 && !isLoading">
+      <Icon icon="svg-spinners:3-dots-rotate" width="20" height="20" class="mv-empty-spinner" />
       <p>NO GEOTAGGED FILES FOUND. PHOTOS WITH GPS EXIF DATA WILL APPEAR HERE.</p>
     </div>
 
     <div class="empty-state" v-if="isLoading">
-      <div class="loading-spinner"></div>
+      <Icon icon="svg-spinners:tadpole" width="32" height="32" class="mv-spinner" />
       <p>LOADING GEO DATA..</p>
     </div>
 
@@ -61,6 +62,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 import type { GeoMarker } from '@/types'
 
@@ -370,15 +372,13 @@ async function handleRefresh() { await store.fetchGeoFiles() }
 
 .empty-state p { font-size: 11px; color: rgba(255,255,255,0.5); margin: 0; }
 
-.loading-spinner {
-  width: 24px;
-  height: 24px;
-  border: 3px solid rgba(255,255,255,0.2);
-  border-top-color: #FFFFFF;
-  animation: spin 0.8s linear infinite;
+.mv-spinner {
+  opacity: 0.8;
 }
 
-@keyframes spin { to { transform: rotate(360deg); } }
+.mv-empty-spinner {
+  opacity: 0.4;
+}
 
 .status-footer {
   margin-top: auto;

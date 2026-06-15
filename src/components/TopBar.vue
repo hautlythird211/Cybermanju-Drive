@@ -1,5 +1,5 @@
 <template>
-  <header class="topbar">
+  <header class="topbar glass-liquid">
     <div class="topbar-left">
       <div class="logo">
         <span class="logo-text">CYBERMANJU</span>
@@ -9,7 +9,7 @@
 
     <div class="topbar-center">
       <div class="search-wrap" :class="{ searching: store.isSearching }" role="search">
-        <span class="search-icon">&gt;</span>
+        <Icon icon="mdi:magnify" width="12" height="12" class="search-icon" />
         <input
           v-model="store.searchQuery"
           class="search-input"
@@ -74,6 +74,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 
 const store = useAppStore()
@@ -105,8 +106,10 @@ watch(() => store.searchQuery, () => {
   height: 48px;
   padding: 0 10px;
   gap: 12px;
-  background: #000;
-  border-bottom: 2px solid #FFFFFF;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   z-index: 10;
   position: relative;
 }
@@ -153,10 +156,18 @@ watch(() => store.searchQuery, () => {
   display: flex;
   align-items: center;
   width: 100%;
-  border: 2px solid #FFFFFF;
-  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 6px;
   padding: 0 8px;
   height: 30px;
+  transition: border-color 0.2s;
+}
+
+.search-wrap:focus-within {
+  border-color: rgba(0, 255, 65, 0.4);
 }
 
 .search-icon {
@@ -206,8 +217,10 @@ watch(() => store.searchQuery, () => {
   align-items: center;
   gap: 4px;
   padding: 3px 8px;
-  border: 2px solid #FFFFFF;
-  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: #FFFFFF;
   cursor: pointer;
   font-family: 'Courier New', monospace;
@@ -215,17 +228,19 @@ watch(() => store.searchQuery, () => {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  transition: none;
+  border-radius: 4px;
+  transition: all 0.15s;
 }
 
 .status-badge:hover {
-  background: #FFFFFF;
-  color: #000;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .status-badge.on {
-  background: #FFFFFF;
-  color: #000;
+  background: rgba(0, 255, 65, 0.15);
+  border-color: rgba(0, 255, 65, 0.3);
+  color: #00ff41;
 }
 
 .status-badge.off {
@@ -237,7 +252,7 @@ watch(() => store.searchQuery, () => {
 }
 
 .status-badge.neutral:hover {
-  background: #000;
+  background: rgba(0, 0, 0, 0.35);
   color: #FFFFFF;
 }
 

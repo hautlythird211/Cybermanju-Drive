@@ -28,7 +28,7 @@
           title="FILTER FILES IN CURRENT DIRECTORY"
           aria-label="FILTER FILES"
         />
-        <span v-if="store.isLoading" class="text-muted" role="status" aria-live="polite">LOADING..</span>
+        <Icon v-if="store.isLoading" icon="svg-spinners:3-dots-bounce" width="16" height="16" class="fg-spinner" role="status" aria-live="polite" />
       </div>
     </div>
 
@@ -83,6 +83,7 @@
         </div>
       </div>
       <div v-if="sortedFiles.length === 0 && !store.isLoading" class="empty-grid">
+        <Icon icon="svg-spinners:pulse-rings-multiple" width="20" height="20" class="fg-empty-spinner" />
         <span class="text-muted" role="status">NO FILES IN THIS DIRECTORY</span>
       </div>
     </div>
@@ -128,6 +129,7 @@
         </div>
       </div>
       <div v-if="sortedFiles.length === 0 && !store.isLoading" class="empty-grid">
+        <Icon icon="svg-spinners:pulse-rings-multiple" width="20" height="20" class="fg-empty-spinner" />
         <span class="text-muted" role="status">NO FILES IN THIS DIRECTORY</span>
       </div>
     </div>
@@ -186,6 +188,7 @@
         <span class="lc lc-hash text-muted">{{ file.hashBlake3 ? file.hashBlake3.substring(0, 8) + '..' : '--' }}</span>
       </div>
       <div v-if="sortedFiles.length === 0 && !store.isLoading" class="empty-list">
+        <Icon icon="svg-spinners:pulse-rings-multiple" width="20" height="20" class="fg-empty-spinner" />
         <span class="text-muted" role="status">NO FILES</span>
       </div>
     </div>
@@ -221,6 +224,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 import { useContextMenu } from '@/composables/useContextMenu'
 import { useDrag } from '@/composables/useDrag'
@@ -557,6 +561,17 @@ async function handleRenameConfirm() {
   font-family: 'Courier New', monospace;
   font-size: 10px;
   color: rgba(255,255,255,0.5);
+}
+
+.fg-spinner {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+.fg-empty-spinner {
+  opacity: 0.4;
+  margin-bottom: 4px;
 }
 
 .sort-select {

@@ -1,5 +1,5 @@
 <template>
-  <header class="top-menu-bar">
+  <header class="top-menu-bar glass-liquid">
     <div class="tmb-left">
       <div class="app-logo" @click="store.currentPanel = 'landing'">
         <span class="logo-brand">CYBERMANJU</span>
@@ -25,7 +25,7 @@
                 class="menu-dropdown-item"
                 @click.stop="executeMenuItem(sub)"
               >
-                <span class="mdi-icon">{{ sub.icon || '' }}</span>
+                <Icon v-if="sub.icon" :icon="'mdi:' + sub.icon" width="14" height="14" class="mdi-icon" />
                 <span class="mdi-label">{{ sub.label }}</span>
                 <span v-if="sub.shortcut" class="mdi-shortcut">{{ sub.shortcut }}</span>
                 <span v-if="sub.checked" class="mdi-check">[x]</span>
@@ -38,7 +38,7 @@
 
     <div class="tmb-center">
       <div class="search-wrap" :class="{ searching: store.isSearching }">
-        <span class="search-prompt">&gt;</span>
+        <Icon icon="mdi:magnify" width="11" height="11" class="search-prompt" />
         <input
           v-model="store.searchQuery"
           class="search-input"
@@ -58,10 +58,7 @@
           @click="wm.open('encryption')"
           title="Encryption: {{ store.encryptionStatus.isEncrypted ? 'ON' : 'OFF' }}"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
+          <Icon icon="mdi:lock-outline" width="14" height="14" />
         </button>
 
         <button
@@ -70,11 +67,7 @@
           @click="wm.open('compression')"
           title="Compression: {{ store.compressedFiles.length }} files"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-            <line x1="12" y1="22.08" x2="12" y2="12"/>
-          </svg>
+          <Icon icon="mdi:package-variant-closed" width="14" height="14" />
         </button>
 
         <button
@@ -83,10 +76,7 @@
           @click="wm.open('accounts')"
           :title="store.activeAccount?.name || 'No account'"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
-          </svg>
+          <Icon icon="mdi:account-circle-outline" width="14" height="14" />
         </button>
 
         <button
@@ -95,9 +85,7 @@
           @click="store.matrixRainEnabled = !store.matrixRainEnabled"
           title="Toggle background effects"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="22 3 22 15 16 15 16 21 8 21 8 15 2 15 2 3"/>
-          </svg>
+          <Icon icon="mdi:lightning-bolt-outline" width="14" height="14" />
         </button>
 
         <button
@@ -106,10 +94,7 @@
           @click="store.commandPaletteOpen = true"
           title="Command Palette"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="4" y1="4" x2="10" y2="4"/><line x1="4" y1="10" x2="15" y2="10"/>
-            <line x1="4" y1="16" x2="20" y2="16"/>
-          </svg>
+          <Icon icon="mdi:code-brackets" width="14" height="14" />
         </button>
 
         <button
@@ -117,11 +102,7 @@
           @click="store.showLoginPopup = true"
           :title="store.currentUser ? store.currentUser.username : 'Login'"
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-            <polyline points="10 17 15 12 10 7"/>
-            <line x1="15" y1="12" x2="3" y2="12"/>
-          </svg>
+          <Icon icon="mdi:login" width="14" height="14" />
         </button>
       </div>
 
@@ -137,6 +118,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 import { useWindowManager } from '@/composables/useWindowManager'
 
@@ -176,6 +158,8 @@ interface MenuItem {
   action?: () => void
 }
 
+const iconifyIcon = (name: string) => `mdi:${name}`
+
 interface MenuGroup {
   id: string
   label: string
@@ -187,69 +171,69 @@ const menuStructure = computed(() => { const m: MenuGroup[] = [
     id: 'file',
     label: 'File',
     children: [
-      { id: 'new-folder', label: 'New Folder', icon: '[+]', shortcut: 'Ctrl+N', action: () => { store.createFolderPromptOpen = true } },
-      { id: 'upload', label: 'Upload Files', icon: '[^]', action: () => { window.dispatchEvent(new CustomEvent('cybermanju:upload')) } },
+      { id: 'new-folder', label: 'New Folder', icon: 'folder-plus-outline', shortcut: 'Ctrl+N', action: () => { store.createFolderPromptOpen = true } },
+      { id: 'upload', label: 'Upload Files', icon: 'upload-outline', action: () => { window.dispatchEvent(new CustomEvent('cybermanju:upload')) } },
       { id: 'div1', divider: true },
-      { id: 'open-terminal', label: 'Open Terminal', icon: '[>]', action: () => { store.currentPanel = 'landing' } },
+      { id: 'open-terminal', label: 'Open Terminal', icon: 'console', action: () => { store.currentPanel = 'landing' } },
       { id: 'div2', divider: true },
-      { id: 'settings', label: 'Settings', icon: '[@]', shortcut: 'Ctrl+,', action: () => { wm.open('settings') } },
-      { id: 'quit', label: 'Quit', icon: '[X]', action: () => {} },
+      { id: 'settings', label: 'Settings', icon: 'cog-outline', shortcut: 'Ctrl+,', action: () => { wm.open('settings') } },
+      { id: 'quit', label: 'Quit', icon: 'exit-to-app', action: () => {} },
     ],
   },
   {
     id: 'edit',
     label: 'Edit',
     children: [
-      { id: 'cut', label: 'Cut', icon: '[-]', shortcut: 'Ctrl+X', action: () => {} },
-      { id: 'copy', label: 'Copy', icon: '[C]', shortcut: 'Ctrl+C', action: () => {} },
-      { id: 'paste', label: 'Paste', icon: '[P]', shortcut: 'Ctrl+V', action: () => {} },
+      { id: 'cut', label: 'Cut', icon: 'content-cut', shortcut: 'Ctrl+X', action: () => {} },
+      { id: 'copy', label: 'Copy', icon: 'content-copy', shortcut: 'Ctrl+C', action: () => {} },
+      { id: 'paste', label: 'Paste', icon: 'content-paste', shortcut: 'Ctrl+V', action: () => {} },
       { id: 'div1', divider: true },
-      { id: 'select-all', label: 'Select All', icon: '[A]', shortcut: 'Ctrl+A', action: () => { store.selectedFileIds = store.files.map(f => f.id) } },
-      { id: 'deselect', label: 'Deselect', icon: '[C]', action: () => { store.selectedFileIds = [] } },
+      { id: 'select-all', label: 'Select All', icon: 'select-all', shortcut: 'Ctrl+A', action: () => { store.selectedFileIds = store.files.map(f => f.id) } },
+      { id: 'deselect', label: 'Deselect', icon: 'select-off', action: () => { store.selectedFileIds = [] } },
     ],
   },
   {
     id: 'view',
     label: 'View',
     children: [
-      { id: 'file-browser', label: 'File Browser', icon: '[#]', shortcut: 'Ctrl+1', action: () => { wm.open('files') } },
-      { id: 'collections', label: 'Collections', icon: '[*]', action: () => { wm.open('collections') } },
-      { id: 'people', label: 'People (Faces)', icon: '[+]', action: () => { wm.open('faces') } },
-      { id: 'map', label: 'Map View', icon: '[@]', action: () => { wm.open('map') } },
-      { id: 'code', label: 'Code Intelligence', icon: '[T]', action: () => { wm.open('code') } },
+      { id: 'file-browser', label: 'File Browser', icon: 'folder-outline', shortcut: 'Ctrl+1', action: () => { wm.open('files') } },
+      { id: 'collections', label: 'Collections', icon: 'bookmark-multiple-outline', action: () => { wm.open('collections') } },
+      { id: 'people', label: 'People (Faces)', icon: 'face-man-outline', action: () => { wm.open('faces') } },
+      { id: 'map', label: 'Map View', icon: 'map-outline', action: () => { wm.open('map') } },
+      { id: 'code', label: 'Code Intelligence', icon: 'code-tags', action: () => { wm.open('code') } },
       { id: 'div1', divider: true },
-      { id: 'search', label: 'Search', icon: '[S]', shortcut: 'Ctrl+F', action: () => { store.searchQuery = ''; store.currentPanel = 'search' } },
-      { id: 'storage', label: 'Storage Dashboard', icon: '[$]', action: () => { wm.open('storage') } },
-      { id: 'sync-panel', label: 'Sync Panel', icon: '[~]', action: () => { wm.open('sync') } },
+      { id: 'search', label: 'Search', icon: 'magnify', shortcut: 'Ctrl+F', action: () => { store.searchQuery = ''; store.currentPanel = 'search' } },
+      { id: 'storage', label: 'Storage Dashboard', icon: 'harddisk', action: () => { wm.open('storage') } },
+      { id: 'sync-panel', label: 'Sync Panel', icon: 'sync', action: () => { wm.open('sync') } },
       { id: 'div2', divider: true },
-      { id: 'minimize-all', label: 'Minimize All', icon: '[-]', action: () => wm.minimizeAll() },
-      { id: 'close-all', label: 'Close All Windows', icon: '[X]', action: () => wm.closeAll() },
+      { id: 'minimize-all', label: 'Minimize All', icon: 'window-minimize', action: () => wm.minimizeAll() },
+      { id: 'close-all', label: 'Close All Windows', icon: 'close-box-multiple-outline', action: () => wm.closeAll() },
     ],
   },
   {
     id: 'tools',
     label: 'Tools',
     children: [
-      { id: 'trash', label: 'Trash', icon: '[%]', action: () => { wm.open('trash'); store.fetchTrashItems() } },
-      { id: 'activity', label: 'Activity Log', icon: '[~]', action: () => { wm.open('activity'); store.fetchAuditLog() } },
-      { id: 'favorites', label: 'Favorites', icon: '[*]', action: () => { wm.open('favorites') } },
-      { id: 'recent', label: 'Recent Files', icon: '[T]', action: () => { wm.open('recent') } },
+      { id: 'trash', label: 'Trash', icon: 'delete-outline', action: () => { wm.open('trash'); store.fetchTrashItems() } },
+      { id: 'activity', label: 'Activity Log', icon: 'history', action: () => { wm.open('activity'); store.fetchAuditLog() } },
+      { id: 'favorites', label: 'Favorites', icon: 'star-outline', action: () => { wm.open('favorites') } },
+      { id: 'recent', label: 'Recent Files', icon: 'clock-outline', action: () => { wm.open('recent') } },
       { id: 'div1', divider: true },
-      { id: 'accounts', label: 'Account Manager', icon: '[@]', action: () => { wm.open('accounts') } },
-      { id: 'users', label: 'User Management', icon: '[!]', action: () => { wm.open('users'); store.fetchUsers() } },
+      { id: 'accounts', label: 'Account Manager', icon: 'account-outline', action: () => { wm.open('accounts') } },
+      { id: 'users', label: 'User Management', icon: 'account-group-outline', action: () => { wm.open('users'); store.fetchUsers() } },
       { id: 'div2', divider: true },
-      { id: 'command-palette', label: 'Command Palette', icon: '[K]', shortcut: 'Ctrl+K', action: () => { store.commandPaletteOpen = true } },
-      { id: 'keyboard-shortcuts', label: 'Keyboard Shortcuts', icon: '[?]', action: () => { store.showShortcutsHelp = true } },
+      { id: 'command-palette', label: 'Command Palette', icon: 'keyboard', shortcut: 'Ctrl+K', action: () => { store.commandPaletteOpen = true } },
+      { id: 'keyboard-shortcuts', label: 'Keyboard Shortcuts', icon: 'keyboard-settings-outline', action: () => { store.showShortcutsHelp = true } },
     ],
   },
   {
     id: 'help',
     label: 'Help',
     children: [
-      { id: 'about', label: 'About Cybermanju Drive', icon: '[i]', action: () => {} },
-      { id: 'docs', label: 'Documentation', icon: '[D]', action: () => { window.open('https://github.com/hautlythird211/Cybermanju-Drive', '_blank') } },
+      { id: 'about', label: 'About Cybermanju Drive', icon: 'information-outline', action: () => {} },
+      { id: 'docs', label: 'Documentation', icon: 'file-document-outline', action: () => { window.open('https://github.com/hautlythird211/Cybermanju-Drive', '_blank') } },
       { id: 'div1', divider: true },
-      { id: 'matrix', label: 'Toggle Matrix Rain', icon: '[~]', checked: store.matrixRainEnabled, action: () => { store.matrixRainEnabled = !store.matrixRainEnabled } },
+      { id: 'matrix', label: 'Toggle Matrix Rain', icon: 'lightning-bolt-outline', checked: store.matrixRainEnabled, action: () => { store.matrixRainEnabled = !store.matrixRainEnabled } },
     ],
   },
 ]; return m; })
@@ -301,8 +285,10 @@ onUnmounted(() => {
   align-items: center;
   height: 32px;
   padding: 0 8px;
-  background: #111;
-  border-bottom: 1px solid #222;
+  background: rgba(17, 17, 17, 0.55);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   z-index: 100;
   position: relative;
   gap: 8px;
@@ -382,9 +368,11 @@ onUnmounted(() => {
   top: 100%;
   left: 0;
   min-width: 220px;
-  background: #181818;
-  border: 1px solid #2a2a2a;
-  border-radius: 6px;
+  background: rgba(24, 24, 24, 0.7);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
   padding: 4px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   z-index: 200;
@@ -410,8 +398,10 @@ onUnmounted(() => {
 
 .mdi-icon {
   width: 18px;
-  text-align: center;
-  font-size: 10px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #666;
 }
 

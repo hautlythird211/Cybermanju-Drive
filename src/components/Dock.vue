@@ -11,7 +11,7 @@
         :title="app.label"
       >
         <div class="dock-icon">
-          <span class="dock-icon-text">{{ app.icon }}</span>
+          <Icon :icon="'mdi:' + app.icon" width="18" height="18" class="dock-iconify" />
         </div>
         <div class="dock-indicator" v-if="wm.isOpen(app.panelType)">
           <div class="indicator-dot" :class="{ active: isAppActive(app.panelType) }" />
@@ -28,7 +28,7 @@
         :title="win.title + ' (minimized)'"
       >
         <div class="dock-icon minimized">
-          <span class="dock-icon-text">{{ win.icon }}</span>
+          <Icon icon="mdi:window-minimize" width="18" height="18" class="dock-iconify" />
         </div>
         <div class="dock-indicator">
           <div class="indicator-dot muted" />
@@ -40,6 +40,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 import { useWindowManager } from '@/composables/useWindowManager'
 import type { PanelType } from '@/types'
@@ -55,18 +56,18 @@ interface DockApp {
 }
 
 const dockApps = computed<DockApp[]>(() => [
-  { panelType: 'files', label: 'File Browser', icon: '[#]', category: 'core' },
-  { panelType: 'search', label: 'Search', icon: '[S]', category: 'core' },
-  { panelType: 'collections', label: 'Collections', icon: '[*]', category: 'organize' },
-  { panelType: 'faces', label: 'People', icon: '[+]', category: 'organize' },
-  { panelType: 'map', label: 'Map', icon: '[@]', category: 'tools' },
-  { panelType: 'code', label: 'Code', icon: '[T]', category: 'tools' },
-  { panelType: 'sync', label: 'Sync', icon: '[~]', category: 'tools' },
-  { panelType: 'storage', label: 'Storage', icon: '[$]', category: 'tools' },
-  { panelType: 'settings', label: 'Settings', icon: '[@]', category: 'system' },
-  { panelType: 'trash', label: 'Trash', icon: '[%]', category: 'system' },
-  { panelType: 'users', label: 'Users', icon: '[!]', category: 'system' },
-  { panelType: 'accounts', label: 'Accounts', icon: '[+]', category: 'system' },
+  { panelType: 'files', label: 'File Browser', icon: 'folder-outline', category: 'core' },
+  { panelType: 'search', label: 'Search', icon: 'magnify', category: 'core' },
+  { panelType: 'collections', label: 'Collections', icon: 'bookmark-multiple-outline', category: 'organize' },
+  { panelType: 'faces', label: 'People', icon: 'face-man-outline', category: 'organize' },
+  { panelType: 'map', label: 'Map', icon: 'map-outline', category: 'tools' },
+  { panelType: 'code', label: 'Code', icon: 'code-tags', category: 'tools' },
+  { panelType: 'sync', label: 'Sync', icon: 'sync', category: 'tools' },
+  { panelType: 'storage', label: 'Storage', icon: 'harddisk', category: 'tools' },
+  { panelType: 'settings', label: 'Settings', icon: 'cog-outline', category: 'system' },
+  { panelType: 'trash', label: 'Trash', icon: 'delete-outline', category: 'system' },
+  { panelType: 'users', label: 'Users', icon: 'account-group-outline', category: 'system' },
+  { panelType: 'accounts', label: 'Accounts', icon: 'account-outline', category: 'system' },
 ])
 
 const minimizedWindows = computed(() =>
@@ -124,14 +125,14 @@ function handleDockContext(e: MouseEvent, panelType: PanelType) {
   align-items: center;
   gap: 4px;
   padding: 6px 10px;
-  background: rgba(20, 20, 20, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 15, 15, 0.5);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 14px;
   box-shadow:
-    0 4px 24px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
   pointer-events: auto;
 }
 
@@ -188,15 +189,17 @@ function handleDockContext(e: MouseEvent, panelType: PanelType) {
   border-color: rgba(0, 255, 65, 0.3);
 }
 
-.dock-icon-text {
-  font-family: 'Courier New', monospace;
-  font-size: 13px;
-  font-weight: 700;
+.dock-iconify {
   color: #ccc;
+  transition: color 0.15s;
 }
 
-.dock-item.active .dock-icon-text {
+.dock-item.active .dock-iconify {
   color: #00ff41;
+}
+
+.dock-item:hover .dock-iconify {
+  color: #fff;
 }
 
 .dock-icon.minimized {

@@ -9,6 +9,7 @@
     </div>
 
     <div v-if="!store.selectedFile" class="empty-state">
+      <Icon icon="svg-spinners:6-dots-scale-middle" width="18" height="18" class="fpp-empty-spinner" />
       <p class="text-muted">SELECT A FILE TO VIEW PERMISSIONS</p>
     </div>
 
@@ -62,6 +63,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 import { invoke } from '@/composables/useTauri'
 import type { FilePermission } from '@/types'
@@ -181,9 +183,15 @@ async function handleRevoke(perm: FilePermission) {
 
 .empty-state {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   height: 120px;
+}
+
+.fpp-empty-spinner {
+  opacity: 0.4;
 }
 
 .file-info {

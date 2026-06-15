@@ -50,9 +50,11 @@
         >[LOAD MORE] ({{ store.searchTotalResults - filteredSearchResults.length }} MORE)</button>
       </div>
       <div v-else-if="store.searchQuery && !store.isSearching" class="empty-state">
+        <Icon icon="svg-spinners:180-ring-with-bg" width="20" height="20" class="empty-spinner" />
         <p class="text-muted">NO RESULTS FOR "{{ store.searchQuery }}"</p>
       </div>
       <div v-else-if="!store.searchQuery" class="empty-state">
+        <Icon icon="svg-spinners:wind-toy" width="20" height="20" class="empty-spinner" />
         <p class="text-muted">TYPE IN SEARCH BAR FOR TANTIVY BM25 SEARCH</p>
       </div>
     </div>
@@ -69,6 +71,7 @@
         </div>
         <p class="panel-hint">DELETED FILES CAN BE RESTORED FROM HERE.</p>
         <div v-if="store.trashItems.length === 0" class="empty-state" style="height:80px;">
+          <Icon icon="svg-spinners:6-dots-rotate" width="18" height="18" class="empty-spinner" />
           <p class="text-muted">NO FILES IN TRASH</p>
         </div>
         <div v-else class="trash-list">
@@ -96,6 +99,7 @@
         </div>
         <p class="panel-hint">FILE OPERATIONS TIMELINE.</p>
         <div v-if="store.auditLog.length === 0" class="empty-state" style="height:80px;">
+          <Icon icon="svg-spinners:clock" width="18" height="18" class="empty-spinner" />
           <p class="text-muted">NO RECENT ACTIVITY</p>
         </div>
         <div v-else class="activity-list">
@@ -114,6 +118,7 @@
       <div class="panel-card">
         <div class="panel-title">FAVORITES</div>
         <div v-if="store.starredFiles.length === 0" class="empty-state" style="height:100px;">
+          <Icon icon="svg-spinners:12-dots-scale-rotate" width="18" height="18" class="empty-spinner" />
           <p class="text-muted">NO STARRED FILES</p>
         </div>
         <div v-else class="fav-list">
@@ -130,6 +135,7 @@
       <div class="panel-card">
         <div class="panel-title">RECENT FILES</div>
         <div v-if="recentFiles.length === 0" class="empty-state" style="height:100px;">
+          <Icon icon="svg-spinners:3-dots-scale-middle" width="18" height="18" class="empty-spinner" />
           <p class="text-muted">NO FILES YET</p>
         </div>
         <div v-else class="recent-list">
@@ -204,6 +210,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 import { useWindowManager } from '@/composables/useWindowManager'
 import type { PanelType } from '@/types'
@@ -349,12 +356,18 @@ function highlightTerms(text: string, query: string): string {
 
 .empty-state {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 10px;
   padding: 24px;
   color: #555;
   font-family: 'Courier New', monospace;
   font-size: 10px;
+}
+
+.empty-spinner {
+  opacity: 0.5;
 }
 
 /* Search panel styles */

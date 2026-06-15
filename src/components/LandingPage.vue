@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { Icon } from '@iconify/vue'
 import TopMenuBar from './TopMenuBar.vue'
 import Dock from './Dock.vue'
 
@@ -323,6 +324,10 @@ onUnmounted(() => {
           <div class="boot-log">
             <div v-for="(line, i) in bootLog" :key="i" class="boot-line">{{ line }}</div>
             <div v-if="phase === 'loading'" class="boot-progress">
+              <div class="boot-spinner-row">
+                <Icon icon="svg-spinners:blocks-wave" width="32" height="32" class="boot-spinner-icon" />
+                <span class="boot-percent">{{ Math.round(loadProgress) }}%</span>
+              </div>
               <div class="progress-track">
                 <div class="progress-fill" :style="{ width: loadProgress + '%' }" />
               </div>
@@ -441,6 +446,27 @@ onUnmounted(() => {
 .boot-progress {
   margin-top: 16px;
   padding: 0 4px;
+}
+
+.boot-spinner-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  justify-content: center;
+}
+
+.boot-spinner-icon {
+  opacity: 0.9;
+  filter: drop-shadow(0 0 6px rgba(0, 255, 65, 0.4));
+}
+
+.boot-percent {
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: #00ff41;
+  letter-spacing: 1px;
 }
 
 .progress-track {

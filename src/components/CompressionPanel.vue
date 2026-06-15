@@ -34,7 +34,7 @@
     </div>
 
     <div class="section" v-if="compressionStats">
-      <h3 class="section-title">[STATS] RESULTS</h3>
+      <h3 class="section-title"><Icon icon="svg-spinners:bars-scale-fade" width="12" height="12" class="section-spinner" /> [STATS] RESULTS</h3>
       <div class="stats-card">
         <div class="stat-row">
           <span class="stat-key text-muted">ORIGINAL</span>
@@ -59,6 +59,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 import type { CompressionType } from '@/types'
 import { COMPRESSION_INFO } from '@/types'

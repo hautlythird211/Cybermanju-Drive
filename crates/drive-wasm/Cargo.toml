@@ -1,8 +1,8 @@
 [package]
 name = "cybermanju-drive-wasm"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
-description = "Cybermanju Drive — WASM bridge for browser-based crypto, compression, and storage"
+description = "Cybermanju Drive — WASM bridge for browser-based crypto, compression, sync, and storage"
 
 [lib]
 crate-type = ["cdylib"]
@@ -10,6 +10,7 @@ crate-type = ["cdylib"]
 [dependencies]
 wasm-bindgen = "0.2"
 js-sys = "0.3"
+serde-wasm-bindgen = "0.6"
 
 # Crypto (pure Rust only, no C bindings)
 blake3 = "1"
@@ -30,6 +31,10 @@ brotli = "7"
 # Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+# Identifiers & timestamps
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde", "wasmbind"] }
 
 # Logging
 wasm-logger = "0.2"

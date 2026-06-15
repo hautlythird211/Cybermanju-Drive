@@ -22,28 +22,33 @@
     "check:all": "npm run typecheck && npm run rust:check && npm run rust:clippy",
     "clean": "rm -rf dist src-tauri/target cybermanju.db tantivy_index",
     "db:reset": "rm -f cybermanju.db tantivy_index",
-    "build:wasm": "vite build --mode production --config vite.config.wasm.ts --outDir dist-wasm"
+    "build:wasm": "vite build --mode production --config vite.config.wasm.ts --outDir dist-wasm",
+    "wasm:build-rust": "cd crates/drive-wasm && wasm-pack build --target web --out-dir ../../node_modules/cybermanju-drive-wasm",
+    "wasm:dev": "npm run wasm:build-rust && vite --config vite.config.wasm.ts",
+    "wasm:build": "npm run wasm:build-rust && npm run build:wasm"
   },
   "dependencies": {
-    "vue": "^3.5.13",
-    "pinia": "^3.0.2",
+    "@iconify/vue": "^4.3.0",
     "@tauri-apps/api": "^2.5.0",
-    "@tauri-apps/plugin-fs": "^2.2.1",
     "@tauri-apps/plugin-dialog": "^2.2.1",
-    "@tauri-apps/plugin-shell": "^2.2.1",
-    "@tauri-apps/plugin-notification": "^2.2.1",
-    "@tauri-apps/plugin-store": "^2.2.1",
+    "@tauri-apps/plugin-fs": "^2.2.1",
     "@tauri-apps/plugin-log": "^2.2.1",
+    "@tauri-apps/plugin-notification": "^2.2.1",
     "@tauri-apps/plugin-os": "^2.2.1",
     "@tauri-apps/plugin-process": "^2.2.1",
+    "@tauri-apps/plugin-shell": "^2.2.1",
+    "@tauri-apps/plugin-store": "^2.2.1",
     "maplibre-gl": "^5.4.0",
-    "lucide-vue-next": "^0.525.0"
+    "pinia": "^3.0.2",
+    "vue": "^3.5.13"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.5.0",
     "@vitejs/plugin-vue": "^5.2.3",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
-    "vue-tsc": "^2.2.8",
-    "@tauri-apps/cli": "^2.5.0"
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.6.0",
+    "vue-tsc": "^2.2.8"
   }
 }

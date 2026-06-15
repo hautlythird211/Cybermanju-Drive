@@ -338,92 +338,414 @@ const REST_ROUTES: Record<string, RestMapping> = {
   },
 }
 
-// Commands that exist in Tauri but have NO REST equivalent (write-heavy / Tauri-only).
-const WRITE_ONLY_COMMANDS = new Set([
-  'create_folder',
-  'rename_file',
-  'duplicate_file_context',
-  'create_collection',
-  'add_to_collection',
-  'remove_from_collection',
-  'create_account',
-  'switch_account',
-  'detect_faces',
-  'detect_faces_batch_cmd',
-  'recluster_faces',
-  'rename_face_group',
-  'merge_face_groups',
-  'delete_face_group',
-  'find_similar_faces',
-  'generate_keypair',
-  'encrypt_file',
-  'decrypt_file',
-  'compress_file',
-  'decompress_file',
-  'parse_file',
-  'start_dashboard',
-  'stop_dashboard',
-  'start_sync',
-  'cancel_sync',
-  'create_sync_config',
-  'delete_sync_config',
-  'test_sync_connection',
-  'list_remote_files',
-  'revoke_file_permission',
-  'list_sync_configs',
-  'get_sync_progress',
-])
+// ── WASM Bridge fallback ───────────────────────────────────
+// For commands that can be handled locally via the WASM bridge + IndexedDB
 
-/** The core invoke — works in both Tauri and Web modes. */
+async function tryWasmInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T | null> {
+  try {
+    const { initWasm, drive, sync, crypto } = await import('@/wasm')
+    await initWasm()
+
+    switch (cmd) {
+      // ── File operations via WASM drive ────────────────────
+      case 'create_folder': {
+        const name = args?.name as string
+        const parentId = args?.parentId as string | undefined
+        const folder = await drive.createFolder(name, parentId ?? null)
+        return folder as unknown as T
+      }
+      case 'rename_file': {
+        const fileId = args?.fileId as string
+        const newName = args?.newName as string
+        await drive.renameDriveFile(fileId, newName)
+        return undefined as T
+      }
+      case 'delete_file': {
+        const fileId = args?.fileId as string
+        await drive.deleteDriveFile(fileId)
+        return undefined as T
+      }
+      case 'list_files': {
+        const parentPath = args?.parentPath as string | undefined
+        const allFiles = await drive.getAllDriveFiles()
+        const fileNodes = await drive.toFileNodes(
+          parentPath
+            ? allFiles.filter(f => f.parentId === parentPath || (parentPath === '/' && !f.parentId))
+            : allFiles
+        )
+        return fileNodes as unknown as T
+      }
+      case 'get_file': {
+        const fileId = args?.fileId as string
+        const file = await drive.getDriveFile(fileId)
+        if (!file) throw new Error('File not found')
+        const nodes = await drive.toFileNodes([file])
+        return nodes[0] as unknown as T
+      }
+      case 'search_files':
+      case 'search_files_paginated': {
+        const query = args?.query as string
+        const results = await drive.searchDriveFiles(query || '')
+        return results as unknown as T
+      }
+      case 'get_geo_files': {
+        const geoFiles = await drive.getGeoFiles()
+        return geoFiles as unknown as T
+      }
+
+      // ── Accounts (persisted in IndexedDB via data module) ─
+      case 'list_accounts': {
+        const data = await import('@/wasm/data')
+        return (await data.listAccounts()) as unknown as T
+      }
+      case 'create_account': {
+        const data = await import('@/wasm/data')
+        const { name, accountType: act, path, color } = args ?? {}
+        return (await data.createAccount({
+          name: name as string,
+          accountType: (act as any) || 'local',
+          path: path as string | undefined,
+          color: color as string | undefined,
+        })) as unknown as T
+      }
+      case 'switch_account': {
+        const data = await import('@/wasm/data')
+        const accountId = args?.accountId as string
+        await data.setActiveAccount(accountId)
+        return undefined as T
+      }
+
+      // ── Collections (persisted in IndexedDB) ────────────
+      case 'list_collections': {
+        const data = await import('@/wasm/data')
+        return (await data.listCollections()) as unknown as T
+      }
+      case 'get_collection_items': {
+        const data = await import('@/wasm/data')
+        return (await data.listCollections()) as unknown as T
+      }
+      case 'create_collection': {
+        const data = await import('@/wasm/data')
+        const { name, collectionType: colType, color, description } = args ?? {}
+        return (await data.createCollection({
+          name: name as string,
+          collectionType: (colType as string) || 'custom',
+          color: color as string | undefined,
+          description: description as string | undefined,
+        })) as unknown as T
+      }
+      case 'add_to_collection': {
+        const data = await import('@/wasm/data')
+        const { collectionId, fileId } = args ?? {}
+        await data.addToCollection(collectionId as string, fileId as string)
+        return undefined as T
+      }
+      case 'remove_from_collection': {
+        const data = await import('@/wasm/data')
+        const { collectionId, fileId } = args ?? {}
+        await data.removeFromCollection(collectionId as string, fileId as string)
+        return undefined as T
+      }
+
+      // ── Face groups (persisted in IndexedDB) ────────────
+      case 'list_face_groups': {
+        const data = await import('@/wasm/data')
+        return (await data.listFaceGroups()) as unknown as T
+      }
+      case 'list_loose_groups': {
+        const data = await import('@/wasm/data')
+        return (await data.listLooseGroups()) as unknown as T
+      }
+      case 'rename_face_group': {
+        const data = await import('@/wasm/data')
+        return undefined as T
+      }
+
+      // ── Encryption (persisted in IndexedDB) ─────────────
+      case 'get_encryption_status': {
+        const data = await import('@/wasm/data')
+        return (await data.getEncryptionStatus()) as unknown as T
+      }
+      case 'list_keys': {
+        const data = await import('@/wasm/data')
+        return (await data.listEncryptionKeys()) as unknown as T
+      }
+
+      // ── Users (persisted in IndexedDB) ──────────────────
+      case 'list_users': {
+        const data = await import('@/wasm/data')
+        return (await data.listUsers()) as unknown as T
+      }
+      case 'register_user': {
+        const data = await import('@/wasm/data')
+        const { username, password, displayName, role } = args ?? {}
+        return (await data.createUser({
+          username: username as string,
+          password: password as string,
+          displayName: displayName as string | undefined,
+          role: role as string | undefined,
+        })) as unknown as T
+      }
+      case 'authenticate_user': {
+        const data = await import('@/wasm/data')
+        const { username, password } = args ?? {}
+        return (await data.authenticateUser(username as string, password as string)) as unknown as T
+      }
+
+      // ── Dashboard status ────────────────────────────────
+      case 'dashboard_status': {
+        return { running: false, port: 0, url: window.location.origin, activeConnections: 0, service: 'wasm-bridge', timestamp: new Date().toISOString() } as unknown as T
+      }
+
+      // ── Locations ───────────────────────────────────────
+      case 'list_locations': {
+        return [] as unknown as T
+      }
+
+      // ── Sync operations via WASM sync ────────────────────
+      case 'list_sync_configs': {
+        const configs = await sync.getSyncConfigs()
+        return configs as unknown as T
+      }
+      case 'create_sync_config': {
+        const config = args?.config as any
+        const created = await sync.saveSyncConfig(config)
+        return created as unknown as T
+      }
+      case 'delete_sync_config': {
+        const configId = args?.configId as string
+        await sync.deleteSyncConfig(configId)
+        return undefined as T
+      }
+      case 'start_sync': {
+        const configId = args?.configId as string
+        const fileIds = args?.fileIds as string[]
+        const configs = await sync.getSyncConfigs()
+        const config = configs.find(c => c.id === configId)
+        if (!config) throw new Error('Sync config not found')
+        sync.startSync(config, fileIds).catch(console.error)
+        return undefined as T
+      }
+      case 'cancel_sync': {
+        sync.cancelSync()
+        return undefined as T
+      }
+      case 'get_sync_progress': {
+        return sync.getProgress() as unknown as T
+      }
+      case 'list_remote_files': {
+        const config = args?.config as any
+        const prefix = args?.prefix as string
+        const files = await sync.listRemoteFiles(config, prefix || '')
+        return files as unknown as T
+      }
+
+      // ── Encryption via WASM crypto ───────────────────────
+      case 'chacha20_encrypt': {
+        const key = new Uint8Array(args?.key as number[])
+        const nonce = new Uint8Array(args?.nonce as number[])
+        const plaintext = new Uint8Array(args?.plaintext as number[])
+        return (await crypto.encryptData(key, nonce, plaintext)) as unknown as T
+      }
+      case 'chacha20_decrypt': {
+        const key = new Uint8Array(args?.key as number[])
+        const nonce = new Uint8Array(args?.nonce as number[])
+        const ciphertext = new Uint8Array(args?.ciphertext as number[])
+        return (await crypto.decryptData(key, nonce, ciphertext)) as unknown as T
+      }
+
+      // ── Auth (requires REST, stubs for WASM) ──────────────
+      case 'authenticate_user': {
+        return null // fall through to REST
+      }
+      case 'register_user': {
+        return null // fall through to REST
+      }
+    }
+  } catch {
+    // WASM not available, fall through
+  }
+  return null
+}
+
+/** The core invoke — works in Tauri, Web REST, and WASM bridge modes. */
 export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   if (isTauri()) {
-    // ── Tauri IPC path ────────────────────────────────────
     const core = await import('@tauri-apps/api/core')
     return core.invoke<T>(cmd, args)
+  }
+
+  // ── Try WASM bridge first (fast, local, no network needed) ──
+  if (isWebMode()) {
+    const wasmResult = await tryWasmInvoke<T>(cmd, args)
+    if (wasmResult !== null) return wasmResult
   }
 
   // ── Web / REST path ────────────────────────────────────
   const mapping = REST_ROUTES[cmd]
   if (mapping) {
-    const path = mapping.buildPath(args ?? {})
-
-    // Allow the mapping to transform the request body
-    let body: unknown = undefined
-    if (mapping.transformRequest && args) {
-      body = mapping.transformRequest(args)
-    } else if (mapping.method !== 'GET' && mapping.method !== 'HEAD' && args) {
-      body = args
+    try {
+      const path = mapping.buildPath(args ?? {})
+      let body: unknown = undefined
+      if (mapping.transformRequest && args) {
+        body = mapping.transformRequest(args)
+      } else if (mapping.method !== 'GET' && mapping.method !== 'HEAD' && args) {
+        body = args
+      }
+      const raw = await restFetch<unknown>(mapping.method, path, body)
+      if (mapping.transformResponse) {
+        return (mapping.transformResponse(raw, args ?? {})) as T
+      }
+      return transformResponseKeys(raw) as T
+    } catch (err) {
+      // If REST fails and this is a GET/read-only command, return empty defaults
+      const isReadCmd = cmd.startsWith('list_') || cmd.startsWith('get_') || cmd.startsWith('search_')
+      if (isReadCmd) {
+        console.warn(`[Web Mode] REST fallback failed for "${cmd}": ${err}. Returning empty default.`)
+        return [] as unknown as T
+      }
+      throw err
     }
-
-    const raw = await restFetch<unknown>(mapping.method, path, body)
-
-    if (mapping.transformResponse) {
-      return (mapping.transformResponse(raw, args ?? {})) as T
-    }
-
-    return transformResponseKeys(raw) as T
   }
 
-  // Write-only / unsupported commands in web mode
-  if (WRITE_ONLY_COMMANDS.has(cmd)) {
-    throw new Error(
-      `[Web Mode] Command "${cmd}" requires the Tauri desktop app and is not available through the Web Dashboard REST API.`
-    )
+  // Unsupported command in web mode
+  console.warn(`[Web Mode] Command "${cmd}" is not supported via REST or WASM bridge.`)
+  // Return empty defaults for read/list commands instead of throwing
+  if (cmd.startsWith('list_') || cmd.startsWith('get_') || cmd.startsWith('search_')) {
+    return [] as unknown as T
   }
-
-  // Unknown command — attempt a best-effort REST call
-  console.warn(`[Web Mode] Unknown Tauri command "${cmd}" — no REST mapping exists.`)
   throw new Error(
-    `[Web Mode] Command "${cmd}" is not supported. The Web Dashboard REST API does not provide this endpoint.`
+    `[Web Mode] Command "${cmd}" is not supported. The WASM bridge and Web Dashboard REST API do not provide this endpoint.`
   )
 }
 
 // ── Composable ──────────────────────────────────────────────
 
+// ── Native FS helper ─────────────────────────────────────
+
+async function getNativeFs() {
+  return import('@/wasm/native-fs')
+}
+
+async function tryNativeFsReadDirectory(rootPath: string): Promise<FileNode[] | null> {
+  try {
+    const nativeFs = await getNativeFs()
+    const rootHandle = await nativeFs.getPersistedHandle()
+    if (!rootHandle) return null
+
+    const dirHandle = rootPath === '/' || !rootPath
+      ? rootHandle
+      : await nativeFs.resolveHandle(rootHandle, rootPath)
+
+    if (!dirHandle || dirHandle.kind !== 'directory') return null
+
+    const entries = await nativeFs.listDirectory(dirHandle as FileSystemDirectoryHandle, false)
+    return entries.map((e, i) => ({
+      id: `native-${e.path}`,
+      name: e.name,
+      fileType: e.kind,
+      parentId: e.parentPath || undefined,
+      path: e.path,
+      sizeBytes: e.size,
+      mimeType: e.mimeType,
+      encrypted: false,
+      compressionLayers: [],
+      createdAt: e.modifiedAt,
+      modifiedAt: e.modifiedAt,
+    }))
+  } catch {
+    return null
+  }
+}
+
+async function tryNativeFsReadText(relPath: string): Promise<string | null> {
+  try {
+    const nativeFs = await getNativeFs()
+    const rootHandle = await nativeFs.getPersistedHandle()
+    if (!rootHandle) return null
+    const handle = await nativeFs.resolveHandle(rootHandle, relPath)
+    if (!handle || handle.kind !== 'file') return null
+    return nativeFs.readFileText(handle as FileSystemFileHandle)
+  } catch {
+    return null
+  }
+}
+
+async function tryNativeFsWriteText(relPath: string, contents: string): Promise<boolean> {
+  try {
+    const nativeFs = await getNativeFs()
+    const rootHandle = await nativeFs.getPersistedHandle()
+    if (!rootHandle) return false
+    const handle = await nativeFs.resolveHandle(rootHandle, relPath)
+    if (!handle || handle.kind !== 'file') return false
+    await nativeFs.writeFileText(handle as FileSystemFileHandle, contents)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function tryNativeFsCreateDir(relPath: string): Promise<boolean> {
+  try {
+    const nativeFs = await getNativeFs()
+    const rootHandle = await nativeFs.getPersistedHandle()
+    if (!rootHandle) return false
+    const parts = relPath.split('/').filter(Boolean)
+    if (parts.length === 0) return false
+    const name = parts.pop()!
+    const parentPath = parts.join('/')
+    const parent = parentPath
+      ? await nativeFs.resolveHandle(rootHandle, parentPath)
+      : rootHandle
+    if (!parent || parent.kind !== 'directory') return false
+    await nativeFs.createDirectory(parent as FileSystemDirectoryHandle, name)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function tryNativeFsDelete(relPath: string): Promise<boolean> {
+  try {
+    const nativeFs = await getNativeFs()
+    const rootHandle = await nativeFs.getPersistedHandle()
+    if (!rootHandle) return false
+    const parts = relPath.split('/').filter(Boolean)
+    if (parts.length === 0) return false
+    const name = parts.pop()!
+    const parentPath = parts.join('/')
+    const parent = parentPath
+      ? await nativeFs.resolveHandle(rootHandle, parentPath)
+      : rootHandle
+    if (!parent || parent.kind !== 'directory') return false
+    await nativeFs.removeEntry(parent as FileSystemDirectoryHandle, name, true)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function tryNativeFsExists(relPath: string): Promise<boolean> {
+  try {
+    const nativeFs = await getNativeFs()
+    const rootHandle = await nativeFs.getPersistedHandle()
+    if (!rootHandle) return false
+    const handle = await nativeFs.resolveHandle(rootHandle, relPath)
+    return handle !== null
+  } catch {
+    return false
+  }
+}
+
 export function useTauri() {
   async function pickFolder(): Promise<string | null> {
     if (isWebMode()) {
-      // Native folder picker not available in web mode
+      const nativeFs = await getNativeFs()
+      if (nativeFs.isSupported()) {
+        const handle = await nativeFs.openDirectory('readwrite')
+        return handle ? handle.name : null
+      }
+      // Fallback: webkitdirectory (returns first folder name)
       return null
     }
     const { open } = await import('@tauri-apps/plugin-dialog')
@@ -433,6 +755,11 @@ export function useTauri() {
 
   async function pickFiles(multiple = false): Promise<string[] | null> {
     if (isWebMode()) {
+      const nativeFs = await getNativeFs()
+      if (nativeFs.isSupported()) {
+        const handles = await nativeFs.openFiles(multiple)
+        return handles.map(h => h.name)
+      }
       return null
     }
     const { open } = await import('@tauri-apps/plugin-dialog')
@@ -442,7 +769,24 @@ export function useTauri() {
 
   async function readDirectory(path: string): Promise<FileNode[]> {
     if (isWebMode()) {
-      // Use REST API to list files, then filter by path prefix
+      // 1) Native FS (real filesystem via File System Access API)
+      const nativeResult = await tryNativeFsReadDirectory(path)
+      if (nativeResult !== null) return nativeResult
+
+      // 2) WASM drive (IndexedDB virtual FS)
+      try {
+        const { drive, isWasmReady } = await import('@/wasm')
+        if (isWasmReady()) {
+          const allFiles = await drive.getAllDriveFiles()
+          const filtered = allFiles.filter(f => {
+            if (!path || path === '/') return !f.parentId
+            return f.parentId === path
+          })
+          return drive.toFileNodes(filtered)
+        }
+      } catch { /* fall through */ }
+
+      // 3) REST API
       try {
         const allFiles = await invoke<FileNode[]>('list_files', {})
         return allFiles
@@ -474,33 +818,82 @@ export function useTauri() {
     }))
   }
 
-  async function readTextFile(path: string): Promise<string> {
+  async function readTextFile(pathOrId: string): Promise<string> {
     if (isWebMode()) {
-      throw new Error('[Web Mode] Direct file reads are not available. Use the REST API file endpoints.')
+      // 1) Native FS (real file, synced passthrough)
+      const nativeResult = await tryNativeFsReadText(pathOrId)
+      if (nativeResult !== null) return nativeResult
+
+      // 2) WASM drive (IndexedDB)
+      try {
+        const { drive, isWasmReady } = await import('@/wasm')
+        if (isWasmReady()) {
+          const text = await drive.readFileText(pathOrId)
+          if (text !== null) return text
+        }
+      } catch { /* fall through */ }
+      throw new Error('[Web Mode] File not found.')
     }
     const { readFile } = await import('@tauri-apps/plugin-fs')
-    return await readFile(path) as unknown as string
+    return await readFile(pathOrId) as unknown as string
   }
 
-  async function writeTextFile(path: string, contents: string): Promise<void> {
+  async function writeTextFile(pathOrId: string, contents: string): Promise<void> {
     if (isWebMode()) {
-      throw new Error('[Web Mode] Direct file writes are not available through the Web Dashboard.')
+      // 1) Native FS (writes directly to original file — synced passthrough)
+      const nativeWritten = await tryNativeFsWriteText(pathOrId, contents)
+      if (nativeWritten) return
+
+      // 2) WASM drive (IndexedDB)
+      try {
+        const { drive, isWasmReady } = await import('@/wasm')
+        if (isWasmReady()) {
+          const data = new TextEncoder().encode(contents).buffer
+          await drive.updateFileData(pathOrId, data)
+          return
+        }
+      } catch { /* fall through */ }
+      throw new Error('[Web Mode] File write failed.')
     }
     const { writeFile } = await import('@tauri-apps/plugin-fs')
-    await writeFile(path, new TextEncoder().encode(contents))
+    await writeFile(pathOrId, new TextEncoder().encode(contents))
   }
 
-  async function createDir(path: string): Promise<void> {
+  async function createDir(name: string): Promise<void> {
     if (isWebMode()) {
-      throw new Error('[Web Mode] Directory creation is not available through the Web Dashboard.')
+      // 1) Native FS
+      const nativeCreated = await tryNativeFsCreateDir(name)
+      if (nativeCreated) return
+
+      // 2) WASM drive
+      try {
+        const { drive, isWasmReady } = await import('@/wasm')
+        if (isWasmReady()) {
+          await drive.createFolder(name, null)
+          return
+        }
+      } catch { /* fall through */ }
+      throw new Error('[Web Mode] Directory creation failed.')
     }
     const { mkdir } = await import('@tauri-apps/plugin-fs')
-    await mkdir(path, { recursive: true })
+    await mkdir(name, { recursive: true })
   }
 
   async function deletePath(path: string): Promise<void> {
     if (isWebMode()) {
-      throw new Error('[Web Mode] File deletion is not available through the Web Dashboard.')
+      // 1) Native FS
+      const nativeDeleted = await tryNativeFsDelete(path)
+      if (nativeDeleted) return
+
+      // 2) WASM drive
+      try {
+        const { drive, isWasmReady } = await import('@/wasm')
+        if (isWasmReady()) {
+          await drive.deleteDriveFile(path)
+          return
+        }
+      } catch { /* fall through */ }
+      throw new Error('[Web Mode] Deletion failed.')
     }
     const { remove } = await import('@tauri-apps/plugin-fs')
     await remove(path)
@@ -508,7 +901,16 @@ export function useTauri() {
 
   async function renamePath(oldPath: string, newPath: string): Promise<void> {
     if (isWebMode()) {
-      throw new Error('[Web Mode] File renaming is not available through the Web Dashboard.')
+      // Native FS rename not directly supported (move via read+write+delete)
+      // Fall through to WASM drive
+      try {
+        const { drive, isWasmReady } = await import('@/wasm')
+        if (isWasmReady()) {
+          await drive.renameDriveFile(oldPath, newPath)
+          return
+        }
+      } catch { /* fall through */ }
+      throw new Error('[Web Mode] Rename failed.')
     }
     const { rename } = await import('@tauri-apps/plugin-fs')
     await rename(oldPath, newPath)
@@ -516,14 +918,57 @@ export function useTauri() {
 
   async function copyPath(src: string, dest: string): Promise<void> {
     if (isWebMode()) {
-      throw new Error('[Web Mode] File copying is not available through the Web Dashboard.')
+      // Native FS: read from source, write to dest
+      try {
+        const nativeFs = await getNativeFs()
+        const rootHandle = await nativeFs.getPersistedHandle()
+        if (rootHandle) {
+          const srcHandle = await nativeFs.resolveHandle(rootHandle, src)
+          if (srcHandle && srcHandle.kind === 'file') {
+            const data = await nativeFs.readFile(srcHandle as FileSystemFileHandle)
+            const destHandle = await nativeFs.resolveHandle(rootHandle, dest)
+            if (destHandle && destHandle.kind === 'file') {
+              await nativeFs.writeFile(destHandle as FileSystemFileHandle, data)
+              return
+            }
+          }
+        }
+      } catch { /* fall through */ }
+
+      // WASM drive fallback
+      try {
+        const { drive, isWasmReady } = await import('@/wasm')
+        if (isWasmReady()) {
+          const data = await drive.readFileData(src)
+          if (data) {
+            const file = await drive.getDriveFile(src)
+            if (file) {
+              await drive.addFile(file.name, data, null, file.mimeType || undefined)
+              return
+            }
+          }
+        }
+      } catch { /* fall through */ }
+      throw new Error('[Web Mode] Copy failed.')
     }
     const { copyFile } = await import('@tauri-apps/plugin-fs')
     await copyFile(src, dest)
   }
 
-  async function pathExists(path: string): Promise<boolean> {
+  async function pathExists(id: string): Promise<boolean> {
     if (isWebMode()) {
+      // 1) Native FS
+      const nativeExists = await tryNativeFsExists(id)
+      if (nativeExists) return true
+
+      // 2) WASM drive
+      try {
+        const { drive, isWasmReady } = await import('@/wasm')
+        if (isWasmReady()) {
+          return !!(await drive.getDriveFile(id))
+        }
+      } catch { /* fall through */ }
+      // 3) REST API
       try {
         await restFetch<unknown>('GET', `/api/files`)
         return true
@@ -532,7 +977,7 @@ export function useTauri() {
       }
     }
     const { exists } = await import('@tauri-apps/plugin-fs')
-    return await exists(path)
+    return await exists(id)
   }
 
   return {

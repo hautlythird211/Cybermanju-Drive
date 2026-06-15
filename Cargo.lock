@@ -1158,6 +1158,7 @@ dependencies = [
  "cybermanju-faces",
  "cybermanju-search",
  "cybermanju-types",
+ "hmac",
  "image",
  "infer 0.16.0",
  "jsonwebtoken",
@@ -1166,9 +1167,11 @@ dependencies = [
  "mime_guess",
  "rand_core 0.6.4",
  "rayon",
+ "redb",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
+ "sha2",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
@@ -1188,11 +1191,12 @@ dependencies = [
 
 [[package]]
 name = "cybermanju-drive-wasm"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "blake3",
  "brotli 7.0.0",
  "chacha20poly1305",
+ "chrono",
  "getrandom 0.2.17",
  "hkdf",
  "hmac",
@@ -1202,9 +1206,11 @@ dependencies = [
  "ml-dsa",
  "rand_core 0.6.4",
  "serde",
+ "serde-wasm-bindgen",
  "serde_json",
  "sha2",
  "signature",
+ "uuid",
  "wasm-bindgen",
  "wasm-logger",
  "x25519-dalek",
@@ -5103,6 +5109,17 @@ dependencies = [
  "serde",
  "serde_core",
  "typeid",
+]
+
+[[package]]
+name = "serde-wasm-bindgen"
+version = "0.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8302e169f0eddcc139c70f139d19d6467353af16f9fce27e8c30158036a1e16b"
+dependencies = [
+ "js-sys",
+ "serde",
+ "wasm-bindgen",
 ]
 
 [[package]]

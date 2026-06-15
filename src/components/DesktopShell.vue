@@ -10,27 +10,27 @@
       <div class="desktop-workspace">
         <div class="desktop-icons">
           <div class="desktop-shortcut" @dblclick="wm.open('files')">
-            <div class="shortcut-icon">[#]</div>
+            <div class="shortcut-icon"><Icon icon="mdi:folder-outline" width="20" height="20" /></div>
             <div class="shortcut-label">Files</div>
           </div>
           <div class="desktop-shortcut" @dblclick="wm.open('collections')">
-            <div class="shortcut-icon">[*]</div>
+            <div class="shortcut-icon"><Icon icon="mdi:bookmark-multiple-outline" width="20" height="20" /></div>
             <div class="shortcut-label">Collections</div>
           </div>
           <div class="desktop-shortcut" @dblclick="wm.open('map')">
-            <div class="shortcut-icon">[@]</div>
+            <div class="shortcut-icon"><Icon icon="mdi:map-outline" width="20" height="20" /></div>
             <div class="shortcut-label">Map</div>
           </div>
           <div class="desktop-shortcut" @dblclick="wm.open('code')">
-            <div class="shortcut-icon">[T]</div>
+            <div class="shortcut-icon"><Icon icon="mdi:code-tags" width="20" height="20" /></div>
             <div class="shortcut-label">Code</div>
           </div>
           <div class="desktop-shortcut" @dblclick="wm.open('settings')">
-            <div class="shortcut-icon">[@]</div>
+            <div class="shortcut-icon"><Icon icon="mdi:cog-outline" width="20" height="20" /></div>
             <div class="shortcut-label">Settings</div>
           </div>
           <div class="desktop-shortcut" @dblclick="store.currentPanel = 'landing'">
-            <div class="shortcut-icon">[>]</div>
+            <div class="shortcut-icon"><Icon icon="mdi:console" width="20" height="20" /></div>
             <div class="shortcut-label">Terminal</div>
           </div>
         </div>
@@ -74,6 +74,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 import { useWindowManager } from '@/composables/useWindowManager'
 import TopMenuBar from './TopMenuBar.vue'
@@ -193,11 +194,13 @@ onUnmounted(() => {
 }
 
 .shortcut-icon {
-  font-family: 'Courier New', monospace;
-  font-size: 16px;
-  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   color: #888;
-  transition: color 0.1s;
+  transition: all 0.15s;
 }
 
 .desktop-shortcut:hover .shortcut-icon {

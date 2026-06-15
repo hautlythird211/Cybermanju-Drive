@@ -1,18 +1,21 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
+set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+echo "=== Building Cybermanju Drive WASM module ==="
 
-echo "=== Cybermanju Drive — WASM Build for GitHub Pages ==="
+# Navigate to drive-wasm crate
+cd "$(dirname "$0")/../crates/drive-wasm"
+
 echo ""
+echo "Step 1: Building WASM crate with wasm-pack..."
+wasm-pack build --target web --out-dir ../../node_modules/cybermanju-drive-wasm
 
-cd "$PROJECT_ROOT"
-npm ci
+echo ""
+echo "Step 2: Building Vite project with WASM config..."
+cd ../../
+npx vite build --mode production --config vite.config.wasm.ts --outDir dist-wasm
 
-echo "[1/2] Building WASM frontend..."
-npx vite build --config vite.config.wasm.ts
-
-echo "[2/2] WASM build complete!"
-echo "Output: dist-wasm/"
-ls -la dist-wasm/ 2>/dev/null || echo "(no output found)"
+echo ""
+echo "=== Done! ==="
+echo "WASM output: dist-wasm/"
+echo "To serve locally: npx vite preview --port 4175 --outDir dist-wasm"

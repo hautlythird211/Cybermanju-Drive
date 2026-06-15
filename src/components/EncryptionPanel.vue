@@ -47,7 +47,7 @@
     </div>
 
     <div class="section">
-      <h3 class="section-title">[KEY] GENERATE KEYPAIR</h3>
+      <h3 class="section-title"><Icon icon="svg-spinners:90-ring" width="12" height="12" class="section-spinner" /> [KEY] GENERATE KEYPAIR</h3>
       <div class="algo-buttons">
         <button v-for="(info, algo) in ENCRYPTION_INFO" :key="algo" class="algo-btn" @click="handleGenerate(algo as EncryptionAlgo)">
           <div class="algo-top">
@@ -74,7 +74,7 @@
     </div>
 
     <div class="section" v-if="selectedFile">
-      <h3 class="section-title">[LOCK] ENCRYPT SELECTED FILE</h3>
+      <h3 class="section-title"><Icon icon="svg-spinners:90-ring-with-bg" width="12" height="12" class="section-spinner" /> [LOCK] ENCRYPT SELECTED FILE</h3>
       <p class="selected-file-name">{{ selectedFile.name }}</p>
       <div class="encrypt-actions">
         <select v-model="selectedAlgo" class="encrypt-select">
@@ -88,6 +88,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 import type { EncryptionAlgo } from '@/types'
 import { ENCRYPTION_INFO } from '@/types'

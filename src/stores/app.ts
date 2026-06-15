@@ -884,7 +884,7 @@ export const useAppStore = defineStore('cybermanju', () => {
     showShortcutsHelp, createFolderPromptOpen, showLoginPopup,
     selectedFileIds, isMultiSelect, users, autoRefreshInterval, sortBy,
     // Computed
-    currentUser, selectedFile, activeAccount, encryptedFiles, compressedFiles,
+    currentUser, authToken, isAuthenticated, selectedFile, activeAccount, encryptedFiles, compressedFiles,
     starredFiles, folders, currentFolderFiles,
     // Actions
     initialize, selectFile, toggleStar, clearError,
