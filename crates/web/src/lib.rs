@@ -659,11 +659,14 @@ pub fn handle_request(
 
         // ─── Encrypt file ─────────────────────────────────────────
         ["api", "files", id, "encrypt"] if method == "POST" => {
-            let algorithm = parse_query_param(query, "algorithm")
-                .unwrap_or("hybrid")
-                .to_string();
-            let key_id = parse_query_param(query, "keyId");
-            encrypt_file_via_api(db, id, &algorithm, key_id.as_deref(), origin)
+            let algorithm = parse_query_param(query, "algorithm").unwrap_or("hybrid".to_string());
+            encrypt_file_via_api(
+                db,
+                id,
+                &algorithm,
+                parse_query_param(query, "keyId").as_deref(),
+                origin,
+            )
         }
 
         // ─── Decrypt file ─────────────────────────────────────────
@@ -673,9 +676,7 @@ pub fn handle_request(
         ["api", "oauth", "callback"] if method == "GET" => {
             let code = parse_query_param(query, "code").unwrap_or_default();
             let state = parse_query_param(query, "state").unwrap_or_default();
-            let provider = parse_query_param(query, "provider")
-                .unwrap_or("google")
-                .to_string();
+            let provider = parse_query_param(query, "provider").unwrap_or("google".to_string());
             handle_oauth_callback(db, &code, &state, &provider, origin)
         }
 
@@ -1252,7 +1253,7 @@ fn decrypt_file_via_api(db: &RedbDb, file_id: &str, origin: Option<&str>) -> Str
 
 /// Handle OAuth callback by proxying the authorization code exchange.
 fn handle_oauth_callback(
-    db: &RedbDb,
+    _db: &RedbDb,
     code: &str,
     state: &str,
     provider: &str,
