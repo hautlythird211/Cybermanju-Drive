@@ -1,35 +1,46 @@
 # ═══════════════════════════════════════════════════════════════════════
 # Cybermanju Drive — Multi-stage Docker Build
 #
-# Stage 1: Build Vue 3 frontend (Node.js) + WASM crate
+# Stage 0: Build WASM crate (Rust → wasm)
+# Stage 1: Build Vue 3 frontend (Node.js)
 # Stage 2: Build standalone Rust web server (no Tauri/GTK deps)
 # Stage 3: Minimal Alpine runtime
 # ═══════════════════════════════════════════════════════════════════════
 
-# ─── Stage 1: Frontend + WASM Build ──────────────────────────────────
-FROM node:20-alpine AS frontend-builder
+# ─── Stage 0: WASM Build ────────────────────────────────────────────
+FROM rust:alpine AS wasm-builder
 
-RUN apk add --no-cache cargo rust rustfmt
+RUN apk add --no-cache musl-dev pkgconf npm
+RUN rustup target add wasm32-unknown-unknown && npm install -g wasm-pack@0.15.0
+
+WORKDIR /wasm
+
+# Copy only the parts needed for the WASM crate
+COPY Cargo.toml Cargo.lock ./
+COPY crates/ ./crates/
+
+# Build WASM crate into node_modules location
+RUN mkdir -p node_modules && \
+    cd crates/drive-wasm && \
+    wasm-pack build --target bundler --out-dir ../../node_modules/cybermanju-drive-wasm
+
+# ─── Stage 1: Frontend Build ──────────────────────────────────────────
+FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app
 
-# Copy workspace Cargo files first for dep caching
-COPY Cargo.toml Cargo.lock ./
-COPY crates/drive-wasm/ ./crates/drive-wasm/
+# Install dependencies (layer caching)
+COPY package.json package-lock.json* ./
+RUN npm install --frozen-lockfile 2>/dev/null || npm install
 
-# Set up WASM target and install wasm-pack binary via npm
-RUN rustup target add wasm32-unknown-unknown && \
-    npm install -g wasm-pack@0.15.0
+# Copy the pre-built WASM output into node_modules
+COPY --from=wasm-builder /wasm/node_modules/cybermanju-drive-wasm ./node_modules/cybermanju-drive-wasm
 
-# Build WASM crate
-RUN npm run wasm:build-rust
-
-# Copy and install frontend deps, then build
-COPY package.json package-lock.json* index.html tsconfig.json tsconfig.node.json env.d.ts vite.config.wasm.ts ./
+# Copy frontend source and build
+COPY index.html tsconfig.json tsconfig.node.json env.d.ts vite.config.wasm.ts ./
 COPY public/ ./public/
 COPY keymaps/ ./keymaps/
 COPY src/ ./src/
-RUN npm install --frozen-lockfile 2>/dev/null || npm install
 RUN DOCKER_BUILD=true npm run build:wasm
 
 # ─── Stage 2: Rust Backend Build ─────────────────────────────────────
