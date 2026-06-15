@@ -9,7 +9,7 @@ use sha2::Sha512;
 use wasm_bindgen::prelude::*;
 use x25519_dalek::{PublicKey, StaticSecret};
 
-use ml_kem::{DecapsulationKey1024, EncapsulationKey1024, MlKem1024};
+use ml_kem::{DecapsulationKey1024, EncapsulationKey1024, MlKem1024, KeySizeUser};
 use ml_kem::kem::{Decapsulate, Encapsulate, Kem};
 use ml_kem::kem::Ciphertext;
 
@@ -193,10 +193,10 @@ pub fn ml_kem1024_generate_keypair() -> Result<js_sys::Object, JsValue> {
 #[wasm_bindgen]
 pub fn ml_kem1024_encapsulate(public_key: &[u8]) -> Result<js_sys::Object, JsValue> {
     use core::convert::TryInto;
-    let pk_array: <EncapsulationKey1024 as ml_kem::KeySizeUser>::Key = public_key
+    let pk_arr: ml_kem::array::Array<u8, <EncapsulationKey1024 as ml_kem::KeySizeUser>::KeySize> = public_key
         .try_into()
-        .map_err(|_| JsValue::from_str("Invalid ML-KEM-1024 public key"))?;
-    let ek = EncapsulationKey1024::new(&pk_array)
+        .map_err(|_| JsValue::from_str("Invalid ML-KEM-1024 public key: wrong length"))?;
+    let ek = EncapsulationKey1024::new(&pk_arr)
         .map_err(|e| JsValue::from_str(&format!("Invalid ML-KEM-1024 public key: {:?}", e)))?;
     let (ciphertext, shared_secret) = ek.encapsulate();
     let obj = js_sys::Object::new();
