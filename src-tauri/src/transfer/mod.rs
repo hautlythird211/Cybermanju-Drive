@@ -25,7 +25,7 @@ pub struct TransferRequest {
     pub save_to_local: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TransferProgress {
     pub total_files: u32,
@@ -53,6 +53,12 @@ pub struct TransferResult {
 pub struct TransferState {
     pub progress: Mutex<TransferProgress>,
     pub cancel_flag: AtomicBool,
+}
+
+impl Default for TransferState {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TransferState {
