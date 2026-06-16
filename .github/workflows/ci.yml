@@ -1,8 +1,18 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# Cybermanju Drive — Consolidated CI & Release workflow
+# ──────────────────────────────────────────────────────────────────────────────
+# Triggers:
+#   push (main)      → lint, test, build all platforms, deploy Pages, publish release
+#   pull_request     → lint, test, build all platforms (no deploy/release)
+#   tag "v*"         → lint, test, build all platforms, publish release
+# ──────────────────────────────────────────────────────────────────────────────
+
 name: CI
 
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
     branches: [main]
 
@@ -14,18 +24,16 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 1
   RUST_BACKTRACE: 1
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  # ─── Rust: Lint & Test ─────────────────────────────────────────────
+  # ─── Rust: Lint & Test (gate) ─────────────────────────────────────
   rust-check:
     name: Rust Lint & Test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install system dependencies (for Tauri)
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -56,14 +64,13 @@ jobs:
         working-directory: src-tauri
         run: cargo test --no-fail-fast
 
-  # ─── Docker: Build Image ──────────────────────────────────────────
+  # ─── Docker: Build Image (gate only) ──────────────────────────────
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
     needs: rust-check
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -81,58 +88,52 @@ jobs:
       - name: Verify image exists
         run: docker images cybermanju-drive:latest
 
-  # ─── WASM: Build for Web ─────────────────────────────────────────
+  # ─── WASM: Build for Web (shared dependency for all platforms) ────
   wasm-build:
     name: Build WASM (Web)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "lts/*"
+          node-version: "22"
           cache: "npm"
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
       - name: Type check
         run: npx vue-tsc --noEmit
 
       - name: Install wasm-pack
-        run: npm install -g wasm-pack@0.15.0
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
-      - name: Build WASM crate (Rust)
-        run: npm run wasm:build-rust
+      - name: Build WASM
+        run: npm run wasm:build
 
-      - name: Build WASM frontend (Vite)
-        run: npm run build:wasm
-
-      - name: Upload WASM artifacts
+      - name: Upload WASM web artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dist-wasm
           path: dist-wasm/
-          retention-days: 7
+          retention-days: 30
+
+      - name: Upload WASM node module (for Tauri builds)
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-node-module
+          path: node_modules/cybermanju-drive-wasm/
+          retention-days: 30
 
   # ─── Windows: Build Desktop ──────────────────────────────────────
   windows-build:
     name: Build Windows
     runs-on: windows-latest
-    needs: rust-check
+    needs: [rust-check, wasm-build]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
@@ -142,14 +143,17 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "lts/*"
+          node-version: "22"
           cache: "npm"
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Install wasm-pack
-        run: npm install -g wasm-pack@0.15.0
+      - name: Download pre-built WASM
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-node-module
+          path: node_modules/cybermanju-drive-wasm
 
       - name: Build Tauri app
         run: npm run tauri build
@@ -159,20 +163,21 @@ jobs:
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dist-windows
-          path: target/release/bundle/**/*
-          retention-days: 7
+          name: release-windows
+          path: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*.exe
+          retention-days: 30
 
-  # ─── Linux: Build .deb, .AppImage & .rpm ──────────────────────────
+  # ─── Linux: Build Desktop (deb + AppImage + rpm + binary) ──────────
   linux-build:
     name: Build Linux (deb+AppImage+rpm)
     runs-on: ubuntu-latest
-    needs: rust-check
+    needs: [rust-check, wasm-build]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install system dependencies (for Tauri)
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -185,77 +190,65 @@ jobs:
             pkg-config \
             build-essential \
             libssl-dev \
+            libfuse2 \
+            rpm \
             xdg-utils
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download pre-built WASM
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-node-module
+          path: node_modules/cybermanju-drive-wasm
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "lts/*"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install wasm-pack
-        run: npm install -g wasm-pack@0.15.0
-
       - name: Build Tauri app
         run: npm run tauri build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dist-linux
+          name: release-linux
           path: |
-            target/release/bundle/deb/*.deb
-            target/release/bundle/appimage/*.AppImage
-          retention-days: 7
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/appimage/*.AppImage
+            src-tauri/target/release/bundle/rpm/*.rpm
+          retention-days: 30
 
       - name: Upload Debian package
         uses: actions/upload-artifact@v4
         with:
-          name: dist-linux-deb
-          path: target/release/bundle/deb/*.deb
-          retention-days: 7
+          name: release-linux-deb
+          path: src-tauri/target/release/bundle/deb/*.deb
+          retention-days: 30
 
       - name: Upload RPM package
         uses: actions/upload-artifact@v4
         with:
-          name: dist-linux-rpm
-          path: target/release/bundle/rpm/*.rpm
-          retention-days: 7
+          name: release-linux-rpm
+          path: src-tauri/target/release/bundle/rpm/*.rpm
+          retention-days: 30
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
-          name: dist-linux-binary
-          path: target/release/cybermanju-drive
-          retention-days: 7
-
-  # ─── Linux: Build RPM ────────────────────────────────────────────
-  rpm-build:
-    name: Build Linux (RPM)
-    runs-on: ubuntu-latest
-    needs: [rust-check, linux-build]
-    steps:
-      - name: Download RPM from linux-build
-        continue-on-error: true
-        uses: actions/download-artifact@v4
-        with:
-          name: dist-linux-rpm
-          path: rpm-out
-
-      - name: Upload RPM artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist-rpm
-          path: rpm-out/*.rpm
-          retention-days: 7
+          name: release-linux-binary
+          path: src-tauri/target/release/cybermanju-drive
+          retention-days: 30
 
   # ─── Linux: Build Flatpak ────────────────────────────────────────
   flatpak-build:
@@ -263,13 +256,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: [rust-check, linux-build]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Download binary
         uses: actions/download-artifact@v4
         with:
-          name: dist-linux-binary
+          name: release-linux-binary
           path: artifacts
 
       - name: Install Flatpak
@@ -290,15 +282,15 @@ jobs:
       - name: Upload Flatpak artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dist-flatpak
+          name: release-flatpak
           path: cybermanju-drive.flatpak
-          retention-days: 7
+          retention-days: 30
 
   # ─── Linux: Build Arch Package ────────────────────────────────────
   arch-build:
     name: Build Linux (Arch/CachyOS)
     runs-on: ubuntu-latest
-    needs: [rust-check, linux-build]
+    needs: [rust-check, wasm-build, linux-build]
     container:
       image: archlinux:latest
     steps:
@@ -307,7 +299,6 @@ jobs:
           pacman -Syu --noconfirm
           pacman -S --noconfirm \
             base-devel \
-            clang \
             git \
             webkit2gtk-4.1 \
             gtk3 \
@@ -325,8 +316,7 @@ jobs:
           useradd -m builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Fix ownership
         run: chown -R builder:builder $GITHUB_WORKSPACE
@@ -339,8 +329,23 @@ jobs:
       - name: Install Node.js
         run: pacman -S --noconfirm nodejs npm
 
-      - name: Install wasm-pack
-        run: npm install -g wasm-pack@0.15.0
+      - name: Install npm dependencies
+        run: |
+          sudo -u builder bash -c "
+            export HOME=/home/builder
+            export PATH=\$HOME/.cargo/bin:\$PATH
+            cd $GITHUB_WORKSPACE
+            npm ci
+          "
+
+      - name: Download pre-built WASM
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-node-module
+          path: node_modules/cybermanju-drive-wasm
+
+      - name: Fix WASM ownership
+        run: chown -R builder:builder $GITHUB_WORKSPACE/node_modules/cybermanju-drive-wasm
 
       - name: Build Arch package
         run: |
@@ -348,7 +353,6 @@ jobs:
             export HOME=/home/builder
             export PATH=\$HOME/.cargo/bin:\$PATH
             cd $GITHUB_WORKSPACE
-            npm ci
             npm run tauri build -- --bundles deb,rpm
           "
 
@@ -357,25 +361,66 @@ jobs:
           chown -R builder:builder $GITHUB_WORKSPACE
           sudo -u builder bash -c '
             mkdir -p dist-arch
-            cp target/release/bundle/deb/*.deb dist-arch/ 2>/dev/null || true
-            cp target/release/bundle/appimage/*.AppImage dist-arch/ 2>/dev/null || true
+            cp src-tauri/target/release/bundle/deb/*.deb dist-arch/ 2>/dev/null || true
+            cp src-tauri/target/release/bundle/appimage/*.AppImage dist-arch/ 2>/dev/null || true
           '
 
       - name: Upload Arch build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dist-arch
+          name: release-arch
           path: dist-arch/
-          retention-days: 7
+          retention-days: 30
+
+  # ─── macOS: Build Desktop (dmg + app) ────────────────────────────
+  macos-build:
+    name: Build macOS
+    runs-on: macos-latest
+    needs: [rust-check, wasm-build]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download pre-built WASM
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-node-module
+          path: node_modules/cybermanju-drive-wasm
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - name: Build Tauri app
+        run: npm run tauri build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-macos
+          path: |
+            src-tauri/target/release/bundle/dmg/*.dmg
+            src-tauri/target/release/bundle/macos/*.app
+          retention-days: 30
 
   # ─── Android: Build APK ──────────────────────────────────────────
   android-build:
     name: Build Android
     runs-on: ubuntu-latest
-    needs: rust-check
+    needs: [rust-check, wasm-build]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -386,21 +431,32 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install Android SDK components
+        run: |
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "ndk;26.1.10909125"
+          sdkmanager --licenses <<< "y"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "lts/*"
+          node-version: "22"
           cache: "npm"
 
       - name: Install dependencies
         run: npm ci
 
+      - name: Download pre-built WASM
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-node-module
+          path: node_modules/cybermanju-drive-wasm
+
       - name: Install Rust targets
         run: |
           rustup target add aarch64-linux-android i686-linux-android x86_64-linux-android
 
-      - name: Install Android NDK
-        run: sdkmanager "ndk;26.1.10909125"
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
@@ -408,31 +464,41 @@ jobs:
           cache-on-failure: true
 
       - name: Initialize Android project
-        run: npm run tauri android init
+        run: npx tauri android init
 
-      - name: Remove armv7 ABI (ort-sys lacks prebuilt for armv7-linux-androideabi)
+      - name: Limit Android ABIs to arm64-v8a and x86_64 only
         run: |
-          F=src-tauri/gen/android/app/build.gradle.kts
-          if [ -f "$F" ]; then
-            sed -i "s/\"armv7\"//g; s/, ,/,/g; s/,,/,/g; s/\[ ,/[/g; s/, \]/]/g" "$F"
-          fi
+          python3 << 'EOF'
+          import re
+          with open('src-tauri/gen/android/app/build.gradle.kts') as f:
+              content = f.read()
+          content = re.sub(r'"armeabi-v7a"[\s,]*', '', content)
+          content = re.sub(r'"x86"[\s,]*', '', content)
+          content = re.sub(r',\s*,', ',', content)
+          content = re.sub(r'\[\s*,', '[', content)
+          content = re.sub(r',\s*\]', ']', content)
+          with open('src-tauri/gen/android/app/build.gradle.kts', 'w') as f:
+              f.write(content)
+          print('Updated ABIs')
+          EOF
 
-      - name: Install wasm-pack
-        run: npm install -g wasm-pack@0.15.0
+      - name: Remove armv7 Rust target
+        run: rustup target remove armv7-linux-androideabi || true
 
       - name: Build Android APK
-        run: npm run tauri android build -- --target aarch64
+        run: npx tauri android build
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
+          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dist-android
+          name: release-android
           path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
-          retention-days: 7
+          retention-days: 30
 
-  # ─── Deploy: GitHub Pages ─────────────────────────────────────────
+  # ─── Deploy: GitHub Pages (push to main only) ──────────────────────
   deploy-pages:
     name: Deploy to GitHub Pages
     runs-on: ubuntu-latest
@@ -445,8 +511,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Download WASM artifacts
         uses: actions/download-artifact@v4
@@ -465,3 +530,154 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  # ─── Publish GitHub Release (push to main or tag) ──────────────────
+  release:
+    name: Publish Release
+    runs-on: ubuntu-latest
+    needs:
+      - rust-check
+      - wasm-build
+      - windows-build
+      - linux-build
+      - flatpak-build
+      - arch-build
+      - macos-build
+      - android-build
+      - docker-build
+    if: |
+      !cancelled() && (
+        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+        startsWith(github.ref, 'refs/tags/v')
+      )
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Auto-detect version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "version=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            VERSION=$(grep '^version =' src-tauri/Cargo.toml | head -1 | cut -d'"' -f2)
+            echo "version=v${VERSION}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check tag does not already exist
+        run: |
+          TAG="${{ steps.version.outputs.version }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists — skipping release."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+        id: tag-check
+
+      - name: Generate release notes
+        if: steps.tag-check.outputs.skip != 'true'
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            COMMITS=$(git log "$LAST_TAG"..HEAD --oneline --no-decorate 2>/dev/null | head -100 || true)
+          else
+            COMMITS=$(git log --oneline --no-decorate -50 2>/dev/null || true)
+          fi
+
+          cat > release_body.md << 'EOF'
+          # Cybermanju Drive
+
+          **Quantum-resistant encrypted file manager** — desktop, mobile, web, Docker, and headless server.
+
+          ## Platform Support
+
+          | Platform | Bundle Type | Status |
+          |----------|-------------|--------|
+          | Windows | .msi (MSI), .exe (NSIS) | ✅ |
+          | Linux (Debian/Ubuntu) | .deb | ✅ |
+          | Linux (Fedora/RHEL) | .rpm | ✅ |
+          | Linux (Universal) | .AppImage | ✅ |
+          | Linux (Flatpak) | .flatpak | ✅ |
+          | Linux (Arch/CachyOS) | deb + AppImage | ✅ |
+          | macOS | .dmg, .app | ✅ |
+          | Android | .apk | ✅ |
+          | Web (WASM) | Static files | ✅ |
+          | Docker | Container image | ✅ |
+          EOF
+
+          # Append features from RELEASE_NOTES.md
+          if [ -f RELEASE_NOTES.md ]; then
+            awk '/^## Features/,/^## (Current Limitations|Roadmap)/' RELEASE_NOTES.md | \
+              head -n -2 >> release_body.md 2>/dev/null || true
+          fi
+
+          cat >> release_body.md << 'EOF'
+
+          ## Change Log
+
+          EOF
+
+          if [ -n "$COMMITS" ]; then
+            echo '```' >> release_body.md
+            echo "$COMMITS" >> release_body.md
+            echo '```' >> release_body.md
+          else
+            echo "_No new commits since last release._" >> release_body.md
+          fi
+
+          # Append limitations and roadmap
+          if [ -f RELEASE_NOTES.md ]; then
+            awk '/^## (Current Limitations|Roadmap)/,0' RELEASE_NOTES.md >> release_body.md 2>/dev/null || true
+          fi
+
+      - name: Download all release artifacts
+        if: steps.tag-check.outputs.skip != 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+          pattern: release-*
+          merge-multiple: false
+
+      - name: Download WASM artifacts
+        if: steps.tag-check.outputs.skip != 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+          pattern: dist-wasm
+          merge-multiple: false
+
+      - name: Package artifacts
+        if: steps.tag-check.outputs.skip != 'true'
+        run: |
+          mkdir -p packages
+
+          for dir in artifacts/release-*/; do
+            [ -d "$dir" ] || continue
+            name=$(basename "$dir")
+            (cd "$dir" && zip -r "../../packages/${name}.zip" .) || true
+          done
+
+          [ -d "artifacts/dist-wasm" ] && \
+            (cd "artifacts/dist-wasm" && zip -r "../../packages/dist-wasm.zip" .) || true
+
+          ls -la packages/
+
+      - name: Create GitHub Release
+        if: steps.tag-check.outputs.skip != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: "Cybermanju Drive ${{ steps.version.outputs.version }}"
+          body_path: release_body.md
+          draft: false
+          prerelease: false
+          files: packages/*
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
