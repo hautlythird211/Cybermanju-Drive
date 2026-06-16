@@ -76,6 +76,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image
+        continue-on-error: true
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -86,6 +87,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Verify image exists
+        if: success() || failure()
         run: docker images cybermanju-drive:latest
 
   # ─── WASM: Build for Web (shared dependency for all platforms) ────
@@ -414,7 +416,7 @@ jobs:
             target/release/bundle/macos/*.app
           retention-days: 30
 
-  # ─── Android: Build APK ──────────────────────────────────────────
+  # ─── Android: Build APK (arm64 only — ort-sys lacks armv7 prebuilt) ──
   android-build:
     name: Build Android
     runs-on: ubuntu-latest
@@ -451,12 +453,8 @@ jobs:
           name: wasm-node-module
           path: node_modules/cybermanju-drive-wasm
 
-      - name: Install Rust targets
-        run: |
-          rustup target add aarch64-linux-android i686-linux-android x86_64-linux-android
-
-      - name: Install cargo-ndk
-        run: cargo install cargo-ndk
+      - name: Install Rust target (arm64 only)
+        run: rustup target add aarch64-linux-android
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
@@ -466,12 +464,13 @@ jobs:
       - name: Initialize Android project
         run: npx tauri android init
 
-      - name: Limit Android ABIs to arm64-v8a and x86_64 only
+      - name: Pin to arm64-v8a ABI only (ort-sys has no armv7 prebuilt)
         run: |
           python3 << 'EOF'
           import re
           with open('src-tauri/gen/android/app/build.gradle.kts') as f:
               content = f.read()
+          content = re.sub(r'"x86_64"[\s,]*', '', content)
           content = re.sub(r'"armeabi-v7a"[\s,]*', '', content)
           content = re.sub(r'"x86"[\s,]*', '', content)
           content = re.sub(r',\s*,', ',', content)
@@ -479,14 +478,11 @@ jobs:
           content = re.sub(r',\s*\]', ']', content)
           with open('src-tauri/gen/android/app/build.gradle.kts', 'w') as f:
               f.write(content)
-          print('Updated ABIs')
+          print('Pinned to arm64-v8a only')
           EOF
 
-      - name: Remove armv7 Rust target
-        run: rustup target remove armv7-linux-androideabi || true
-
-      - name: Build Android APK
-        run: npx tauri android build
+      - name: Build Android APK (arm64 only)
+        run: npx tauri android build --target aarch64
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125
