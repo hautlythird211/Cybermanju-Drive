@@ -437,17 +437,26 @@ impl Database {
     // Portable Database (`.cybermanju`) operations
     // -----------------------------------------------------------------------
 
-    pub fn store_file_relation(&self, relation: &cybermanju_types::schema::FileRelation) -> Result<()> {
+    pub fn store_file_relation(
+        &self,
+        relation: &cybermanju_types::schema::FileRelation,
+    ) -> Result<()> {
         let tx = self.db.begin_write()?;
         {
             let mut table = tx.open_table(FILE_RELATIONS_TABLE)?;
-            table.insert(relation.id.as_str(), serde_json::to_string(relation)?.as_str())?;
+            table.insert(
+                relation.id.as_str(),
+                serde_json::to_string(relation)?.as_str(),
+            )?;
         }
         tx.commit()?;
         Ok(())
     }
 
-    pub fn get_file_relation(&self, relation_id: &str) -> Result<Option<cybermanju_types::schema::FileRelation>> {
+    pub fn get_file_relation(
+        &self,
+        relation_id: &str,
+    ) -> Result<Option<cybermanju_types::schema::FileRelation>> {
         let tx = self.db.begin_read()?;
         let table = tx.open_table(FILE_RELATIONS_TABLE)?;
         match table.get(relation_id)? {
@@ -456,13 +465,18 @@ impl Database {
         }
     }
 
-    pub fn get_file_relations_for_local(&self, local_file_id: &str) -> Result<Vec<cybermanju_types::schema::FileRelation>> {
+    pub fn get_file_relations_for_local(
+        &self,
+        local_file_id: &str,
+    ) -> Result<Vec<cybermanju_types::schema::FileRelation>> {
         let tx = self.db.begin_read()?;
         let table = tx.open_table(FILE_RELATIONS_TABLE)?;
         let mut relations = Vec::new();
         for entry in table.iter()? {
             let (_, value) = entry?;
-            if let Ok(rel) = serde_json::from_str::<cybermanju_types::schema::FileRelation>(value.value()) {
+            if let Ok(rel) =
+                serde_json::from_str::<cybermanju_types::schema::FileRelation>(value.value())
+            {
                 if rel.local_file_id == local_file_id {
                     relations.push(rel);
                 }
@@ -475,7 +489,8 @@ impl Database {
         let tx = self.db.begin_write()?;
         let removed = {
             let mut table = tx.open_table(FILE_RELATIONS_TABLE)?;
-            table.remove(relation_id)?.is_some()
+            let result = table.remove(relation_id)?.is_some();
+            result
         };
         tx.commit()?;
         Ok(removed)
@@ -487,14 +502,19 @@ impl Database {
         let mut relations = Vec::new();
         for entry in table.iter()? {
             let (_, value) = entry?;
-            if let Ok(rel) = serde_json::from_str::<cybermanju_types::schema::FileRelation>(value.value()) {
+            if let Ok(rel) =
+                serde_json::from_str::<cybermanju_types::schema::FileRelation>(value.value())
+            {
                 relations.push(rel);
             }
         }
         Ok(relations)
     }
 
-    pub fn store_deletion_record(&self, record: &cybermanju_types::schema::DeletionRecord) -> Result<()> {
+    pub fn store_deletion_record(
+        &self,
+        record: &cybermanju_types::schema::DeletionRecord,
+    ) -> Result<()> {
         let tx = self.db.begin_write()?;
         {
             let mut table = tx.open_table(DELETION_LOG_TABLE)?;
@@ -504,7 +524,10 @@ impl Database {
         Ok(())
     }
 
-    pub fn get_deletion_record(&self, record_id: &str) -> Result<Option<cybermanju_types::schema::DeletionRecord>> {
+    pub fn get_deletion_record(
+        &self,
+        record_id: &str,
+    ) -> Result<Option<cybermanju_types::schema::DeletionRecord>> {
         let tx = self.db.begin_read()?;
         let table = tx.open_table(DELETION_LOG_TABLE)?;
         match table.get(record_id)? {
@@ -519,7 +542,9 @@ impl Database {
         let mut records = Vec::new();
         for entry in table.iter()? {
             let (_, value) = entry?;
-            if let Ok(rec) = serde_json::from_str::<cybermanju_types::schema::DeletionRecord>(value.value()) {
+            if let Ok(rec) =
+                serde_json::from_str::<cybermanju_types::schema::DeletionRecord>(value.value())
+            {
                 if !rec.pending_platforms.is_empty() {
                     records.push(rec);
                 }
@@ -528,20 +553,27 @@ impl Database {
         Ok(records)
     }
 
-    pub fn list_all_deletion_records(&self) -> Result<Vec<cybermanju_types::schema::DeletionRecord>> {
+    pub fn list_all_deletion_records(
+        &self,
+    ) -> Result<Vec<cybermanju_types::schema::DeletionRecord>> {
         let tx = self.db.begin_read()?;
         let table = tx.open_table(DELETION_LOG_TABLE)?;
         let mut records = Vec::new();
         for entry in table.iter()? {
             let (_, value) = entry?;
-            if let Ok(rec) = serde_json::from_str::<cybermanju_types::schema::DeletionRecord>(value.value()) {
+            if let Ok(rec) =
+                serde_json::from_str::<cybermanju_types::schema::DeletionRecord>(value.value())
+            {
                 records.push(rec);
             }
         }
         Ok(records)
     }
 
-    pub fn update_deletion_record(&self, record: &cybermanju_types::schema::DeletionRecord) -> Result<()> {
+    pub fn update_deletion_record(
+        &self,
+        record: &cybermanju_types::schema::DeletionRecord,
+    ) -> Result<()> {
         let tx = self.db.begin_write()?;
         {
             let mut table = tx.open_table(DELETION_LOG_TABLE)?;
@@ -555,13 +587,17 @@ impl Database {
         let tx = self.db.begin_write()?;
         let removed = {
             let mut table = tx.open_table(DELETION_LOG_TABLE)?;
-            table.remove(record_id)?.is_some()
+            let result = table.remove(record_id)?.is_some();
+            result
         };
         tx.commit()?;
         Ok(removed)
     }
 
-    pub fn store_recovery_entry(&self, entry: &cybermanju_types::schema::RecoveryEntry) -> Result<()> {
+    pub fn store_recovery_entry(
+        &self,
+        entry: &cybermanju_types::schema::RecoveryEntry,
+    ) -> Result<()> {
         let tx = self.db.begin_write()?;
         {
             let mut table = tx.open_table(RECOVERY_STORE_TABLE)?;
@@ -571,12 +607,17 @@ impl Database {
         Ok(())
     }
 
-    pub fn get_recovery_entry(&self, file_id: &str) -> Result<Option<cybermanju_types::schema::RecoveryEntry>> {
+    pub fn get_recovery_entry(
+        &self,
+        file_id: &str,
+    ) -> Result<Option<cybermanju_types::schema::RecoveryEntry>> {
         let tx = self.db.begin_read()?;
         let table = tx.open_table(RECOVERY_STORE_TABLE)?;
         for entry in table.iter()? {
             let (_, value) = entry?;
-            if let Ok(rec) = serde_json::from_str::<cybermanju_types::schema::RecoveryEntry>(value.value()) {
+            if let Ok(rec) =
+                serde_json::from_str::<cybermanju_types::schema::RecoveryEntry>(value.value())
+            {
                 if rec.original_file_id == file_id {
                     return Ok(Some(rec));
                 }
@@ -585,13 +626,17 @@ impl Database {
         Ok(None)
     }
 
-    pub fn list_all_recovery_entries(&self) -> Result<Vec<cybermanju_types::schema::RecoveryEntry>> {
+    pub fn list_all_recovery_entries(
+        &self,
+    ) -> Result<Vec<cybermanju_types::schema::RecoveryEntry>> {
         let tx = self.db.begin_read()?;
         let table = tx.open_table(RECOVERY_STORE_TABLE)?;
         let mut entries = Vec::new();
         for entry in table.iter()? {
             let (_, value) = entry?;
-            if let Ok(rec) = serde_json::from_str::<cybermanju_types::schema::RecoveryEntry>(value.value()) {
+            if let Ok(rec) =
+                serde_json::from_str::<cybermanju_types::schema::RecoveryEntry>(value.value())
+            {
                 entries.push(rec);
             }
         }
@@ -602,7 +647,8 @@ impl Database {
         let tx = self.db.begin_write()?;
         let removed = {
             let mut table = tx.open_table(RECOVERY_STORE_TABLE)?;
-            table.remove(entry_id)?.is_some()
+            let result = table.remove(entry_id)?.is_some();
+            result
         };
         tx.commit()?;
         Ok(removed)
@@ -642,12 +688,14 @@ impl Database {
         let tx = self.db.begin_write()?;
         {
             let table = tx.open_table(DELETION_LOG_TABLE)?;
-            if let Some(v) = table.get(record_id)? {
-                let mut record: cybermanju_types::schema::DeletionRecord =
-                    serde_json::from_str(v.value())?;
+            let existing: Option<cybermanju_types::schema::DeletionRecord> = table
+                .get(record_id)?
+                .map(|v| serde_json::from_str(v.value()))
+                .transpose()?;
+            drop(table);
+            if let Some(mut record) = existing {
                 record.propagated_to.push(platform.to_string());
                 record.pending_platforms.retain(|p| p != platform);
-                drop(table);
                 let mut table = tx.open_table(DELETION_LOG_TABLE)?;
                 table.insert(record_id, serde_json::to_string(&record)?.as_str())?;
             }
@@ -668,7 +716,9 @@ impl Database {
             let mut to_update = Vec::new();
             for entry in table.iter()? {
                 let (k, v) = entry?;
-                if let Ok(rel) = serde_json::from_str::<cybermanju_types::schema::FileRelation>(v.value()) {
+                if let Ok(rel) =
+                    serde_json::from_str::<cybermanju_types::schema::FileRelation>(v.value())
+                {
                     if rel.local_file_id == local_file_id && rel.backend_type == backend_type {
                         to_update.push(k.value().to_string());
                     }
@@ -677,9 +727,11 @@ impl Database {
             drop(table);
             let mut table = tx.open_table(FILE_RELATIONS_TABLE)?;
             for key in to_update {
-                if let Some(v) = table.get(key.as_str())? {
-                    let mut rel: cybermanju_types::schema::FileRelation =
-                        serde_json::from_str(v.value())?;
+                let value: Option<cybermanju_types::schema::FileRelation> = table
+                    .get(key.as_str())?
+                    .map(|v| serde_json::from_str(v.value()))
+                    .transpose()?;
+                if let Some(mut rel) = value {
                     rel.status = new_status.to_string();
                     rel.last_verified_at = Some(chrono::Utc::now().to_rfc3339());
                     table.insert(key.as_str(), serde_json::to_string(&rel)?.as_str())?;
