@@ -461,21 +461,19 @@ jobs:
 
       - name: Limit Android ABIs to arm64-v8a and x86_64 only
         run: |
-          python3 -c "
-import re
-with open('src-tauri/gen/android/app/build.gradle.kts') as f:
-    content = f.read()
-# Remove armeabi-v7a and x86 from abiFilters
-content = re.sub(r'\\\"armeabi-v7a\\\"[\\s,]*', '', content)
-content = re.sub(r'\\\"x86\\\"[\\s,]*', '', content)
-content = re.sub(r',\\s*,', ',', content)
-content = re.sub(r'\\[\\s*,', '[', content)
-content = re.sub(r',\\s*\\]', ']', content)
-with open('src-tauri/gen/android/app/build.gradle.kts', 'w') as f:
-    f.write(content)
-print('Updated ABIs')
-"
-        # Also remove unnecessary Android targets
+          python3 << 'EOF'
+          import re
+          with open('src-tauri/gen/android/app/build.gradle.kts') as f:
+              content = f.read()
+          content = re.sub(r'"armeabi-v7a"[\s,]*', '', content)
+          content = re.sub(r'"x86"[\s,]*', '', content)
+          content = re.sub(r',\s*,', ',', content)
+          content = re.sub(r'\[\s*,', '[', content)
+          content = re.sub(r',\s*\]', ']', content)
+          with open('src-tauri/gen/android/app/build.gradle.kts', 'w') as f:
+              f.write(content)
+          print('Updated ABIs')
+          EOF
       - name: Remove armv7 Rust target
         run: rustup target remove armv7-linux-androideabi || true
 
