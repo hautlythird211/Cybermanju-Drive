@@ -1673,9 +1673,7 @@ impl MegaBackend {
     pub fn new(token: &str) -> Result<Self, String> {
         let parts: Vec<&str> = token.splitn(2, '|').collect();
         if parts.len() != 2 || parts[0].is_empty() || parts[1].is_empty() {
-            return Err(
-                "Mega backend requires token in 'email|password' format".to_string(),
-            );
+            return Err("Mega backend requires token in 'email|password' format".to_string());
         }
         let rt = tokio::runtime::Runtime::new()
             .map_err(|e| format!("Failed to create tokio runtime: {}", e))?;

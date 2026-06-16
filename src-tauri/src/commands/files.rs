@@ -608,11 +608,7 @@ pub fn delete_files_from_backends(
                     let remote_path = format!("files/{}", file_id);
                     match backend.delete_file(&remote_path) {
                         Ok(_) => {
-                            log::info!(
-                                "Deleted {} from backend {}",
-                                file_id,
-                                cfg.backend_type
-                            );
+                            log::info!("Deleted {} from backend {}", file_id, cfg.backend_type);
                             deleted_count += 1;
                         }
                         Err(e) => {
