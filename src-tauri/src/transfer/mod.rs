@@ -117,19 +117,18 @@ fn resolve_source_path(
             }
             None => remote_path.to_string(),
         };
-        let size = fs::metadata(&local_path)
-            .map(|m| m.len())
-            .unwrap_or(0);
-        info!("Transfer: local source — using path directly: {}", local_path);
+        let size = fs::metadata(&local_path).map(|m| m.len()).unwrap_or(0);
+        info!(
+            "Transfer: local source — using path directly: {}",
+            local_path
+        );
         Ok((local_path, size))
     } else {
         // ── Remote source: download to temp ──
         let temp_path = unique_temp_path(temp_root, &file_name);
         info!("Transfer: downloading {} from remote source", remote_path);
         source.download_file(remote_path, &temp_path)?;
-        let size = fs::metadata(&temp_path)
-            .map(|m| m.len())
-            .unwrap_or(0);
+        let size = fs::metadata(&temp_path).map(|m| m.len()).unwrap_or(0);
         Ok((temp_path, size))
     }
 }
@@ -144,8 +143,13 @@ fn transfer_single_file(
     temp_root: &str,
 ) -> Result<u64, String> {
     // 1. Resolve source (download remote or use local path directly)
-    let (source_path, file_size) =
-        resolve_source_path(remote_path, source, is_source_local, source_base_path, temp_root)?;
+    let (source_path, file_size) = resolve_source_path(
+        remote_path,
+        source,
+        is_source_local,
+        source_base_path,
+        temp_root,
+    )?;
 
     // 2. Upload from source path to destination.
     //    The remote_path acts as the destination key/name.
@@ -242,7 +246,11 @@ pub fn transfer_files(
         {
             let mut p = transfer_state.progress.lock().map_err(|e| e.to_string())?;
             p.current_file = Some(file_path.clone());
-            p.status = if is_source_local { "uploading".to_string() } else { "downloading".to_string() };
+            p.status = if is_source_local {
+                "uploading".to_string()
+            } else {
+                "downloading".to_string()
+            };
         }
 
         match transfer_single_file(
@@ -319,9 +327,7 @@ pub fn get_transfer_progress(
 
 /// Cancel an in-progress transfer.
 #[tauri::command]
-pub fn cancel_transfer(
-    transfer_state: State<'_, Arc<TransferState>>,
-) -> Result<bool, String> {
+pub fn cancel_transfer(transfer_state: State<'_, Arc<TransferState>>) -> Result<bool, String> {
     transfer_state.cancel_flag.store(true, Ordering::SeqCst);
     {
         let mut p = transfer_state.progress.lock().map_err(|e| e.to_string())?;
