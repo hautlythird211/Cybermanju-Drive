@@ -465,7 +465,7 @@ jobs:
         run: |
           sed -i '/armeabi/d; /"x86"/d' src-tauri/gen/android/app/build.gradle.kts || true
 
-      - name: Debug: check Gradle config
+      - name: "Debug: check Gradle config"
         run: cat src-tauri/gen/android/app/build.gradle.kts
 
       - name: Build Android APK
