@@ -1,8 +1,9 @@
 use chrono::Utc;
+use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::State;
 
