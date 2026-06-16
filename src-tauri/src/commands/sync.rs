@@ -175,7 +175,7 @@ pub fn start_sync(
     sync_state.cancel_flag.store(false, Ordering::SeqCst);
 
     // 3. Create pipeline and run sync
-    let pipeline = crate::sync::SyncPipeline::new(config, "cybermanju.db".to_string());
+    let pipeline = crate::sync::SyncPipeline::new(config, state.db_path.clone());
     let result = pipeline.sync_all(file_ids, &state)?;
 
     // 4. Update progress to completed

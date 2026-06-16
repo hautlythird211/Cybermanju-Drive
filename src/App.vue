@@ -14,6 +14,7 @@ import { ShortcutsKey } from '@/composables/shortcutsKey'
 import { kvGet } from '@/wasm/storage'
 import DesktopShell from '@/components/DesktopShell.vue'
 import LandingPage from '@/components/LandingPage.vue'
+import BootScreen from '@/components/BootScreen.vue'
 import SetupWizard from '@/components/SetupWizard.vue'
 import CanvasEngine from '@/components/CanvasEngine.vue'
 import NotificationStack from '@/components/NotificationStack.vue'
@@ -498,6 +499,7 @@ function handleUpload() {
 }
 
 const needsSetup = ref<boolean | null>(null)
+const bootComplete = ref(false)
 
 onMounted(async () => {
   store.currentPanel = 'landing'
@@ -510,6 +512,10 @@ onMounted(async () => {
     needsSetup.value = true
   }
 })
+
+function onBootComplete() {
+  bootComplete.value = true
+}
 
 function onSetupComplete() {
   needsSetup.value = false
@@ -526,86 +532,88 @@ function handleLandingLaunch() {
 
 <template>
   <div class="cybermanju-shell">
-    <LandingPage
-      v-if="store.currentPanel === 'landing' && needsSetup !== true"
-      :key="'landing'"
-      @open-app="handleLandingLaunch"
-    />
-    <SetupWizard
-      v-if="needsSetup === true"
-      @complete="onSetupComplete"
-    />
-    <template v-else>
-      <DesktopShell>
-        <template #wallpaper>
-          <CanvasEngine :enabled="store.matrixRainEnabled" />
-        </template>
-      </DesktopShell>
+    <BootScreen v-if="!bootComplete" @complete="onBootComplete" />
+    <template v-if="bootComplete">
+      <LandingPage
+        v-if="store.currentPanel === 'landing' && needsSetup !== true"
+        :key="'landing'"
+        @open-app="handleLandingLaunch"
+      />
+      <SetupWizard
+        v-if="needsSetup === true"
+        @complete="onSetupComplete"
+      />
+      <template v-else>
+        <DesktopShell>
+          <template #wallpaper>
+            <CanvasEngine :enabled="store.matrixRainEnabled" />
+          </template>
+        </DesktopShell>
 
-      <div v-if="store.lastError" class="error-banner" @click="store.clearError()">
-      <Icon icon="mdi:alert-circle-outline" width="14" height="14" class="error-icon" />
-      <span class="error-text">{{ store.lastError }}</span>
-      <span class="error-dismiss">X</span>
-    </div>
-
-    <Teleport to="body">
-      <div v-if="store.createFolderPromptOpen" class="overlay-thin" @click.self="store.createFolderPromptOpen = false">
-        <div class="mini-modal">
-          <div class="mini-header">NEW FOLDER</div>
-          <input
-            ref="folderInputRef"
-            v-model="newFolderName"
-            class="bw-input"
-            style="width:100%;margin-bottom:8px;"
-            placeholder="FOLDER NAME"
-            @keyup.enter="handleCreateFolder"
-          />
-          <div class="mini-actions">
-            <button class="bw-btn" @click="store.createFolderPromptOpen = false">[CANCEL]</button>
-            <button class="bw-btn bw-btn-inverse" @click="handleCreateFolder">[CREATE]</button>
-          </div>
+        <div v-if="store.lastError" class="error-banner" @click="store.clearError()">
+          <Icon icon="mdi:alert-circle-outline" width="14" height="14" class="error-icon" />
+          <span class="error-text">{{ store.lastError }}</span>
+          <span class="error-dismiss">X</span>
         </div>
-      </div>
-    </Teleport>
 
-    <NotificationStack />
-    <CommandPalette />
-    <KeyboardShortcutsHelp />
-    <ConfirmDialog
-      :visible="confirmVisible"
-      :title="confirmTitle"
-      :message="confirmMessage"
-      @confirm="handleConfirm"
-      @cancel="handleCancel"
-      @update:visible="confirmVisible = $event"
-    />
-    <DeleteDialog
-      :visible="deleteDialogVisible"
-      :fileIds="deleteDialogFileIds"
-      @close="deleteDialogVisible = false"
-      @move="onDeleteDialogMove"
-      @unbox="onDeleteDialogUnbox"
-    />
-    <MoveDialog
-      :visible="moveDialogVisible"
-      :fileIds="moveDialogFileIds"
-      @close="moveDialogVisible = false"
-    />
-    <UnboxDialog
-      :visible="unboxDialogVisible"
-      :file="unboxDialogFile"
-      @close="unboxDialogVisible = false"
-    />
-    <LoginPopup />
-    <FileUploadDialog
-      :visible="showUploadDialog"
-      @close="showUploadDialog = false"
-    />
-    <MobileNav />
-    <ContextMenu />
+        <Teleport to="body">
+          <div v-if="store.createFolderPromptOpen" class="overlay-thin" @click.self="store.createFolderPromptOpen = false">
+            <div class="mini-modal">
+              <div class="mini-header">NEW FOLDER</div>
+              <input
+                ref="folderInputRef"
+                v-model="newFolderName"
+                class="bw-input"
+                style="width:100%;margin-bottom:8px;"
+                placeholder="FOLDER NAME"
+                @keyup.enter="handleCreateFolder"
+              />
+              <div class="mini-actions">
+                <button class="bw-btn" @click="store.createFolderPromptOpen = false">[CANCEL]</button>
+                <button class="bw-btn bw-btn-inverse" @click="handleCreateFolder">[CREATE]</button>
+              </div>
+            </div>
+          </div>
+        </Teleport>
 
+        <NotificationStack />
+        <CommandPalette />
+        <KeyboardShortcutsHelp />
+        <ConfirmDialog
+          :visible="confirmVisible"
+          :title="confirmTitle"
+          :message="confirmMessage"
+          @confirm="handleConfirm"
+          @cancel="handleCancel"
+          @update:visible="confirmVisible = $event"
+        />
+        <DeleteDialog
+          :visible="deleteDialogVisible"
+          :fileIds="deleteDialogFileIds"
+          @close="deleteDialogVisible = false"
+          @move="onDeleteDialogMove"
+          @unbox="onDeleteDialogUnbox"
+        />
+        <MoveDialog
+          :visible="moveDialogVisible"
+          :fileIds="moveDialogFileIds"
+          @close="moveDialogVisible = false"
+        />
+        <UnboxDialog
+          :visible="unboxDialogVisible"
+          :file="unboxDialogFile"
+          @close="unboxDialogVisible = false"
+        />
+        <LoginPopup />
+        <FileUploadDialog
+          :visible="showUploadDialog"
+          @close="showUploadDialog = false"
+        />
+        <MobileNav />
+        <ContextMenu />
+      </template>
     </template>
-    </div>
+  </div>
 </template>
 
 <style scoped>

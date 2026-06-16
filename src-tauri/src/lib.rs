@@ -19,13 +19,25 @@ use commands::{
     portable_db, search as search_cmd, share, trash, users, versions,
 };
 use db::Database;
+use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
 pub struct AppState {
     pub db: RwLock<Database>,
+    pub db_path: String,
+    pub data_dir: String,
     pub tantivy_index: RwLock<search::SearchIndex>,
     pub compression: compression::TripleCompressor,
     pub hmac_secret: [u8; 32],
+}
+
+/// Resolve a cross-platform app data directory, creating it if necessary.
+fn app_data_dir() -> PathBuf {
+    let dir = dirs::data_local_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("cybermanju-drive");
+    let _ = std::fs::create_dir_all(&dir);
+    dir
 }
 
 // WebDashboard now handles its own shutdown (Drop impl with signal channel + thread join).
@@ -38,8 +50,18 @@ pub fn run() {
         .init();
     tracing::info!("Cybermanju Drive starting...");
 
+    // Resolve cross-platform app data directory
+    let data_dir = app_data_dir();
+    let data_dir_str = data_dir.to_string_lossy().to_string();
+    tracing::info!("App data directory: {}", data_dir_str);
+
+    // Build paths under the data directory
+    let db_path_str = data_dir.join("cybermanju.db").to_string_lossy().to_string();
+    let portable_db_path_str = data_dir.join(".cybermanju").to_string_lossy().to_string();
+    let search_index_path_str = data_dir.join("tantivy_index").to_string_lossy().to_string();
+
     // Initialize redb database
-    let db = match Database::new("cybermanju.db") {
+    let db = match Database::new(&db_path_str) {
         Ok(d) => d,
         Err(e) => {
             tracing::error!("Failed to initialize redb database: {}", e);
@@ -49,22 +71,22 @@ pub fn run() {
     tracing::info!("redb database initialized");
 
     // Initialize .cybermanju portable database
-    let portable_db_path = ".cybermanju";
     let platform = if std::env::var("DOCKER_MODE").is_ok() {
         "docker"
     } else {
         "local"
     };
-    match cybermanju_portable_db::PortableDatabase::open_or_create(portable_db_path, platform) {
+    match cybermanju_portable_db::PortableDatabase::open_or_create(&portable_db_path_str, platform)
+    {
         Ok(pdb) => {
             tracing::info!(
                 ".cybermanju portable database ready at {} ({} files, {} relations)",
-                portable_db_path,
+                portable_db_path_str,
                 pdb.header().total_files,
                 pdb.header().total_relations
             );
             // Store the path in the redb database for cross-reference
-            let _ = db.set_portable_meta("portable_db_path", portable_db_path);
+            let _ = db.set_portable_meta("portable_db_path", &portable_db_path_str);
             let _ = db.set_portable_meta("portable_db_origin", platform);
         }
         Err(e) => {
@@ -73,7 +95,7 @@ pub fn run() {
     }
 
     // Initialize Tantivy full-text search index
-    let tantivy_index = match search::SearchIndex::new("tantivy_index") {
+    let tantivy_index = match search::SearchIndex::new(&search_index_path_str) {
         Ok(i) => i,
         Err(e) => {
             tracing::error!("Failed to initialize Tantivy: {}", e);
@@ -92,6 +114,8 @@ pub fn run() {
 
     let state = AppState {
         db: RwLock::new(db),
+        db_path: db_path_str.clone(),
+        data_dir: data_dir_str,
         tantivy_index: RwLock::new(tantivy_index),
         compression: compressor,
         hmac_secret,
@@ -114,7 +138,7 @@ pub fn run() {
     };
     let dashboard = std::sync::Arc::new(web_dashboard::WebDashboard::new_with_bind_addr(
         web_dashboard::DEFAULT_PORT,
-        "cybermanju.db",
+        &db_path_str,
         dashboard_bind,
     ));
     match dashboard.start() {

@@ -62,6 +62,7 @@ pub fn dashboard_status(
 #[tauri::command]
 pub fn start_dashboard(
     state: tauri::State<'_, Arc<DashboardState>>,
+    app_state: tauri::State<'_, crate::AppState>,
 ) -> Result<DashboardStatus, String> {
     let port = crate::web_dashboard::DEFAULT_PORT;
 
@@ -82,7 +83,7 @@ pub fn start_dashboard(
         *tx_guard = Some(shutdown_tx);
     }
 
-    let db_path = "cybermanju.db".to_string();
+    let db_path = app_state.db_path.clone();
     let running_flag = Arc::new(AtomicBool::new(true));
     let running_for_thread = running_flag.clone();
     let connections_for_thread = Arc::new(AtomicU64::new(0));
