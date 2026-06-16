@@ -648,9 +648,6 @@ pub fn delete_file_metadata_only(
     }
     tx.commit().map_err(|e| e.to_string())?;
 
-    db.remove_from_all_indexes(&file_id)
-        .map_err(|e| e.to_string())?;
-
     log::info!("Deleted metadata only for file: {}", file_id);
     Ok(true)
 }

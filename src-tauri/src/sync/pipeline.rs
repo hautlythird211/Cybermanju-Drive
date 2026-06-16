@@ -688,7 +688,7 @@ impl SyncPipeline {
 
         // Open the portable DB and record the relation
         match PortableDatabase::open(&pdb_path) {
-            Ok(pdb) => {
+            Ok(_pdb) => {
                 let db_write = state.db.write().map_err(|e| e.to_string())?;
                 match PortableDatabase::record_file_relation(
                     &db_write,
@@ -776,7 +776,8 @@ impl SyncPipeline {
 
         let backend = create_backend(&self.config)?;
         let pdb = PortableDatabase::open(&pdb_path).map_err(|e| e.to_string())?;
-        let url = pdb.sync_to_backend(backend.as_ref())?;
+        let url =
+            backend.upload_file(pdb.path().to_str().unwrap_or(".cybermanju"), ".cybermanju")?;
         Ok(Some(url))
     }
 }

@@ -1,6 +1,7 @@
 use crate::db::schema::{DeletionRecord, FileRelation, PortableHeader, RecoveryEntry};
 use crate::sync::backends::create_backend;
 use crate::AppState;
+use redb::ReadableTable;
 use tauri::State;
 
 #[tauri::command]
@@ -59,19 +60,20 @@ pub fn sync_portable_db(state: State<'_, AppState>) -> Result<Vec<(String, Strin
                             .iter()
                             .find(|r| r.backend_type == *plat && r.status == "active")
                         {
-                            let _ = cybermanju_portable_db::PortableDatabase::propagate_deletion(
-                                &db,
-                                &rec.id,
-                                backend.as_ref(),
-                                &rel.remote_path,
-                            );
+                            let _ = backend.delete_file(&rel.remote_path).and_then(|_| {
+                                db.mark_deletion_propagated(
+                                    &rec.id,
+                                    &backend.backend_type().to_string(),
+                                )
+                                .map_err(|e| e.to_string())
+                            });
                         }
                     }
                 }
             }
         }
         // now upload .cybermanju
-        match pdb.sync_to_backend(backend.as_ref()) {
+        match backend.upload_file(pdb.path().to_str().unwrap_or(".cybermanju"), ".cybermanju") {
             Ok(url) => results.push((config.backend_type.to_string(), url)),
             Err(e) => log::error!("sync .cybermanju to {} failed: {}", config.backend_type, e),
         }
