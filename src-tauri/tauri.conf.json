@@ -7,7 +7,7 @@
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
     "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "[ -d node_modules/cybermanju-drive-wasm ] || npm run wasm:build-rust && npm run build"
+    "beforeBuildCommand": "node -e \"require('fs').existsSync('node_modules/cybermanju-drive-wasm')||require('child_process').execSync('npm run wasm:build-rust',{stdio:'inherit'})\" && npm run build"
   },
   "app": {
     "withGlobalTauri": true,
