@@ -254,6 +254,7 @@ impl PortableDatabase {
         let _ = fs::remove_file(&p);
     }
 
+    #[allow(dead_code)]
     fn blob_size(&self, file_id: &str, kind: &str) -> u64 {
         self.blob_path(file_id, kind)
             .metadata()
@@ -571,7 +572,7 @@ impl PortableDatabase {
 
     fn resolve(path: &str) -> PathBuf {
         let p = Path::new(path);
-        if p.is_dir() || p.extension().map_or(true, |e| e != "cybermanju") {
+        if p.is_dir() || !p.extension().is_some_and(|e| e == "cybermanju") {
             p.join(DB_FILENAME)
         } else {
             p.to_path_buf()
