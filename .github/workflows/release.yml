@@ -500,6 +500,12 @@ jobs:
       - wasm-build
       - windows-build
       - linux-build
+      - rpm-build
+      - flatpak-build
+      - arch-build
+      - macos-build
+      - android-build
+      - docker-build
     if: always()
     steps:
       - name: Checkout repository
