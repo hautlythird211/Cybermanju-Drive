@@ -1,5 +1,5 @@
 export type ViewMode = 'grid' | 'list' | 'masonry'
-export type PanelType = 'landing' | 'files' | 'preview' | 'encryption' | 'compression' | 'collections' | 'faces' | 'map' | 'code' | 'search' | 'style' | 'accounts' | 'loose-groups' | 'sync' | 'webdash' | 'users' | 'dashboard' | 'settings' | 'trash' | 'activity' | 'favorites' | 'recent' | 'storage' | 'history'
+export type PanelType = 'landing' | 'files' | 'preview' | 'encryption' | 'compression' | 'collections' | 'faces' | 'map' | 'code' | 'search' | 'style' | 'accounts' | 'loose-groups' | 'sync' | 'webdash' | 'users' | 'dashboard' | 'settings' | 'trash' | 'activity' | 'favorites' | 'recent' | 'storage' | 'history' | 'import' | 'transfer'
 export type SidebarSection = 'tree' | 'locations' | 'collections' | 'people' | 'styles' | 'loose' | 'users' | 'sync' | 'dashboard' | 'landing' | 'tools'
 
 export interface ModuleInfo {
@@ -58,9 +58,11 @@ export interface Account {
   id: string
   name: string
   accountType: string
+  backendType?: string
   path?: string
   color: string
   isActive: boolean
+  oauthProvider?: string
   createdAt: string
   updatedAt: string
 }
@@ -420,6 +422,8 @@ export const MODULE_METADATA: Record<PanelType, ModuleInfo> = {
   recent: { id: 'recent', label: 'RECENT', icon: 'mdi:clock-outline', color: '#FFFFFF', gradient: 'linear-gradient(180deg, #000000 0%, #080808 50%, #000000 100%)', description: 'Recently modified files', requiresAuth: true },
   storage: { id: 'storage', label: 'STORAGE', icon: 'mdi:harddisk', color: '#FFFFFF', gradient: 'linear-gradient(180deg, #000000 0%, #000a00 50%, #000000 100%)', description: 'Storage usage dashboard', requiresAuth: true },
   history: { id: 'history', label: 'HISTORY', icon: 'mdi:history', color: '#FFFFFF', gradient: 'linear-gradient(180deg, #000000 0%, #00080d 50%, #000000 100%)', description: 'Atomic undo/redo history', requiresAuth: true },
+  import: { id: 'import', label: 'IMPORT', icon: 'mdi:file-import-outline', color: '#FFFFFF', gradient: 'linear-gradient(180deg, #000000 0%, #000d08 50%, #000000 100%)', description: 'Import files from cloud sources with per-source personalization', requiresAuth: true },
+  transfer: { id: 'transfer', label: 'TRANSFER', icon: 'mdi:transfer', color: '#FFFFFF', gradient: 'linear-gradient(180deg, #000000 0%, #00080d 50%, #000000 100%)', description: 'Transfer files between any two backends', requiresAuth: true },
 }
 
 export const SYNC_BACKEND_INFO: Record<SyncBackendType, { name: string; description: string; color: string; icon: string }> = {

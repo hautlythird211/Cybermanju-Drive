@@ -1221,6 +1221,7 @@ dependencies = [
  "cybermanju-portable-db",
  "cybermanju-search",
  "cybermanju-types",
+ "dirs",
  "hex",
  "hmac",
  "image",

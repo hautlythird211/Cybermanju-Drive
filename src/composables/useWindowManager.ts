@@ -15,6 +15,8 @@ import EncryptionPanel from '@/components/EncryptionPanel.vue'
 import CompressionPanel from '@/components/CompressionPanel.vue'
 import FilePermissionsPanel from '@/components/FilePermissionsPanel.vue'
 import FilePreview from '@/components/FilePreview.vue'
+import ImportWindow from '@/components/ImportWindow.vue'
+import TransferWindow from '@/components/TransferWindow.vue'
 import WindowContent from '@/components/WindowContent.vue'
 
 export interface WindowState {
@@ -59,6 +61,8 @@ const defaultSizes: SizeMap = {
   compression: { width: 480, height: 420 },
   permissions: { width: 440, height: 380 },
   preview: { width: 480, height: 540 },
+  import: { width: 640, height: 520 },
+  transfer: { width: 540, height: 600 },
 }
 
 const inlinePanels: PanelType[] = [
@@ -81,6 +85,8 @@ const panelComponentMap: Record<string, Component> = {
   compression: CompressionPanel,
   permissions: FilePermissionsPanel,
   preview: FilePreview,
+  import: ImportWindow,
+  transfer: TransferWindow,
   webdash: WebDashboardPanel,
 }
 
@@ -140,7 +146,7 @@ export function useWindowManager() {
       minimized: false,
       zIndex: nextZIndex.value++,
       component: comp,
-      props: resolvedProps,
+      props: Object.keys(resolvedProps).length > 0 ? resolvedProps : undefined,
     }
     windows.value.push(win)
     windowFocusHistory.value = windowFocusHistory.value.filter(w => w !== id)

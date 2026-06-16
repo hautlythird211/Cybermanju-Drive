@@ -5,6 +5,7 @@ import { kvGet, kvSet } from '@/wasm/storage'
 import { useAppStore } from '@/stores/app'
 import ImportDialog from '@/components/ImportDialog.vue'
 import type { OAuthProvider, OAuthToken } from '@/wasm'
+import type { SyncConfig } from '@/types'
 
 const store = useAppStore()
 
@@ -22,7 +23,7 @@ const PROVIDER_ICONS: Record<string, string> = {
   github: 'logos:github-icon',
   gitlab: 'logos:gitlab',
   telegram: 'logos:telegram',
-  mega: 'mdi:cloud-upload-outline',
+  mega: 'logos:mega',
 }
 
 const AVAILABLE_PROVIDERS = [
@@ -30,7 +31,7 @@ const AVAILABLE_PROVIDERS = [
   { id: 'github', label: 'GitHub', color: '#333', oauth: true },
   { id: 'gitlab', label: 'GitLab', color: '#FC6D26', oauth: true },
   { id: 'telegram', label: 'Telegram', color: '#0088CC', oauth: true },
-  { id: 'mega', label: 'Mega.nz', color: '#D9272E', oauth: false },
+  { id: 'mega', label: 'Mega.nz', color: '#D9272E', oauth: true },
 ]
 
 interface ProviderAccount {
@@ -45,11 +46,13 @@ const accounts = ref<ProviderAccount[]>([])
 const isConnecting = ref<string | null>(null)
 const accountError = ref('')
 
-// ── Mega manual form ──
-const showMegaForm = ref(false)
+// ── Mega login modal ──
+const showMegaModal = ref(false)
 const megaEmail = ref('')
 const megaPassword = ref('')
 const megaLabel = ref('')
+const megaVerifying = ref(false)
+const megaVerifyError = ref('')
 
 // ── Client ID fallback form ──
 const showClientIdForm = ref<string | null>(null)
@@ -86,6 +89,11 @@ function getProviderLabel(id: string): string {
 
 async function connectOAuth(pid: string) {
   if (isConnecting.value) return
+
+  if (pid === 'mega') {
+    openMegaModal()
+    return
+  }
 
   if (pid === 'google') {
     await connectGoogle()
@@ -212,22 +220,68 @@ function cancelClientIdForm() {
   clientIdInput.value = ''
 }
 
-function addMegaAccount() {
-  accountError.value = ''
-  if (!megaLabel.value.trim() || !megaEmail.value.trim() || !megaPassword.value.trim()) {
-    accountError.value = 'LABEL, EMAIL AND PASSWORD ARE REQUIRED'
-    return
-  }
-  accounts.value.push({
-    providerId: 'mega',
-    label: megaLabel.value.trim(),
-    email: megaEmail.value.trim(),
-    password: megaPassword.value,
-  })
-  megaLabel.value = ''
+function openMegaModal() {
   megaEmail.value = ''
   megaPassword.value = ''
-  showMegaForm.value = false
+  megaLabel.value = 'Mega'
+  megaVerifyError.value = ''
+  showMegaModal.value = true
+}
+
+function closeMegaModal() {
+  showMegaModal.value = false
+  megaVerifying.value = false
+  megaVerifyError.value = ''
+}
+
+async function verifyAndConnectMega() {
+  megaVerifyError.value = ''
+  if (!megaEmail.value.trim() || !megaPassword.value.trim()) {
+    megaVerifyError.value = 'EMAIL AND PASSWORD ARE REQUIRED'
+    return
+  }
+
+  megaVerifying.value = true
+  isConnecting.value = 'mega'
+  try {
+    const label = megaLabel.value.trim() || 'Mega'
+    const token = `${megaEmail.value.trim()}|${megaPassword.value}`
+
+    const testConfig: SyncConfig = {
+      id: '',
+      backendType: 'mega',
+      enabled: true,
+      name: label,
+      basePath: '/',
+      token,
+      autoSync: false,
+      compressBeforeUpload: false,
+      createPreviews: false,
+      deleteRawAfterSync: false,
+      maxConcurrentUploads: 1,
+    }
+
+    const ok = await store.testSyncConnection(testConfig)
+    if (!ok) {
+      megaVerifyError.value = 'CONNECTION FAILED — check your email and password'
+      return
+    }
+
+    accounts.value.push({
+      providerId: 'mega',
+      label,
+      email: megaEmail.value.trim(),
+      password: megaPassword.value,
+      token,
+    })
+    closeMegaModal()
+    showImportDialog('mega', { accessToken: token } as OAuthToken, label)
+  } catch (e) {
+    megaVerifyError.value = e instanceof Error ? e.message : 'CONNECTION FAILED'
+  } finally {
+    megaVerifying.value = false
+    isConnecting.value = null
+  }
 }
 
 function removeAccount(idx: number) {
@@ -315,7 +369,7 @@ async function finish() {
   completeError.value = ''
   try {
     const config = {
-      accounts: accounts.value,
+      accounts: accounts.value.map(a => ({ ...a })),
       collections: collections.value.filter(c => c.selected).map(c => ({
         name: c.name,
         type: c.type,
@@ -467,7 +521,12 @@ onMounted(async () => {
               class="oauth-connect-card"
               :class="{ connected: isConnected(p.id), connecting: isConnecting === p.id }"
             >
-              <div class="oauth-connect-icon">
+              <div
+                class="oauth-connect-icon"
+                :class="{ clickable: p.id === 'mega' && !isConnected(p.id) }"
+                :title="p.id === 'mega' && !isConnected(p.id) ? 'CLICK TO CONNECT' : ''"
+                @click="p.id === 'mega' && !isConnected(p.id) ? connectOAuth('mega') : undefined"
+              >
                 <Icon :icon="providerIcon(p.id)" width="24" height="24" />
               </div>
               <div class="oauth-connect-name">{{ p.label }}</div>
@@ -480,38 +539,13 @@ onMounted(async () => {
                 <span v-else class="status-disconnected">NOT CONNECTED</span>
               </div>
               <button
-                v-if="p.oauth && !isConnected(p.id)"
+                v-if="p.oauth && p.id !== 'mega' && !isConnected(p.id)"
                 class="bw-btn bw-btn-inverse connect-btn"
                 :disabled="isConnecting !== null"
                 @click="connectOAuth(p.id)"
               >
                 [ CONNECT ]
               </button>
-            </div>
-          </div>
-
-          <div v-if="!showMegaForm && !isConnected('mega')" class="add-account-trigger" @click="showMegaForm = true">
-            <Icon icon="mdi:plus-circle-outline" width="16" height="16" />
-            CONFIGURE MEGA (MANUAL)
-          </div>
-
-          <div v-if="showMegaForm" class="add-account-form">
-            <div class="form-row">
-              <label>LABEL</label>
-              <input v-model="megaLabel" class="bw-input" placeholder="e.g. My Mega" />
-            </div>
-            <div class="form-row">
-              <label>EMAIL</label>
-              <input v-model="megaEmail" class="bw-input" placeholder="Mega.nz account email" />
-            </div>
-            <div class="form-row">
-              <label>PASSWORD</label>
-              <input v-model="megaPassword" class="bw-input" type="password" placeholder="Mega.nz password" />
-            </div>
-            <div v-if="accountError" class="form-error">{{ accountError }}</div>
-            <div class="form-actions">
-              <button class="bw-btn" @click="showMegaForm = false">CANCEL</button>
-              <button class="bw-btn bw-btn-inverse" @click="addMegaAccount">ADD MEGA</button>
             </div>
           </div>
 
@@ -654,6 +688,59 @@ onMounted(async () => {
       </div>
     </div>
   </div>
+  <!-- Mega login modal -->
+  <Teleport to="body">
+    <div v-if="showMegaModal" class="mega-modal-overlay" @click.self="closeMegaModal">
+      <div class="mega-modal">
+        <div class="mega-modal-header">
+          <Icon icon="logos:mega" width="28" height="28" />
+          <span>CONNECT MEGA.NZ</span>
+        </div>
+        <div class="mega-modal-body">
+          <div class="form-row">
+            <label>EMAIL</label>
+            <input
+              v-model="megaEmail"
+              class="bw-input"
+              placeholder="Mega.nz account email"
+              autocomplete="email"
+              @keyup.enter="verifyAndConnectMega"
+            />
+          </div>
+          <div class="form-row">
+            <label>PASSWORD</label>
+            <input
+              v-model="megaPassword"
+              class="bw-input"
+              type="password"
+              placeholder="Mega.nz password"
+              autocomplete="current-password"
+              @keyup.enter="verifyAndConnectMega"
+            />
+          </div>
+          <div class="form-row">
+            <label>LABEL (OPTIONAL)</label>
+            <input v-model="megaLabel" class="bw-input" placeholder="e.g. My Mega" />
+          </div>
+          <div v-if="megaVerifyError" class="mega-modal-error">{{ megaVerifyError }}</div>
+          <div v-if="megaVerifying" class="mega-modal-verifying">
+            <Icon icon="svg-spinners:blocks-wave" width="16" height="16" />
+            VERIFYING...
+          </div>
+        </div>
+        <div class="mega-modal-footer">
+          <button class="bw-btn" :disabled="megaVerifying" @click="closeMegaModal">CANCEL</button>
+          <button
+            class="bw-btn bw-btn-inverse"
+            :disabled="megaVerifying || !megaEmail.trim() || !megaPassword.trim()"
+            @click="verifyAndConnectMega"
+          >
+            {{ megaVerifying ? 'VERIFYING...' : 'VERIFY & CONNECT' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
   <ImportDialog
     :visible="importVisible"
     :backendType="importBackend"
@@ -930,6 +1017,16 @@ onMounted(async () => {
   justify-content: center;
   border-radius: 6px;
   background: #111;
+}
+
+.oauth-connect-icon.clickable {
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.oauth-connect-icon.clickable:hover {
+  background: #1a1a1a;
+  box-shadow: 0 0 12px rgba(217, 39, 46, 0.15);
 }
 
 .oauth-connect-name {
@@ -1247,5 +1344,73 @@ onMounted(async () => {
   .wizard-body { padding: 16px; }
   .preset-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
   .step-title { font-size: 13px; }
+}
+
+/* ── Mega modal (teleported to body) ── */
+.mega-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 9999;
+}
+
+.mega-modal {
+  width: 380px;
+  max-width: 92vw;
+  background: #0a0a0a;
+  border: 1px solid #D9272E;
+  border-radius: 12px;
+  box-shadow: 0 0 60px rgba(217, 39, 46, 0.08);
+  overflow: hidden;
+}
+
+.mega-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #e0e0e0;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.mega-modal-body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mega-modal-error {
+  font-size: 10px;
+  color: #ff5f57;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 95, 87, 0.2);
+  border-radius: 4px;
+  background: rgba(255, 95, 87, 0.05);
+  text-align: center;
+}
+
+.mega-modal-verifying {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 10px;
+  color: #febc2e;
+  letter-spacing: 1px;
+}
+
+.mega-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid #1a1a1a;
 }
 </style>

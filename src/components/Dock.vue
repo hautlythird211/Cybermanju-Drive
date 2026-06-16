@@ -67,6 +67,8 @@ const dockApps = computed<DockApp[]>(() => [
   { panelType: 'map', label: 'Map', icon: 'map-outline', category: 'tools' },
   { panelType: 'code', label: 'Code', icon: 'code-tags', category: 'tools' },
   { panelType: 'sync', label: 'Sync', icon: 'sync', category: 'tools' },
+  { panelType: 'transfer', label: 'Transfer', icon: 'transfer', category: 'tools' },
+  { panelType: 'import', label: 'Import', icon: 'file-import-outline', category: 'tools' },
   { panelType: 'storage', label: 'Storage', icon: 'harddisk', category: 'tools' },
   { panelType: 'settings', label: 'Settings', icon: 'cog-outline', category: 'system' },
   { panelType: 'history', label: 'History', icon: 'history', category: 'system' },

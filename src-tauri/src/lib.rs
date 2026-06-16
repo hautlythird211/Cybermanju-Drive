@@ -9,6 +9,7 @@ pub mod faces; // ML module: detect_faces_in_file, embedding_distance, cluster_e
 pub mod preview;
 pub mod search;
 pub mod sync;
+pub mod transfer;
 pub mod tree_sitter; // parse_file, get_symbols (tauri commands)
 pub mod web_dashboard;
 
@@ -127,6 +128,9 @@ pub fn run() {
     // Sync state for progress tracking and cancellation
     let sync_state = Arc::new(sync_cmd::SyncState::new());
 
+    // Transfer state for progress tracking and cancellation
+    let transfer_state = Arc::new(transfer::TransferState::new());
+
     // ─── Start Web Dashboard ────────────────────────────────────────────
     // Bind to 0.0.0.0 when DOCKER_MODE env var is set (NAS/container access).
     // Otherwise bind to 127.0.0.1 for local-only security (Tauri desktop).
@@ -165,6 +169,7 @@ pub fn run() {
         .manage(state)
         .manage(dashboard_state)
         .manage(sync_state)
+        .manage(transfer_state)
         .invoke_handler(tauri::generate_handler![
             // File operations
             files::list_files,
@@ -277,6 +282,10 @@ pub fn run() {
             files::delete_files_from_backends,
             // Metadata-only deletion
             files::delete_file_metadata_only,
+            // Transfer
+            transfer::transfer_files,
+            transfer::get_transfer_progress,
+            transfer::cancel_transfer,
             // Duplicate detection
             commands::duplicates::find_duplicates,
             // Portable Database (`.cybermanju`)
