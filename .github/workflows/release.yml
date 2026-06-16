@@ -475,12 +475,7 @@ jobs:
       - wasm-build
       - windows-build
       - linux-build
-      - rpm-build
-      - flatpak-build
-      - arch-build
-      - macos-build
-      - android-build
-      - docker-build
+    if: always()
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -499,55 +494,7 @@ jobs:
       - name: Generate release notes
         id: notes
         run: |
-          # Get the previous tag
-          PREV_TAG=$(git tag --sort=-creatordate | head -2 | tail -1 || echo "")
-          CURRENT_TAG=${GITHUB_REF#refs/tags/}
-          
-          echo "## What's Changed" > release_notes.md
-          echo "" >> release_notes.md
-          
-          if [ -n "$PREV_TAG" ]; then
-            echo "### Changes since $PREV_TAG" >> release_notes.md
-            echo "" >> release_notes.md
-            git log --pretty=format:"- %s (%h)" "$PREV_TAG".."$CURRENT_TAG" >> release_notes.md
-          else
-            echo "### Initial Release" >> release_notes.md
-            echo "" >> release_notes.md
-            git log --pretty=format:"- %s (%h)" >> release_notes.md
-          fi
-          
-          echo "" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "## Downloads" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "| Platform | File |" >> release_notes.md
-          echo "|----------|------|" >> release_notes.md
-          echo "| Windows | \`dist-windows.zip\` (MSI/NSIS installers) |" >> release_notes.md
-          echo "| Linux | \`dist-linux.zip\` (deb + AppImage) |" >> release_notes.md
-          echo "| Linux (RPM) | \`dist-rpm.zip\` (RPM for Fedora/RHEL) |" >> release_notes.md
-          echo "| Linux (Flatpak) | \`dist-flatpak.zip\` (Universal Linux) |" >> release_notes.md
-          echo "| Linux (Arch) | \`dist-arch.zip\` (deb + AppImage on Arch) |" >> release_notes.md
-          echo "| macOS | \`dist-macos.zip\` (DMG) |" >> release_notes.md
-          echo "| Android | \`dist-android.zip\` (APK) |" >> release_notes.md
-          echo "| Web (WASM) | \`dist-wasm.zip\` (static files for any web server) |" >> release_notes.md
-          echo "| Docker | \`docker pull hautlythird211/cybermanju-drive:latest\` |" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "### Docker" >> release_notes.md
-          echo "" >> release_notes.md
-          echo '```bash' >> release_notes.md
-          echo "docker run -d -p 3456:3456 -v /data:/data hautlythird211/cybermanju-drive:latest" >> release_notes.md
-          echo '```' >> release_notes.md
-          echo "" >> release_notes.md
-          echo "## Installation" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "- **Windows**: Download and run the \`.exe\` installer" >> release_notes.md
-          echo "- **Linux (Debian/Ubuntu)**: Install the \`.deb\` package" >> release_notes.md
-          echo "- **Linux (Fedora/RHEL)**: Install the \`.rpm\` package" >> release_notes.md
-          echo "- **Linux (Flatpak)**: \`flatpak install cybermanju-drive.flatpak\`" >> release_notes.md
-          echo "- **Linux (Arch/CachyOS)**: Run the \`.AppImage\` or build from AUR" >> release_notes.md
-          echo "- **macOS**: Open the \`.dmg\` and drag to Applications" >> release_notes.md
-          echo "- **Android**: Enable unknown sources, install the \`.apk\`" >> release_notes.md
-          echo "- **Web**: Extract \`.zip\` and serve with any static file server" >> release_notes.md
+          cp RELEASE_NOTES.md release_notes.md
 
       - name: Package artifacts
         run: |
