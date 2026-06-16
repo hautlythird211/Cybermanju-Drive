@@ -572,7 +572,7 @@ impl PortableDatabase {
 
     fn resolve(path: &str) -> PathBuf {
         let p = Path::new(path);
-        if p.is_dir() || !p.extension().is_some_and(|e| e == "cybermanju") {
+        if p.is_dir() || p.extension().is_none_or(|e| e != "cybermanju") {
             p.join(DB_FILENAME)
         } else {
             p.to_path_buf()
