@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, provide, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useAppStore } from '@/stores/app'
+import { useHistoryStore } from '@/stores/history'
 import { useKeyboardShortcuts, getGlobalShortcuts } from '@/composables/useKeyboardShortcuts'
 import { useShortcuts } from '@/composables/useShortcuts'
 import { useContextMenu } from '@/composables/useContextMenu'
@@ -22,9 +23,12 @@ import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import LoadingSpinner from '@/components/LoadingSpinner.vue'
 import LoginPopup from '@/components/LoginPopup.vue'
 import FileUploadDialog from '@/components/FileUploadDialog.vue'
+import DeleteDialog from '@/components/DeleteDialog.vue'
+import MoveDialog from '@/components/MoveDialog.vue'
+import UnboxDialog from '@/components/UnboxDialog.vue'
 import MobileNav from '@/components/MobileNav.vue'
 import ContextMenu from '@/components/ContextMenu.vue'
-import type { PanelType } from '@/types'
+import type { PanelType, FileNode } from '@/types'
 
 const store = useAppStore()
 const wm = useWindowManager()
@@ -84,6 +88,13 @@ touchConfig.onAction((action: TouchAction) => {
   actionMap[action]?.()
 })
 
+const deleteDialogVisible = ref(false)
+const deleteDialogFileIds = ref<string[]>([])
+const moveDialogVisible = ref(false)
+const moveDialogFileIds = ref<string[]>([])
+const unboxDialogVisible = ref(false)
+const unboxDialogFile = ref<FileNode | null>(null)
+
 const searchTypeFilter = ref('all')
 const searchCurrentDir = ref(false)
 const recentSearches = ref<string[]>((() => {
@@ -124,6 +135,13 @@ const mainAreaRef = ref<HTMLElement | null>(null)
 
 useSwipe(mainAreaRef, touchConfig.getSwipeOptions())
 
+// Handle clear-history confirmation
+function onClearHistoryEvent() {
+  confirmTitle.value = 'CLEAR HISTORY'
+  confirmMessage.value = `PERMANENTLY DELETE ALL ${useHistoryStore().allEntries.length} HISTORY ENTRIES?`
+  confirmVisible.value = true
+}
+
 // Handle empty-trash confirmation
 function onEmptyTrashEvent() {
   confirmTitle.value = 'EMPTY TRASH'
@@ -136,32 +154,45 @@ function onEmptyTrashConfirm() {
 }
 onMounted(() => {
   window.addEventListener('cybermanju:confirm-empty-trash', onEmptyTrashEvent)
+  window.addEventListener('cybermanju:confirm-clear-history', onClearHistoryEvent)
+  window.addEventListener('cybermanju:show-delete-dialog', onShowDeleteDialog)
 })
 onUnmounted(() => {
   window.removeEventListener('cybermanju:confirm-empty-trash', onEmptyTrashEvent)
+  window.removeEventListener('cybermanju:confirm-clear-history', onClearHistoryEvent)
+  window.removeEventListener('cybermanju:show-delete-dialog', onShowDeleteDialog)
 })
 
 function handleConfirm() {
-  if (store.deleteConfirmVisible) {
-    store.confirmDeleteAction()
-  } else if (confirmTitle.value === 'EMPTY TRASH') {
+  if (confirmTitle.value === 'EMPTY TRASH') {
     store.emptyTrash()
-    confirmVisible.value = false
-  } else {
-    confirmVisible.value = false
-  }
-}
-function handleCancel() {
-  if (store.deleteConfirmVisible) {
-    store.cancelDeleteAction()
+  } else if (confirmTitle.value === 'CLEAR HISTORY') {
+    useHistoryStore().clear()
   }
   confirmVisible.value = false
 }
-function handleUpdateVisible(v: boolean) {
-  if (!v) {
-    if (store.deleteConfirmVisible) store.cancelDeleteAction()
-    confirmVisible.value = false
+function handleCancel() {
+  confirmVisible.value = false
+}
+
+function onShowDeleteDialog(e: Event) {
+  const detail = (e as CustomEvent).detail
+  if (detail?.fileIds?.length) {
+    deleteDialogFileIds.value = detail.fileIds
+    deleteDialogVisible.value = true
   }
+}
+
+function onDeleteDialogMove(fileIds: string[]) {
+  deleteDialogVisible.value = false
+  moveDialogFileIds.value = fileIds
+  moveDialogVisible.value = true
+}
+
+function onDeleteDialogUnbox(file: FileNode) {
+  deleteDialogVisible.value = false
+  unboxDialogFile.value = file
+  unboxDialogVisible.value = true
 }
 
 watch(shortcutOverrides, (v) => {
@@ -182,9 +213,18 @@ shortcuts.on('escape', () => {
 shortcuts.on('go_back', () => { navigateInHistory(-1) })
 shortcuts.on('go_forward', () => { navigateInHistory(1) })
 shortcuts.on('open_trash', () => { wm.open('trash'); store.fetchTrashItems() })
+shortcuts.on('undo', () => {
+  const historyStore = useHistoryStore()
+  historyStore.undo()
+})
+shortcuts.on('redo', () => {
+  const historyStore = useHistoryStore()
+  historyStore.redo()
+})
 shortcuts.on('undo_delete', () => {
-  if (store.lastDeletedFileId) {
-    store.restoreTrashItem(store.lastDeletedFileId)
+  const id = store.lastDeletedFileId
+  if (id) {
+    store.restoreTrashItem(id)
     store.lastDeletedFileId = null
   }
 })
@@ -280,7 +320,7 @@ ctx.registerContext('file_grid_item', [
   { id: 'permissions', label: 'PERMISSIONS', icon: 'account-group-outline', shortcut: shortcuts.getShortcut('show_permissions'), action: (d) => d?.permissions?.() },
   { id: 'properties', label: 'PROPERTIES', icon: 'information-outline', shortcut: shortcuts.getShortcut('file_properties'), action: (d) => d?.properties?.() },
   { id: 'div3', label: '', divider: true },
-  { id: 'delete', label: 'DELETE', icon: 'close-outline', shortcut: shortcuts.getShortcut('delete'), action: (d) => { const id = d?.fileId; if (id) store.confirmAndDelete(id) } },
+  { id: 'delete', label: 'DELETE', icon: 'close-outline', shortcut: shortcuts.getShortcut('delete'), action: (d) => d?.delete?.() },
 ])
 
 ctx.registerContext('file_grid_bg', [
@@ -532,12 +572,29 @@ function handleLandingLaunch() {
     <CommandPalette />
     <KeyboardShortcutsHelp />
     <ConfirmDialog
-      :visible="confirmVisible || store.deleteConfirmVisible"
-      :title="store.deleteConfirmVisible ? 'CONFIRM DELETE' : confirmTitle"
-      :message="deleteConfirmMessage"
+      :visible="confirmVisible"
+      :title="confirmTitle"
+      :message="confirmMessage"
       @confirm="handleConfirm"
       @cancel="handleCancel"
-      @update:visible="handleUpdateVisible"
+      @update:visible="confirmVisible = $event"
+    />
+    <DeleteDialog
+      :visible="deleteDialogVisible"
+      :fileIds="deleteDialogFileIds"
+      @close="deleteDialogVisible = false"
+      @move="onDeleteDialogMove"
+      @unbox="onDeleteDialogUnbox"
+    />
+    <MoveDialog
+      :visible="moveDialogVisible"
+      :fileIds="moveDialogFileIds"
+      @close="moveDialogVisible = false"
+    />
+    <UnboxDialog
+      :visible="unboxDialogVisible"
+      :file="unboxDialogFile"
+      @close="unboxDialogVisible = false"
     />
     <LoginPopup />
     <FileUploadDialog

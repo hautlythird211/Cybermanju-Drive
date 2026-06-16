@@ -145,6 +145,9 @@
       </div>
     </div>
 
+    <!-- History Panel -->
+    <HistoryPanel v-if="panelType === 'history'" />
+
     <!-- Storage Dashboard Panel -->
     <div v-if="panelType === 'storage'" class="panel-page">
       <StorageDashboard />
@@ -173,6 +176,7 @@ import { useWindowManager } from '@/composables/useWindowManager'
 import type { PanelType } from '@/types'
 import ActivityPanel from '@/components/ActivityPanel.vue'
 import TrashPanel from '@/components/TrashPanel.vue'
+import HistoryPanel from '@/components/HistoryPanel.vue'
 
 const props = defineProps<{
   panelType: PanelType

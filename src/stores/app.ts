@@ -14,6 +14,7 @@ import type {
 } from '@/types'
 import { MODULE_METADATA } from '@/types'
 import { setAuthToken } from '@/composables/useTauri'
+import { useHistoryStore } from '@/stores/history'
 
 export const useAppStore = defineStore('cybermanju', () => {
   // ── Navigation State ──────────────────────────────────────
@@ -47,7 +48,7 @@ export const useAppStore = defineStore('cybermanju', () => {
   // ── Trash State ────────────────────────────────────────────
   const trashItems = ref<TrashItem[]>([])
   const showTrashPanel = ref(false)
-  let lastDeletedFileId: string | null = null
+  const lastDeletedFileId = ref<string | null>(null)
   let restoreTimeout: ReturnType<typeof setTimeout> | null = null
 
   // ── Audit State ────────────────────────────────────────────
@@ -137,6 +138,7 @@ export const useAppStore = defineStore('cybermanju', () => {
   )
 
   const { notify } = useNotifications()
+  const history = useHistoryStore()
 
   function notifyError(msg: string, error: unknown) {
     const detail = error instanceof Error ? error.message : String(error)
@@ -167,6 +169,7 @@ export const useAppStore = defineStore('cybermanju', () => {
         fetchEncryptionStatus(),
         listKeys(),
         fetchSyncConfigs(),
+        history.load(),
       ])
       startAutoRefresh()
     } finally {
@@ -248,17 +251,21 @@ export const useAppStore = defineStore('cybermanju', () => {
 
       if (silent) return
 
-      lastDeletedFileId = fileId
-      if (restoreTimeout) clearTimeout(restoreTimeout)
-      restoreTimeout = setTimeout(() => { lastDeletedFileId = null }, 8000)
-
       const fileName = file?.name || fileId
+      history.push('file:delete', `DELETED "${fileName}"`, [fileId],
+        { source: 'store', cmd: 'restoreTrashItem', args: { fileId } },
+        { source: 'store', cmd: 'deleteFile', args: { fileId } })
+
+      lastDeletedFileId.value = fileId
+      if (restoreTimeout) clearTimeout(restoreTimeout)
+      restoreTimeout = setTimeout(() => { lastDeletedFileId.value = null }, 8000)
+
       notify('success', `MOVED "${fileName}" TO TRASH`, 8000, {
         label: 'UNDO',
         handler: () => {
-          if (lastDeletedFileId) {
-            restoreTrashItem(lastDeletedFileId)
-            lastDeletedFileId = null
+          if (lastDeletedFileId.value) {
+            restoreTrashItem(lastDeletedFileId.value)
+            lastDeletedFileId.value = null
           }
         },
       })
@@ -268,15 +275,15 @@ export const useAppStore = defineStore('cybermanju', () => {
     }
   }
 
-  async function confirmAndDelete(fileId: string) {
-    lastPendingDeleteId = fileId
-    pendingDeleteFileName = files.value.find(f => f.id === fileId)?.name || null
-    deleteConfirmVisible.value = true
-  }
-
   const deleteConfirmVisible = ref(false)
   const lastPendingDeleteId = ref<string | null>(null)
   const pendingDeleteFileName = ref<string | null>(null)
+
+  async function confirmAndDelete(fileId: string) {
+    lastPendingDeleteId.value = fileId
+    pendingDeleteFileName.value = files.value.find(f => f.id === fileId)?.name || null
+    deleteConfirmVisible.value = true
+  }
 
   function confirmDeleteAction() {
     if (lastPendingDeleteId.value) {
@@ -295,8 +302,12 @@ export const useAppStore = defineStore('cybermanju', () => {
 
   async function renameFile(fileId: string, newName: string) {
     try {
+      const oldName = files.value.find(f => f.id === fileId)?.name || ''
       await invoke('rename_file', { fileId, newName })
       await fetchFiles()
+      history.push('file:rename', `RENAMED "${oldName}" → "${newName}"`, [fileId],
+        { source: 'store', cmd: 'renameFile', args: { fileId, newName: oldName } },
+        { source: 'store', cmd: 'renameFile', args: { fileId, newName } })
       notifySuccess('File renamed')
     } catch (e) {
       notifyError('Failed to rename file', e)
@@ -385,6 +396,10 @@ export const useAppStore = defineStore('cybermanju', () => {
       await invoke('encrypt_file', { fileId, algorithm })
       await fetchFiles()
       await fetchEncryptionStatus()
+      const name = files.value.find(f => f.id === fileId)?.name || fileId
+      history.push('encryption:encrypt', `ENCRYPTED "${name}" (${algorithm})`, [fileId],
+        { source: 'store', cmd: 'decryptFile', args: { fileId } },
+        { source: 'store', cmd: 'encryptFile', args: { fileId, algorithm } })
     } catch (e) {
       notifyError('Encryption failed', e)
     }
@@ -395,6 +410,12 @@ export const useAppStore = defineStore('cybermanju', () => {
       await invoke('decrypt_file', { fileId })
       await fetchFiles()
       await fetchEncryptionStatus()
+      const name = files.value.find(f => f.id === fileId)?.name || fileId
+      const file = files.value.find(f => f.id === fileId)
+      const algo = file?.encryptionAlgorithm || 'aes256'
+      history.push('encryption:decrypt', `DECRYPTED "${name}"`, [fileId],
+        { source: 'store', cmd: 'encryptFile', args: { fileId, algorithm: algo } },
+        { source: 'store', cmd: 'decryptFile', args: { fileId } })
     } catch (e) {
       notifyError('Decryption failed', e)
     }
@@ -406,6 +427,10 @@ export const useAppStore = defineStore('cybermanju', () => {
       const stats = await invoke<CompressionStats>('compress_file', { fileId, layer })
       compressionStats.value = stats
       await fetchFiles()
+      const name = files.value.find(f => f.id === fileId)?.name || fileId
+      history.push('compression:compress', `COMPRESSED "${name}" (${layer})`, [fileId],
+        { source: 'store', cmd: 'decompressFile', args: { fileId } },
+        { source: 'store', cmd: 'compressFile', args: { fileId, layer } })
     } catch (e) {
       notifyError('Compression failed', e)
     }
@@ -416,6 +441,11 @@ export const useAppStore = defineStore('cybermanju', () => {
       const stats = await invoke<CompressionStats>('decompress_file', { fileId })
       compressionStats.value = stats
       await fetchFiles()
+      const name = files.value.find(f => f.id === fileId)?.name || fileId
+      const layer = files.value.find(f => f.id === fileId)?.compressionLayers?.[0] || 'zstd'
+      history.push('compression:decompress', `DECOMPRESSED "${name}"`, [fileId],
+        { source: 'store', cmd: 'compressFile', args: { fileId, layer } },
+        { source: 'store', cmd: 'decompressFile', args: { fileId } })
     } catch (e) {
       notifyError('Decompression failed', e)
     }
@@ -443,6 +473,11 @@ export const useAppStore = defineStore('cybermanju', () => {
     try {
       await invoke('add_to_collection', { collectionId, fileId, note })
       await fetchCollections()
+      const coll = collections.value.find(c => c.id === collectionId)
+      const name = files.value.find(f => f.id === fileId)?.name || fileId
+      history.push('collection:add', `ADDED "${name}" TO COLLECTION`, [fileId],
+        { source: 'store', cmd: 'removeFromCollection', args: { collectionId, fileId } },
+        { source: 'store', cmd: 'addToCollection', args: { collectionId, fileId } })
     } catch (e) {
       notifyError('Failed to add to collection', e)
     }
@@ -452,6 +487,10 @@ export const useAppStore = defineStore('cybermanju', () => {
     try {
       await invoke('remove_from_collection', { collectionId, fileId })
       await fetchCollections()
+      const name = files.value.find(f => f.id === fileId)?.name || fileId
+      history.push('collection:remove', `REMOVED "${name}" FROM COLLECTION`, [fileId],
+        { source: 'store', cmd: 'addToCollection', args: { collectionId, fileId } },
+        { source: 'store', cmd: 'removeFromCollection', args: { collectionId, fileId } })
     } catch (e) {
       notifyError('Failed to remove from collection', e)
     }
@@ -499,8 +538,12 @@ export const useAppStore = defineStore('cybermanju', () => {
 
   async function renameFaceGroup(groupId: string, newName: string) {
     try {
+      const oldName = faceGroups.value.find(g => g.id === groupId)?.name || ''
       await invoke('rename_face_group', { groupId, newName })
       await fetchFaceGroups()
+      history.push('face:rename', `RENAMED FACE GROUP "${oldName}" → "${newName}"`, [],
+        { source: 'store', cmd: 'renameFaceGroup', args: { groupId, newName: oldName } },
+        { source: 'store', cmd: 'renameFaceGroup', args: { groupId, newName } })
     } catch (e) {
       notifyError('Failed to rename face group', e)
     }
@@ -555,9 +598,14 @@ export const useAppStore = defineStore('cybermanju', () => {
 
   async function switchAccount(accountId: string) {
     try {
+      const oldId = activeAccountId.value
       await invoke('switch_account', { accountId })
       activeAccountId.value = accountId
       await fetchAccounts()
+      const name = accounts.value.find(a => a.id === accountId)?.name || accountId
+      history.push('account:switch', `SWITCHED TO ACCOUNT "${name}"`, [],
+        { source: 'store', cmd: 'switchAccount', args: { accountId: oldId || '' } },
+        { source: 'store', cmd: 'switchAccount', args: { accountId } })
     } catch (e) {
       notifyError('Failed to switch account', e)
     }
@@ -694,9 +742,14 @@ export const useAppStore = defineStore('cybermanju', () => {
 
   async function restoreTrashItem(fileId: string) {
     try {
+      const item = trashItems.value.find(i => i.originalFile.id === fileId)
       await invoke('restore_from_trash', { fileId })
       await fetchTrashItems()
       await fetchFiles()
+      const name = item?.originalFile.name || fileId
+      history.push('file:restore', `RESTORED "${name}"`, [fileId],
+        { source: 'store', cmd: 'deleteFile', args: { fileId } },
+        { source: 'store', cmd: 'restoreTrashItem', args: { fileId } })
       notifySuccess('File restored from trash')
     } catch (e) {
       notifyError('Failed to restore file', e)
@@ -831,8 +884,13 @@ export const useAppStore = defineStore('cybermanju', () => {
 
   async function updateUserRole(userId: string, role: string) {
     try {
+      const oldRole = users.value.find(u => u.id === userId)?.role || ''
       await invoke('update_user_role', { userId, role })
       await fetchUsers()
+      const name = users.value.find(u => u.id === userId)?.username || userId
+      history.push('user:role', `CHANGED ROLE FOR "${name}" → "${role}"`, [],
+        { source: 'store', cmd: 'updateUserRole', args: { userId, role: oldRole } },
+        { source: 'store', cmd: 'updateUserRole', args: { userId, role } })
       notifySuccess('User role updated')
     } catch (e) {
       notifyError('Failed to update user role', e)
@@ -877,6 +935,10 @@ export const useAppStore = defineStore('cybermanju', () => {
     try {
       const result = await invoke<import('@/types').ShareLink>('generate_share_link', { fileId, expiresInHours })
       await fetchShareLinks()
+      const name = files.value.find(f => f.id === fileId)?.name || fileId
+      history.push('share:create', `SHARED "${name}"`, [fileId],
+        { source: 'invoke', cmd: 'delete_share_link', args: { shareId: result?.id } },
+        { source: 'store', cmd: 'generateShareLink', args: { fileId, expiresInHours } })
       notifySuccess('Share link generated')
       return result
     } catch (e) {
@@ -929,7 +991,7 @@ export const useAppStore = defineStore('cybermanju', () => {
     showShortcutsHelp, createFolderPromptOpen, showLoginPopup,
     selectedFileIds, isMultiSelect, users, autoRefreshInterval, sortBy,
     trashCount: computed(() => trashItems.value.length),
-    deleteConfirmVisible, pendingDeleteFileName, lastPendingDeleteId,
+    lastDeletedFileId, deleteConfirmVisible, pendingDeleteFileName, lastPendingDeleteId,
     // Computed
     currentUser, authToken, isAuthenticated, selectedFile, activeAccount, encryptedFiles, compressedFiles,
     starredFiles, folders, currentFolderFiles,

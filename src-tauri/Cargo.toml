@@ -69,6 +69,8 @@ mime_guess = "2"
 # Networking
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "multipart", "rustls-tls"] }
 url = "2"
+megalib = "0.11"
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
 
 # File ops
 walkdir = "2.5"

@@ -2,6 +2,7 @@
 // Shared types for the sync backend system
 
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 // ---------------------------------------------------------------------------
 // Enums
@@ -17,6 +18,21 @@ pub enum SyncBackendType {
     GoogleDrive,
     GooglePhotos,
     Telegram,
+    Mega,
+}
+
+impl fmt::Display for SyncBackendType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SyncBackendType::Local => write!(f, "local"),
+            SyncBackendType::GitHub => write!(f, "gitHub"),
+            SyncBackendType::GitLab => write!(f, "gitLab"),
+            SyncBackendType::GoogleDrive => write!(f, "googleDrive"),
+            SyncBackendType::GooglePhotos => write!(f, "googlePhotos"),
+            SyncBackendType::Telegram => write!(f, "telegram"),
+            SyncBackendType::Mega => write!(f, "mega"),
+        }
+    }
 }
 
 /// Current status of a sync operation

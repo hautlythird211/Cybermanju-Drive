@@ -489,7 +489,7 @@ function showContextMenu(e: MouseEvent, file: FileNode) {
     decompress: () => store.notifySuccess('DECOMPRESS: ' + file.name),
     permissions: () => { store.selectedFileId = file.id; store.showPermissionsPanel = true },
     properties: () => store.notifySuccess('PROPS: ' + file.name + ' | SIZE: ' + formatSize(file.sizeBytes) + ' | ' + file.mimeType || ''),
-    delete: () => store.confirmAndDelete(file.id),
+    delete: () => window.dispatchEvent(new CustomEvent('cybermanju:show-delete-dialog', { detail: { fileIds: [file.id] } })),
     duplicate: () => store.duplicateFileContext?.(file.id) || store.notifySuccess('DUPLICATE: ' + file.name),
     rotate: (dir: string) => store.notifySuccess(`ROTATE ${dir}: ` + file.name),
     play: () => store.notifySuccess('PLAY: ' + file.name),
@@ -507,7 +507,7 @@ async function execBulk(action: string) {
         case 'encrypt': await store.encryptFile(id, 'hybrid'); break
         case 'compress': await store.compressFile(id, 'zstd'); break
         case 'star': store.toggleStar(id); break
-        case 'delete': await store.deleteFile(id, true); break
+        case 'delete': window.dispatchEvent(new CustomEvent('cybermanju:show-delete-dialog', { detail: { fileIds: store.selectedFileIds } })); break
       }
     } catch {}
   }

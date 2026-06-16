@@ -249,6 +249,10 @@ pub fn run() {
             versions::snapshot_all_versions,
             // Parent index rebuild
             files::rebuild_parent_index,
+            // Backend-aware deletion
+            files::delete_files_from_backends,
+            // Metadata-only deletion
+            files::delete_file_metadata_only,
             // Duplicate detection
             commands::duplicates::find_duplicates,
             // Portable Database (`.cybermanju`)

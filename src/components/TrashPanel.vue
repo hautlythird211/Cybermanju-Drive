@@ -111,7 +111,7 @@
               {{ getOriginalPath(item) }}
             </span>
           </div>
-          <span class="trash-size text-muted">{{ formatSize(item.originalFile.size) }}</span>
+          <span class="trash-size text-muted">{{ formatSize(item.originalFile.sizeBytes) }}</span>
           <span class="trash-date text-muted" :title="new Date(item.deletedAt).toLocaleString()">
             {{ relativeTime(item.deletedAt) }}
           </span>
@@ -171,8 +171,8 @@ const filteredItems = computed(() => {
       case 'date-asc': return new Date(a.deletedAt).getTime() - new Date(b.deletedAt).getTime()
       case 'name-asc': return a.originalFile.name.localeCompare(b.originalFile.name)
       case 'name-desc': return b.originalFile.name.localeCompare(a.originalFile.name)
-      case 'size-desc': return (b.originalFile.size || 0) - (a.originalFile.size || 0)
-      case 'size-asc': return (a.originalFile.size || 0) - (b.originalFile.size || 0)
+        case 'size-desc': return (b.originalFile.sizeBytes || 0) - (a.originalFile.sizeBytes || 0)
+        case 'size-asc': return (a.originalFile.sizeBytes || 0) - (b.originalFile.sizeBytes || 0)
       default: return new Date(b.deletedAt).getTime() - new Date(a.deletedAt).getTime()
     }
   })

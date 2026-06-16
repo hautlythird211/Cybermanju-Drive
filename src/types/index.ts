@@ -1,5 +1,5 @@
 export type ViewMode = 'grid' | 'list' | 'masonry'
-export type PanelType = 'landing' | 'files' | 'preview' | 'encryption' | 'compression' | 'collections' | 'faces' | 'map' | 'code' | 'search' | 'style' | 'accounts' | 'loose-groups' | 'sync' | 'webdash' | 'users' | 'dashboard' | 'settings' | 'trash' | 'activity' | 'favorites' | 'recent' | 'storage'
+export type PanelType = 'landing' | 'files' | 'preview' | 'encryption' | 'compression' | 'collections' | 'faces' | 'map' | 'code' | 'search' | 'style' | 'accounts' | 'loose-groups' | 'sync' | 'webdash' | 'users' | 'dashboard' | 'settings' | 'trash' | 'activity' | 'favorites' | 'recent' | 'storage' | 'history'
 export type SidebarSection = 'tree' | 'locations' | 'collections' | 'people' | 'styles' | 'loose' | 'users' | 'sync' | 'dashboard' | 'landing' | 'tools'
 
 export interface ModuleInfo {
@@ -328,7 +328,7 @@ export const COMPRESSION_INFO: Record<CompressionType, { name: string; descripti
   triple: { name: 'Triple-Layer', description: 'LZ4 -> ZSTD-15 -> Brotli-11 cascading. Maximum compression for archival.', color: '#FFFFFF', speed: 'Slow' },
 }
 
-export type SyncBackendType = 'local' | 'github' | 'gitlab' | 'googleDrive' | 'googlePhotos' | 'telegram'
+export type SyncBackendType = 'local' | 'github' | 'gitlab' | 'googleDrive' | 'googlePhotos' | 'telegram' | 'mega'
 export type SyncStatusType = 'idle' | 'scanning' | 'compressing' | 'uploading' | 'linking' | 'cleaning' | 'error' | 'done'
 
 export interface SyncConfig {
@@ -419,6 +419,7 @@ export const MODULE_METADATA: Record<PanelType, ModuleInfo> = {
   favorites: { id: 'favorites', label: 'FAVORITES', icon: 'mdi:star-outline', color: '#FFFFFF', gradient: 'linear-gradient(180deg, #000000 0%, #0d0800 50%, #000000 100%)', description: 'Starred files', requiresAuth: true },
   recent: { id: 'recent', label: 'RECENT', icon: 'mdi:clock-outline', color: '#FFFFFF', gradient: 'linear-gradient(180deg, #000000 0%, #080808 50%, #000000 100%)', description: 'Recently modified files', requiresAuth: true },
   storage: { id: 'storage', label: 'STORAGE', icon: 'mdi:harddisk', color: '#FFFFFF', gradient: 'linear-gradient(180deg, #000000 0%, #000a00 50%, #000000 100%)', description: 'Storage usage dashboard', requiresAuth: true },
+  history: { id: 'history', label: 'HISTORY', icon: 'mdi:history', color: '#FFFFFF', gradient: 'linear-gradient(180deg, #000000 0%, #00080d 50%, #000000 100%)', description: 'Atomic undo/redo history', requiresAuth: true },
 }
 
 export const SYNC_BACKEND_INFO: Record<SyncBackendType, { name: string; description: string; color: string; icon: string }> = {
@@ -458,4 +459,39 @@ export const SYNC_BACKEND_INFO: Record<SyncBackendType, { name: string; descript
     color: '#FFFFFF',
     icon: 'MessageCircle',
   },
+  mega: {
+    name: 'Mega',
+    description: 'Mega.nz encrypted cloud storage. Login with email & password. 20 GB free.',
+    color: '#FFFFFF',
+    icon: 'Cloud',
+  },
+}
+
+export type HistoryActionType =
+  | 'file:delete' | 'file:restore' | 'file:rename' | 'file:create' | 'file:move'
+  | 'trash:delete' | 'trash:empty'
+  | 'encryption:encrypt' | 'encryption:decrypt'
+  | 'compression:compress' | 'compression:decompress'
+  | 'collection:create' | 'collection:delete' | 'collection:add' | 'collection:remove'
+  | 'face:rename' | 'face:merge' | 'face:delete'
+  | 'account:create' | 'account:switch'
+  | 'sync:create' | 'sync:delete'
+  | 'user:create' | 'user:delete' | 'user:role'
+  | 'share:create' | 'share:delete'
+  | 'version:create' | 'version:revert'
+
+export interface HistoryAction {
+  source: 'invoke' | 'store'
+  cmd: string
+  args: Record<string, unknown>
+}
+
+export interface HistoryEntry {
+  id: string
+  type: HistoryActionType
+  description: string
+  timestamp: number
+  affectedFileIds: string[]
+  undo: HistoryAction
+  redo: HistoryAction
 }

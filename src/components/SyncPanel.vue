@@ -36,6 +36,7 @@
           <option value="gitlab">GITLAB</option>
           <option value="googleDrive">GOOGLE DRIVE</option>
           <option value="googlePhotos">GOOGLE PHOTOS</option>
+          <option value="mega">MEGA</option>
         </select>
         <button class="bw-btn-sm" @click="addConfig">[SAVE]</button>
       </div>

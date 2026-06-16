@@ -2,6 +2,9 @@
 import { ref, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { kvGet, kvSet } from '@/wasm/storage'
+import { useAppStore } from '@/stores/app'
+
+const store = useAppStore()
 
 const emit = defineEmits<{ (e: 'complete'): void }>()
 
@@ -19,6 +22,7 @@ const PROVIDER_ICONS: Record<string, string> = {
   github: 'logos:github-icon',
   gitlab: 'logos:gitlab',
   telegram: 'logos:telegram',
+  mega: 'mdi:cloud-upload-outline',
 }
 
 const AVAILABLE_PROVIDERS = [
@@ -27,6 +31,7 @@ const AVAILABLE_PROVIDERS = [
   { id: 'github', label: 'GitHub', color: '#333' },
   { id: 'gitlab', label: 'GitLab', color: '#FC6D26' },
   { id: 'telegram', label: 'Telegram', color: '#0088CC' },
+  { id: 'mega', label: 'Mega.nz', color: '#D9272E' },
 ]
 
 interface ProviderAccount {
@@ -35,6 +40,7 @@ interface ProviderAccount {
   clientId: string
   clientSecret: string
   email: string
+  password: string
 }
 
 const accounts = ref<ProviderAccount[]>([])
@@ -45,6 +51,7 @@ const newAccount = ref<ProviderAccount>({
   clientId: '',
   clientSecret: '',
   email: '',
+  password: '',
 })
 const accountError = ref('')
 
@@ -58,12 +65,19 @@ function addAccount() {
     accountError.value = 'LABEL IS REQUIRED'
     return
   }
-  if (!newAccount.value.clientId.trim()) {
-    accountError.value = 'CLIENT ID IS REQUIRED'
-    return
+  if (newAccount.value.providerId === 'mega') {
+    if (!newAccount.value.email.trim() || !newAccount.value.password.trim()) {
+      accountError.value = 'EMAIL AND PASSWORD ARE REQUIRED FOR MEGA'
+      return
+    }
+  } else {
+    if (!newAccount.value.clientId.trim()) {
+      accountError.value = 'CLIENT ID IS REQUIRED'
+      return
+    }
   }
   accounts.value.push({ ...newAccount.value })
-  newAccount.value = { providerId: 'googleDrive', label: '', clientId: '', clientSecret: '', email: '' }
+  newAccount.value = { providerId: 'googleDrive', label: '', clientId: '', clientSecret: '', email: '', password: '' }
   showAddAccount.value = false
 }
 
@@ -169,6 +183,35 @@ async function finish() {
     }
     await kvSet('setup_config', config)
     await kvSet('setup_complete', true)
+
+    // Create sync configs for each account
+    const errors: string[] = []
+    for (const acct of accounts.value) {
+      try {
+        const base: Record<string, unknown> = {
+          name: acct.label,
+          backendType: acct.providerId,
+          enabled: true,
+          basePath: '/',
+          autoSync: false,
+          compressBeforeUpload: false,
+          maxConcurrentUploads: 1,
+        }
+        if (acct.providerId === 'mega') {
+          base.token = `${acct.email}|${acct.password}`
+        } else if (acct.providerId === 'telegram') {
+          if (acct.clientId) base.token = acct.clientId
+        } else {
+          if (acct.clientId) base.token = acct.clientId
+        }
+        await store.createSyncConfig(base as any)
+      } catch (e) {
+        errors.push(`${acct.label}: ${e}`)
+      }
+    }
+    if (errors.length) {
+      completeError.value = `SOME SYNC CONFIGS FAILED:\n${errors.join('\n')}`
+    }
     emit('complete')
   } catch (err) {
     completeError.value = `FAILED TO SAVE: ${err}`
@@ -231,7 +274,7 @@ onMounted(async () => {
           <div class="feature-list">
             <div class="feature-item">
               <Icon icon="mdi:cloud-outline" width="18" height="18" />
-              <span>Cloud provider accounts (Google Drive, GitHub, etc.)</span>
+              <span>Cloud provider accounts (Google Drive, GitHub, Mega.nz, etc.)</span>
             </div>
             <div class="feature-item">
               <Icon icon="mdi:folder-multiple-outline" width="18" height="18" />
@@ -290,18 +333,30 @@ onMounted(async () => {
               <label>LABEL</label>
               <input v-model="newAccount.label" class="bw-input" placeholder="e.g. Work Google" />
             </div>
-            <div class="form-row">
-              <label>CLIENT ID</label>
-              <input v-model="newAccount.clientId" class="bw-input" placeholder="OAuth Client ID" />
-            </div>
-            <div class="form-row">
-              <label>CLIENT SECRET</label>
-              <input v-model="newAccount.clientSecret" class="bw-input" type="password" placeholder="OAuth Client Secret" />
-            </div>
-            <div class="form-row">
-              <label>EMAIL</label>
-              <input v-model="newAccount.email" class="bw-input" placeholder="account email (optional)" />
-            </div>
+            <template v-if="newAccount.providerId === 'mega'">
+              <div class="form-row">
+                <label>EMAIL</label>
+                <input v-model="newAccount.email" class="bw-input" placeholder="Mega.nz account email" />
+              </div>
+              <div class="form-row">
+                <label>PASSWORD</label>
+                <input v-model="newAccount.password" class="bw-input" type="password" placeholder="Mega.nz password" />
+              </div>
+            </template>
+            <template v-else>
+              <div class="form-row">
+                <label>CLIENT ID</label>
+                <input v-model="newAccount.clientId" class="bw-input" placeholder="OAuth Client ID" />
+              </div>
+              <div class="form-row">
+                <label>CLIENT SECRET</label>
+                <input v-model="newAccount.clientSecret" class="bw-input" type="password" placeholder="OAuth Client Secret" />
+              </div>
+              <div class="form-row">
+                <label>EMAIL</label>
+                <input v-model="newAccount.email" class="bw-input" placeholder="account email (optional)" />
+              </div>
+            </template>
             <div v-if="accountError" class="form-error">{{ accountError }}</div>
             <div class="form-actions">
               <button class="bw-btn" @click="showAddAccount = false">CANCEL</button>

@@ -1,6 +1,7 @@
 // Cybermanju Drive — Storage Sync Backends
-// Five backend implementations: Local, GitHub, GitLab, Google Drive, Google Photos
+// Six backend implementations: Local, GitHub, GitLab, Google Drive, Google Photos, Telegram, Mega
 // All HTTP backends use reqwest::blocking (no curl subprocess).
+// MegaBackend uses megalib with a dedicated tokio runtime for async operations.
 
 use crate::sync::models::*;
 use crate::sync::oauth::{self, OAuthCredentials};
@@ -1656,6 +1657,166 @@ fn urlencoding(s: &str) -> String {
 }
 
 // ===========================================================================
+// 7. MegaBackend
+// ===========================================================================
+
+/// Mega.nz cloud storage backend.
+/// Uses the `megalib` crate for all Mega API operations.
+/// Token format: `email|password`
+pub struct MegaBackend {
+    email: String,
+    password: String,
+    rt: tokio::runtime::Runtime,
+}
+
+impl MegaBackend {
+    pub fn new(token: &str) -> Result<Self, String> {
+        let parts: Vec<&str> = token.splitn(2, '|').collect();
+        if parts.len() != 2 || parts[0].is_empty() || parts[1].is_empty() {
+            return Err(
+                "Mega backend requires token in 'email|password' format".to_string(),
+            );
+        }
+        let rt = tokio::runtime::Runtime::new()
+            .map_err(|e| format!("Failed to create tokio runtime: {}", e))?;
+        Ok(Self {
+            email: parts[0].to_string(),
+            password: parts[1].to_string(),
+            rt,
+        })
+    }
+
+    async fn login_inner(&self) -> Result<megalib::SessionHandle, String> {
+        let session = megalib::SessionHandle::login(&self.email, &self.password)
+            .await
+            .map_err(|e| format!("Mega login failed: {}", e))?;
+        session
+            .refresh()
+            .await
+            .map_err(|e| format!("Mega refresh failed: {}", e))?;
+        Ok(session)
+    }
+
+    fn remote_parent(&self, remote_path: &str) -> String {
+        if let Some(pos) = remote_path.rfind('/') {
+            if pos == 0 {
+                "/Root".to_string()
+            } else {
+                remote_path[..pos].to_string()
+            }
+        } else {
+            "/Root".to_string()
+        }
+    }
+
+    fn remote_name(&self, remote_path: &str) -> String {
+        remote_path
+            .rsplit('/')
+            .next()
+            .unwrap_or(remote_path)
+            .to_string()
+    }
+}
+
+impl StorageBackend for MegaBackend {
+    fn name(&self) -> &str {
+        "Mega"
+    }
+
+    fn backend_type(&self) -> SyncBackendType {
+        SyncBackendType::Mega
+    }
+
+    fn upload_file(&self, local_path: &str, remote_path: &str) -> Result<String, String> {
+        let parent = self.remote_parent(remote_path);
+        let name = self.remote_name(remote_path);
+
+        self.rt.block_on(async {
+            let session = self.login_inner().await?;
+            let _ = session.mkdir(&parent).await;
+            session
+                .upload_resumable(local_path, &parent)
+                .await
+                .map_err(|e| format!("Mega upload failed: {}", e))?;
+            let full_remote = format!("{}/{}", parent, name);
+            session
+                .export(&full_remote)
+                .await
+                .map_err(|e| format!("Mega export failed: {}", e))
+        })
+    }
+
+    fn download_file(&self, remote_path: &str, local_path: &str) -> Result<(), String> {
+        self.rt.block_on(async {
+            let session = self.login_inner().await?;
+            let node = session
+                .stat(remote_path)
+                .await
+                .map_err(|e| format!("Mega stat failed: {}", e))?
+                .ok_or_else(|| format!("Mega file not found: {}", remote_path))?;
+            session
+                .download_to_file(&node, local_path)
+                .await
+                .map_err(|e| format!("Mega download failed: {}", e))
+        })
+    }
+
+    fn delete_file(&self, remote_path: &str) -> Result<(), String> {
+        self.rt.block_on(async {
+            let session = self.login_inner().await?;
+            session
+                .rm(remote_path)
+                .await
+                .map_err(|e| format!("Mega delete failed: {}", e))
+        })
+    }
+
+    fn list_files(&self, prefix: &str) -> Result<Vec<RemoteFile>, String> {
+        let list_path = if prefix.is_empty() || prefix == "/" {
+            "/Root"
+        } else {
+            prefix
+        };
+
+        self.rt.block_on(async {
+            let session = self.login_inner().await?;
+            let nodes = session
+                .list(list_path, false)
+                .await
+                .map_err(|e| format!("Mega list failed: {}", e))?;
+
+            Ok(nodes
+                .into_iter()
+                .map(|n| RemoteFile {
+                    name: n.name.clone(),
+                    path: format!("{}/{}", list_path, n.name),
+                    size_bytes: n.size as u64,
+                    modified_at: String::new(),
+                    url: String::new(),
+                })
+                .collect())
+        })
+    }
+
+    fn get_file_url(&self, remote_path: &str) -> Result<String, String> {
+        self.rt.block_on(async {
+            let session = self.login_inner().await?;
+            session
+                .export(remote_path)
+                .await
+                .map_err(|e| format!("Mega export failed: {}", e))
+        })
+    }
+
+    fn test_connection(&self) -> Result<bool, String> {
+        self.rt.block_on(async {
+            self.login_inner().await?;
+            Ok(true)
+        })
+    }
+}
+
+// ===========================================================================
 // Factory: build a StorageBackend from a SyncConfig
 // ===========================================================================
 
@@ -1726,6 +1887,13 @@ pub fn create_backend(config: &SyncConfig) -> Result<Box<dyn StorageBackend>, St
                 .as_deref()
                 .ok_or("Telegram backend requires chat_id")?;
             Ok(Box::new(TelegramBackend::new(token, chat_id)))
+        }
+        SyncBackendType::Mega => {
+            let token = config
+                .token
+                .as_deref()
+                .ok_or("Mega backend requires token in 'email|password' format")?;
+            Ok(Box::new(MegaBackend::new(token)?))
         }
     }
 }

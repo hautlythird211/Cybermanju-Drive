@@ -71,6 +71,8 @@ open_settings=Ctrl+,
 open_storage=Ctrl+Shift+S
 open_favorites=Ctrl+Shift+F
 undo_delete=Ctrl+Z
+undo=Ctrl+Z
+redo=Ctrl+Shift+Z
 
 [Touch]
 swipe_threshold=50

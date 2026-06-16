@@ -69,6 +69,7 @@ const dockApps = computed<DockApp[]>(() => [
   { panelType: 'sync', label: 'Sync', icon: 'sync', category: 'tools' },
   { panelType: 'storage', label: 'Storage', icon: 'harddisk', category: 'tools' },
   { panelType: 'settings', label: 'Settings', icon: 'cog-outline', category: 'system' },
+  { panelType: 'history', label: 'History', icon: 'history', category: 'system' },
   { panelType: 'trash', label: 'Trash', icon: 'delete-outline', category: 'system' },
   { panelType: 'users', label: 'Users', icon: 'account-group-outline', category: 'system' },
   { panelType: 'accounts', label: 'Accounts', icon: 'account-outline', category: 'system' },

@@ -584,3 +584,77 @@ pub fn rebuild_parent_index(state: State<'_, AppState>) -> Result<u32, String> {
 
     Ok(count)
 }
+
+/// Delete files from specific backend(s) after local deletion.
+/// `backend_config_ids` — list of sync config IDs whose backends to delete from.
+#[tauri::command]
+pub fn delete_files_from_backends(
+    file_ids: Vec<String>,
+    backend_config_ids: Vec<String>,
+    state: State<'_, AppState>,
+) -> Result<u32, String> {
+    let db = state.db.read().map_err(|e| e.to_string())?;
+    let configs = crate::commands::sync::list_sync_configs_inner(&db)?;
+    drop(db);
+
+    let mut deleted_count = 0u32;
+    for cfg in &configs {
+        if !backend_config_ids.contains(&cfg.id) {
+            continue;
+        }
+        match crate::sync::backends::create_backend(cfg) {
+            Ok(backend) => {
+                for file_id in &file_ids {
+                    let remote_path = format!("files/{}", file_id);
+                    match backend.delete_file(&remote_path) {
+                        Ok(_) => {
+                            log::info!(
+                                "Deleted {} from backend {}",
+                                file_id,
+                                cfg.backend_type
+                            );
+                            deleted_count += 1;
+                        }
+                        Err(e) => {
+                            log::warn!(
+                                "Failed to delete {} from backend {}: {}",
+                                file_id,
+                                cfg.backend_type,
+                                e
+                            );
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                log::warn!("Failed to create backend {}: {}", cfg.id, e);
+            }
+        }
+    }
+    Ok(deleted_count)
+}
+
+/// Delete a file's metadata from the database without touching the file data
+/// on disk or in backends. Used for "delete metadata only" option.
+#[tauri::command]
+pub fn delete_file_metadata_only(
+    file_id: String,
+    state: State<'_, AppState>,
+) -> Result<bool, String> {
+    let db = state.db.write().map_err(|e| e.to_string())?;
+
+    let tx = db.begin_write().map_err(|e| e.to_string())?;
+    {
+        let mut table = tx
+            .open_table(crate::db::Database::get_files_table())
+            .map_err(|e| e.to_string())?;
+        table.remove(file_id.as_str()).map_err(|e| e.to_string())?;
+    }
+    tx.commit().map_err(|e| e.to_string())?;
+
+    db.remove_from_all_indexes(&file_id)
+        .map_err(|e| e.to_string())?;
+
+    log::info!("Deleted metadata only for file: {}", file_id);
+    Ok(true)
+}
