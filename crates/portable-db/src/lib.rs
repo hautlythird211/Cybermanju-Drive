@@ -6,16 +6,9 @@
 use anyhow::{Context, Result};
 use chrono::Utc;
 use cybermanju_compression::TripleCompressor;
-use cybermanju_crypto::{
-    decrypt_data, encrypt_data, generate_random_nonce, EncryptedFileMeta, FileEncryptedData,
-    KeyPair, PqcEngine,
-};
+use cybermanju_crypto::{decrypt_data, encrypt_data, EncryptedFileMeta, KeyPair, PqcEngine};
 use cybermanju_db::Database;
-use cybermanju_types::schema::{
-    ContentStoreEntry, DeletionRecord, FileRelation, PortableHeader, PreviewStoreEntry,
-    RecoveryEntry,
-};
-use std::collections::HashMap;
+use cybermanju_types::schema::{DeletionRecord, FileRelation, PortableHeader, RecoveryEntry};
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -24,7 +17,7 @@ use std::path::{Path, PathBuf};
 // Constants
 // ---------------------------------------------------------------------------
 
-const MAGIC: &[u8; 32] = b"CYBERMANJU_PORTABLE_v1\0\0\0\0\0\0\0\0";
+const MAGIC: &[u8; 32] = b"CYBERMANJU_PORTABLE_v1\0\0\0\0\0\0\0\0\0\0";
 const DB_FILENAME: &str = ".cybermanju";
 const CUR_VER: &str = "1.0";
 const BLOB_EXT: &str = "cyb3";
@@ -96,7 +89,7 @@ impl PortableDatabase {
             synced_platforms: Vec::new(),
         };
 
-        let mut pdb = Self {
+        let pdb = Self {
             path: p,
             header,
             compressor,
@@ -158,7 +151,7 @@ impl PortableDatabase {
         // Encrypt the whole compressed blob if a key is provided.
         // We store the KEM ciphertext + nonce inside an `EncryptedFileMeta`
         // serialized inline right after the header.
-        let (body, enc_algo, key_id, kem_meta) = if let Some(k) = key {
+        let (body, enc_algo, key_id) = if let Some(k) = key {
             let enc = encrypt_data(&compressed, k)?;
             let meta = EncryptedFileMeta::from(&enc);
             let meta_json = serde_json::to_vec(&meta)?;
@@ -349,8 +342,8 @@ impl PortableDatabase {
         db: &Database,
         file_id: &str,
         preview_data: &[u8],
-        width: u32,
-        height: u32,
+        _width: u32,
+        _height: u32,
     ) -> Result<RecoveryEntry> {
         self.ensure_blob_dir()?;
         let ph = blake3::hash(preview_data).to_hex().to_string();
@@ -410,7 +403,7 @@ impl PortableDatabase {
 
     /// Get the preview bytes for a file.
     pub fn get_preview_data(&self, db: &Database, file_id: &str) -> Result<Option<Vec<u8>>> {
-        let entry = match db.get_recovery_entry(file_id).ok().flatten() {
+        let _entry = match db.get_recovery_entry(file_id).ok().flatten() {
             Some(e) if e.has_preview => e,
             _ => return Ok(None),
         };
@@ -504,7 +497,7 @@ impl PortableDatabase {
         deleted_from: &str,
         connected_platforms: &[String],
     ) -> Result<DeletionRecord> {
-        let mut pending: Vec<String> = connected_platforms
+        let pending: Vec<String> = connected_platforms
             .iter()
             .filter(|p| *p != deleted_from)
             .cloned()
