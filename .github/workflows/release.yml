@@ -245,10 +245,15 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download Debian package
-        uses: actions/download-artifact@v4
-        with:
-          name: release-linux-deb
-          path: artifacts
+        run: |
+          for i in $(seq 1 6); do
+            if gh run download ${{ github.run_id }} --name release-linux-deb --dir artifacts 2>/dev/null; then
+              echo "Downloaded successfully"
+              break
+            fi
+            echo "Attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
 
       - name: Ensure artifacts directory exists
         run: mkdir -p artifacts
