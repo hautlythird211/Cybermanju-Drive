@@ -72,8 +72,11 @@ jobs:
       - name: Type check
         run: npx vue-tsc --noEmit
 
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
       - name: Build WASM
-        run: npm run build:wasm
+        run: npm run wasm:build
 
       - name: Upload WASM artifacts
         uses: actions/upload-artifact@v4
@@ -104,6 +107,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Build Tauri app
         run: npm run tauri build
@@ -144,7 +150,7 @@ jobs:
             build-essential \
             libssl-dev \
             libfuse2 \
-            rpm-build \
+            rpm \
             xdg-utils
 
       - name: Setup Node.js
@@ -155,6 +161,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
@@ -293,6 +302,9 @@ jobs:
       - name: Install Node.js
         run: pacman -S --noconfirm nodejs npm
 
+      - name: Install wasm-pack
+        run: sudo -u builder bash -c 'curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh'
+
       - name: Build Arch package
         run: |
           sudo -u builder bash -c "
@@ -336,6 +348,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
@@ -396,6 +411,9 @@ jobs:
 
       - name: Install cargo-ndk
         run: cargo install cargo-ndk
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
