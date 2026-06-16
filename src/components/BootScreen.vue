@@ -9,9 +9,11 @@ const showGlitch = ref(false)
 const crtFlicker = ref(false)
 const ready = ref(false)
 const dismissing = ref(false)
+const bootError = ref(false)
 
 let timer: ReturnType<typeof setInterval> | null = null
 let glitchTimer: ReturnType<typeof setInterval> | null = null
+let bootTimeout: ReturnType<typeof setTimeout> | null = null
 
 const BOOT_LINES: Array<{ msg: string; delay: number; pct: number }> = [
   { msg: '[BOOT] Cybermanju Drive Kernel v4.2.0-RELEASE (x86_64)', delay: 80, pct: 1 },
@@ -117,13 +119,16 @@ async function runBoot() {
   ready.value = true
 }
 
-function handleLogin() {
-  if (!ready.value || dismissing.value) return
+function forceComplete() {
+  if (dismissing.value) return
   dismissing.value = true
   triggerGlitch()
-  setTimeout(() => {
-    emit('complete')
-  }, 400)
+  setTimeout(() => emit('complete'), 400)
+}
+
+function handleLogin() {
+  if (!ready.value || dismissing.value) return
+  forceComplete()
 }
 
 onMounted(() => {
@@ -132,12 +137,23 @@ onMounted(() => {
     crtFlicker.value = Math.random() < 0.003
   }, 1000)
 
-  runBoot()
+  bootTimeout = setTimeout(() => {
+    if (!ready.value && !dismissing.value) {
+      bootError.value = true
+      addBootLine('[KERN] \x1b[31mWATCHDOG\x1b[0m: boot sequence stalled — forcing completion')
+    }
+  }, 30000)
+
+  runBoot().catch((err) => {
+    bootError.value = true
+    addBootLine(`[KERN] \x1b[31mFATAL\x1b[0m: ${err instanceof Error ? err.message : String(err)}`)
+  })
 })
 
 onUnmounted(() => {
   if (timer) clearInterval(timer)
   if (glitchTimer) clearInterval(glitchTimer)
+  if (bootTimeout) clearTimeout(bootTimeout)
 })
 </script>
 
@@ -168,11 +184,15 @@ onUnmounted(() => {
         <div class="boot-progress-label">{{ progress }}%</div>
       </div>
       <div class="boot-hints">
-        <span v-if="progress < 30">INITIALIZING HARDWARE...</span>
+        <span v-if="bootError" class="boot-error-hint">BOOT ERROR — CHECK LOGS</span>
+        <span v-else-if="progress < 30">INITIALIZING HARDWARE...</span>
         <span v-else-if="progress < 60">LOADING KERNEL MODULES...</span>
         <span v-else-if="progress < 85">STARTING DAEMONS...</span>
         <span v-else-if="progress < 100">FINALIZING...</span>
         <span v-else class="login-hint">SYSTEM READY — CLICK ANYWHERE TO LOGIN</span>
+      </div>
+      <div v-if="bootError" class="boot-emergency">
+        <button class="emergency-btn" @click.stop="forceComplete">[ FORCE BOOT ]</button>
       </div>
     </div>
     <div v-if="ready" class="login-overlay">
@@ -477,6 +497,35 @@ onUnmounted(() => {
   color: #444;
   letter-spacing: 2px;
   font-weight: 600;
+}
+
+.boot-error-hint {
+  color: #ff5f57;
+  animation: cursor-blink 1s step-end infinite;
+}
+
+.boot-emergency {
+  text-align: center;
+  padding: 0 16px 14px;
+}
+
+.emergency-btn {
+  background: rgba(255, 95, 87, 0.08);
+  border: 1px solid #ff5f57;
+  border-radius: 4px;
+  color: #ff5f57;
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 6px 20px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: all 0.15s;
+}
+
+.emergency-btn:hover {
+  background: rgba(255, 95, 87, 0.2);
+  box-shadow: 0 0 12px rgba(255, 95, 87, 0.15);
 }
 
 .login-hint {

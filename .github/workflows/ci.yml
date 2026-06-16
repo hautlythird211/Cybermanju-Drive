@@ -230,6 +230,13 @@ jobs:
           path: target/release/bundle/rpm/*.rpm
           retention-days: 7
 
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-linux-binary
+          path: target/release/cybermanju-drive
+          retention-days: 7
+
   # ─── Linux: Build RPM ────────────────────────────────────────────
   rpm-build:
     name: Build Linux (RPM)
@@ -259,15 +266,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download Debian package
-        continue-on-error: true
+      - name: Download binary
         uses: actions/download-artifact@v4
         with:
-          name: dist-linux-deb
+          name: dist-linux-binary
           path: artifacts
-
-      - name: Ensure artifacts directory exists
-        run: mkdir -p artifacts
 
       - name: Install Flatpak
         run: |
@@ -407,10 +410,17 @@ jobs:
       - name: Initialize Android project
         run: npm run tauri android init
 
+      - name: Remove armv7 ABI (ort-sys lacks prebuilt for armv7-linux-androideabi)
+        run: |
+          F=src-tauri/gen/android/app/build.gradle.kts
+          if [ -f "$F" ]; then
+            sed -i "s/\"armv7\"//g; s/, ,/,/g; s/,,/,/g; s/\[ ,/[/g; s/, \]/]/g" "$F"
+          fi
+
       - name: Install wasm-pack
         run: npm install -g wasm-pack@0.15.0
 
-      - name: Build Android APK (aarch64 only — ort-sys lacks prebuilt for others)
+      - name: Build Android APK
         run: npm run tauri android build -- --target aarch64
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.1.10909125

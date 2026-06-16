@@ -55,6 +55,26 @@ const PROVIDER_CONFIGS: Record<OAuthProvider, OAuthConfig> = {
   },
 }
 
+const ENV_MAP: Record<string, OAuthProvider> = {
+  VITE_OAUTH_GOOGLE_DRIVE_CLIENT_ID: 'googleDrive',
+  VITE_OAUTH_GOOGLE_PHOTOS_CLIENT_ID: 'googlePhotos',
+  VITE_OAUTH_GITHUB_CLIENT_ID: 'github',
+  VITE_OAUTH_GITLAB_CLIENT_ID: 'gitlab',
+  VITE_OAUTH_TELEGRAM_CLIENT_ID: 'telegram',
+}
+
+export function loadClientIdsFromEnv(): void {
+  if (typeof import.meta === 'undefined' || !import.meta.env) return
+  for (const [key, provider] of Object.entries(ENV_MAP)) {
+    const val = (import.meta.env as Record<string, string | undefined>)[key]
+    if (val) PROVIDER_CONFIGS[provider].clientId = val
+  }
+}
+
+export function getProviderClientId(provider: OAuthProvider): string {
+  return PROVIDER_CONFIGS[provider].clientId
+}
+
 export function setProviderClientId(provider: OAuthProvider, clientId: string): void {
   PROVIDER_CONFIGS[provider].clientId = clientId
 }
@@ -62,6 +82,9 @@ export function setProviderClientId(provider: OAuthProvider, clientId: string): 
 export function getProviderConfig(provider: OAuthProvider): OAuthConfig {
   return PROVIDER_CONFIGS[provider]
 }
+
+// Auto-load client IDs from environment variables
+loadClientIdsFromEnv()
 
 function base64UrlEncode(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer)

@@ -3,6 +3,8 @@ import { ref, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { kvGet, kvSet } from '@/wasm/storage'
 import { useAppStore } from '@/stores/app'
+import ImportDialog from '@/components/ImportDialog.vue'
+import type { OAuthProvider, OAuthToken } from '@/wasm'
 
 const store = useAppStore()
 
@@ -13,12 +15,10 @@ const steps = ['WELCOME', 'ACCOUNTS', 'COLLECTIONS', 'GROUPS', 'COMPLETE']
 const totalSteps = steps.length
 
 // ── Step 1: Welcome ──
-const welcomeDone = ref(false)
 
 // ── Step 2: OAuth Accounts ──
 const PROVIDER_ICONS: Record<string, string> = {
-  googleDrive: 'logos:google-drive',
-  googlePhotos: 'logos:google-photos',
+  google: 'logos:google-icon',
   github: 'logos:github-icon',
   gitlab: 'logos:gitlab',
   telegram: 'logos:telegram',
@@ -26,59 +26,208 @@ const PROVIDER_ICONS: Record<string, string> = {
 }
 
 const AVAILABLE_PROVIDERS = [
-  { id: 'googleDrive', label: 'Google Drive', color: '#4285F4' },
-  { id: 'googlePhotos', label: 'Google Photos', color: '#FBBC04' },
-  { id: 'github', label: 'GitHub', color: '#333' },
-  { id: 'gitlab', label: 'GitLab', color: '#FC6D26' },
-  { id: 'telegram', label: 'Telegram', color: '#0088CC' },
-  { id: 'mega', label: 'Mega.nz', color: '#D9272E' },
+  { id: 'google', label: 'Google (Drive + Photos)', color: '#4285F4', oauth: true },
+  { id: 'github', label: 'GitHub', color: '#333', oauth: true },
+  { id: 'gitlab', label: 'GitLab', color: '#FC6D26', oauth: true },
+  { id: 'telegram', label: 'Telegram', color: '#0088CC', oauth: true },
+  { id: 'mega', label: 'Mega.nz', color: '#D9272E', oauth: false },
 ]
 
 interface ProviderAccount {
   providerId: string
   label: string
-  clientId: string
-  clientSecret: string
-  email: string
-  password: string
+  token?: string
+  email?: string
+  password?: string
 }
 
 const accounts = ref<ProviderAccount[]>([])
-const showAddAccount = ref(false)
-const newAccount = ref<ProviderAccount>({
-  providerId: 'googleDrive',
-  label: '',
-  clientId: '',
-  clientSecret: '',
-  email: '',
-  password: '',
-})
+const isConnecting = ref<string | null>(null)
 const accountError = ref('')
+
+// ── Mega manual form ──
+const showMegaForm = ref(false)
+const megaEmail = ref('')
+const megaPassword = ref('')
+const megaLabel = ref('')
+
+// ── Client ID fallback form ──
+const showClientIdForm = ref<string | null>(null)
+const clientIdInput = ref('')
+
+// ── Import dialog state ──
+const importVisible = ref(false)
+const importBackend = ref('')
+const importToken = ref('')
+const importLabel = ref('')
+
+function showImportDialog(backend: string, token: OAuthToken, label: string) {
+  importBackend.value = backend
+  importToken.value = token.accessToken
+  importLabel.value = label
+  importVisible.value = true
+}
+
+function onImportComplete() {
+  importVisible.value = false
+}
 
 function providerIcon(id: string): string {
   return PROVIDER_ICONS[id] || 'mdi:cloud-outline'
 }
 
-function addAccount() {
-  accountError.value = ''
-  if (!newAccount.value.label.trim()) {
-    accountError.value = 'LABEL IS REQUIRED'
+function isConnected(id: string): boolean {
+  return accounts.value.some(a => a.providerId === id)
+}
+
+function getProviderLabel(id: string): string {
+  return AVAILABLE_PROVIDERS.find(p => p.id === id)?.label || id
+}
+
+async function connectOAuth(pid: string) {
+  if (isConnecting.value) return
+
+  if (pid === 'google') {
+    await connectGoogle()
     return
   }
-  if (newAccount.value.providerId === 'mega') {
-    if (!newAccount.value.email.trim() || !newAccount.value.password.trim()) {
-      accountError.value = 'EMAIL AND PASSWORD ARE REQUIRED FOR MEGA'
-      return
-    }
-  } else {
-    if (!newAccount.value.clientId.trim()) {
-      accountError.value = 'CLIENT ID IS REQUIRED'
-      return
-    }
+
+  const provider = pid as OAuthProvider
+  if (isConnected(provider)) return
+
+  const { oauth } = await import('@/wasm')
+  oauth.loadClientIdsFromEnv()
+  const clientId = oauth.getProviderClientId(provider)
+
+  if (!clientId) {
+    showClientIdForm.value = provider
+    return
   }
-  accounts.value.push({ ...newAccount.value })
-  newAccount.value = { providerId: 'googleDrive', label: '', clientId: '', clientSecret: '', email: '', password: '' }
-  showAddAccount.value = false
+
+  isConnecting.value = provider
+  accountError.value = ''
+  try {
+    const { initWasm } = await import('@/wasm')
+    await initWasm()
+
+    const existingToken = await oauth.loadTokenFromStorage(provider)
+    let token
+    if (existingToken) {
+      token = await oauth.getValidToken(existingToken)
+      if (token) oauth.saveTokenToStorage(token)
+    }
+    if (!token) {
+      token = await oauth.authenticateWithPopup(provider)
+      oauth.saveTokenToStorage(token)
+    }
+
+    const data = await import('@/wasm/data')
+    const account = await data.upsertOAuthAccount(provider, token)
+
+    const label = account.name || getProviderLabel(provider)
+    accounts.value.push({ providerId: provider, label, token: token.accessToken })
+    showImportDialog(provider, token, label)
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    if (msg.includes('Popup blocked')) {
+      accountError.value = `${getProviderLabel(provider)}: POPUP BLOCKED — allow popups for this site and try again`
+    } else if (msg.includes('timed out') || msg.includes('closed by the user')) {
+      accountError.value = `${getProviderLabel(provider)}: AUTHORIZATION ${msg.includes('timed out') ? 'TIMED OUT' : 'CANCELLED'}`
+    } else if (msg.includes('Client ID not configured')) {
+      showClientIdForm.value = provider
+    } else {
+      accountError.value = `${getProviderLabel(provider)}: ${msg}`
+    }
+  } finally {
+    isConnecting.value = null
+  }
+}
+
+async function connectGoogle() {
+  if (isConnected('google')) return
+  isConnecting.value = 'google'
+  accountError.value = ''
+  try {
+    const { oauth, initWasm } = await import('@/wasm')
+    await initWasm()
+    oauth.loadClientIdsFromEnv()
+
+    const clientId = oauth.getProviderClientId('googleDrive')
+    if (!clientId) {
+      showClientIdForm.value = 'google'
+      return
+    }
+
+    const GOOGLE_SCOPES = [
+      'https://www.googleapis.com/auth/drive.file',
+      'https://www.googleapis.com/auth/photoslibrary.appendonly',
+    ]
+
+    const existingToken = await oauth.loadTokenFromStorage('googleDrive')
+    let token
+    if (existingToken) {
+      token = await oauth.getValidToken(existingToken)
+      if (token) oauth.saveTokenToStorage(token)
+    }
+    if (!token) {
+      token = await oauth.authenticateWithPopup('googleDrive', { scopes: GOOGLE_SCOPES })
+      oauth.saveTokenToStorage(token)
+    }
+
+    const data = await import('@/wasm/data')
+    const driveAccount = await data.upsertOAuthAccount('googleDrive', token)
+    await data.upsertOAuthAccount('googlePhotos', token)
+
+    const label = driveAccount.name || 'Google'
+    accounts.value.push({ providerId: 'google', label, token: token.accessToken })
+    showImportDialog('google', token, 'Google (Drive + Photos)')
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    if (msg.includes('Popup blocked')) {
+      accountError.value = 'GOOGLE: POPUP BLOCKED — allow popups for this site and try again'
+    } else if (msg.includes('timed out') || msg.includes('closed by the user')) {
+      accountError.value = `GOOGLE: AUTHORIZATION ${msg.includes('timed out') ? 'TIMED OUT' : 'CANCELLED'}`
+    } else if (msg.includes('Client ID not configured')) {
+      showClientIdForm.value = 'google'
+    } else {
+      accountError.value = `GOOGLE: ${msg}`
+    }
+  } finally {
+    isConnecting.value = null
+  }
+}
+
+async function saveClientId() {
+  if (!showClientIdForm.value || !clientIdInput.value.trim()) return
+  const provider = showClientIdForm.value as OAuthProvider
+  const { oauth } = await import('@/wasm')
+  oauth.setProviderClientId(provider, clientIdInput.value.trim())
+  showClientIdForm.value = null
+  clientIdInput.value = ''
+  await connectOAuth(provider)
+}
+
+function cancelClientIdForm() {
+  showClientIdForm.value = null
+  clientIdInput.value = ''
+}
+
+function addMegaAccount() {
+  accountError.value = ''
+  if (!megaLabel.value.trim() || !megaEmail.value.trim() || !megaPassword.value.trim()) {
+    accountError.value = 'LABEL, EMAIL AND PASSWORD ARE REQUIRED'
+    return
+  }
+  accounts.value.push({
+    providerId: 'mega',
+    label: megaLabel.value.trim(),
+    email: megaEmail.value.trim(),
+    password: megaPassword.value,
+  })
+  megaLabel.value = ''
+  megaEmail.value = ''
+  megaPassword.value = ''
+  showMegaForm.value = false
 }
 
 function removeAccount(idx: number) {
@@ -140,17 +289,13 @@ const completeError = ref('')
 
 function canProceed(): boolean {
   switch (step.value) {
-    case 0: return welcomeDone.value
+    case 0: return true // welcome — always can proceed
     case 1: return true // accounts are optional — can skip
     case 2: return collections.value.some(c => c.selected)
     case 3: return groups.value.some(g => g.selected)
     case 4: return true
     default: return false
   }
-}
-
-function markWelcomeDone() {
-  welcomeDone.value = true
 }
 
 async function next() {
@@ -188,23 +333,24 @@ async function finish() {
     const errors: string[] = []
     for (const acct of accounts.value) {
       try {
-        const base: Record<string, unknown> = {
-          name: acct.label,
-          backendType: acct.providerId,
-          enabled: true,
-          basePath: '/',
-          autoSync: false,
-          compressBeforeUpload: false,
-          maxConcurrentUploads: 1,
+        const backends = acct.providerId === 'google' ? ['googleDrive', 'googlePhotos'] : [acct.providerId]
+        for (const backend of backends) {
+          const base: Record<string, unknown> = {
+            name: `${acct.label} (${backend.replace(/([A-Z])/g, ' $1').trim()})`,
+            backendType: backend,
+            enabled: true,
+            basePath: '/',
+            autoSync: false,
+            compressBeforeUpload: false,
+            maxConcurrentUploads: 1,
+          }
+          if (backend === 'mega') {
+            base.token = `${acct.email}|${acct.password}`
+          } else if (acct.token) {
+            base.token = acct.token
+          }
+          await store.createSyncConfig(base as any)
         }
-        if (acct.providerId === 'mega') {
-          base.token = `${acct.email}|${acct.password}`
-        } else if (acct.providerId === 'telegram') {
-          if (acct.clientId) base.token = acct.clientId
-        } else {
-          if (acct.clientId) base.token = acct.clientId
-        }
-        await store.createSyncConfig(base as any)
       } catch (e) {
         errors.push(`${acct.label}: ${e}`)
       }
@@ -286,7 +432,7 @@ onMounted(async () => {
             </div>
           </div>
           <div class="step-hint">You can change all settings later.</div>
-          <button class="bw-btn bw-btn-inverse welcome-continue" @click="markWelcomeDone">
+          <button class="bw-btn bw-btn-inverse welcome-continue" @click="next">
             [ CONTINUE ]
           </button>
         </div>
@@ -308,61 +454,80 @@ onMounted(async () => {
               </div>
               <div class="account-info">
                 <div class="account-label">{{ acct.label }}</div>
-                <div class="account-provider">{{ acct.providerId }} — {{ acct.email || 'no email' }}</div>
+                <div class="account-provider">{{ acct.providerId }}{{ acct.email ? ' — ' + acct.email : '' }}</div>
               </div>
               <button class="btn-remove" @click="removeAccount(idx)">✕</button>
             </div>
           </div>
 
-          <div v-if="!showAddAccount" class="add-account-trigger" @click="showAddAccount = true">
-            <Icon icon="mdi:plus-circle-outline" width="16" height="16" />
-            ADD ACCOUNT
+          <div class="oauth-connect-grid">
+            <div
+              v-for="p in AVAILABLE_PROVIDERS"
+              :key="p.id"
+              class="oauth-connect-card"
+              :class="{ connected: isConnected(p.id), connecting: isConnecting === p.id }"
+            >
+              <div class="oauth-connect-icon">
+                <Icon :icon="providerIcon(p.id)" width="24" height="24" />
+              </div>
+              <div class="oauth-connect-name">{{ p.label }}</div>
+              <div class="oauth-connect-status">
+                <span v-if="isConnected(p.id)" class="status-connected">CONNECTED</span>
+                <span v-else-if="isConnecting === p.id" class="status-connecting">
+                  <Icon icon="svg-spinners:blocks-wave" width="12" height="12" />
+                  AUTH...
+                </span>
+                <span v-else class="status-disconnected">NOT CONNECTED</span>
+              </div>
+              <button
+                v-if="p.oauth && !isConnected(p.id)"
+                class="bw-btn bw-btn-inverse connect-btn"
+                :disabled="isConnecting !== null"
+                @click="connectOAuth(p.id)"
+              >
+                [ CONNECT ]
+              </button>
+            </div>
           </div>
 
-          <div v-if="showAddAccount" class="add-account-form">
-            <div class="form-row">
-              <label>PROVIDER</label>
-              <select v-model="newAccount.providerId" class="bw-select">
-                <option v-for="p in AVAILABLE_PROVIDERS" :key="p.id" :value="p.id">
-                  {{ p.label }}
-                </option>
-                <option value="custom">CUSTOM</option>
-              </select>
-            </div>
+          <div v-if="!showMegaForm && !isConnected('mega')" class="add-account-trigger" @click="showMegaForm = true">
+            <Icon icon="mdi:plus-circle-outline" width="16" height="16" />
+            CONFIGURE MEGA (MANUAL)
+          </div>
+
+          <div v-if="showMegaForm" class="add-account-form">
             <div class="form-row">
               <label>LABEL</label>
-              <input v-model="newAccount.label" class="bw-input" placeholder="e.g. Work Google" />
+              <input v-model="megaLabel" class="bw-input" placeholder="e.g. My Mega" />
             </div>
-            <template v-if="newAccount.providerId === 'mega'">
-              <div class="form-row">
-                <label>EMAIL</label>
-                <input v-model="newAccount.email" class="bw-input" placeholder="Mega.nz account email" />
-              </div>
-              <div class="form-row">
-                <label>PASSWORD</label>
-                <input v-model="newAccount.password" class="bw-input" type="password" placeholder="Mega.nz password" />
-              </div>
-            </template>
-            <template v-else>
-              <div class="form-row">
-                <label>CLIENT ID</label>
-                <input v-model="newAccount.clientId" class="bw-input" placeholder="OAuth Client ID" />
-              </div>
-              <div class="form-row">
-                <label>CLIENT SECRET</label>
-                <input v-model="newAccount.clientSecret" class="bw-input" type="password" placeholder="OAuth Client Secret" />
-              </div>
-              <div class="form-row">
-                <label>EMAIL</label>
-                <input v-model="newAccount.email" class="bw-input" placeholder="account email (optional)" />
-              </div>
-            </template>
+            <div class="form-row">
+              <label>EMAIL</label>
+              <input v-model="megaEmail" class="bw-input" placeholder="Mega.nz account email" />
+            </div>
+            <div class="form-row">
+              <label>PASSWORD</label>
+              <input v-model="megaPassword" class="bw-input" type="password" placeholder="Mega.nz password" />
+            </div>
             <div v-if="accountError" class="form-error">{{ accountError }}</div>
             <div class="form-actions">
-              <button class="bw-btn" @click="showAddAccount = false">CANCEL</button>
-              <button class="bw-btn bw-btn-inverse" @click="addAccount">ADD</button>
+              <button class="bw-btn" @click="showMegaForm = false">CANCEL</button>
+              <button class="bw-btn bw-btn-inverse" @click="addMegaAccount">ADD MEGA</button>
             </div>
           </div>
+
+          <div v-if="showClientIdForm" class="add-account-form client-id-form">
+            <div class="form-row">
+              <label>ENTER CLIENT ID FOR {{ getProviderLabel(showClientIdForm) }}</label>
+              <input v-model="clientIdInput" class="bw-input" placeholder="OAuth Client ID" />
+              <div class="hint-text">Set via <code>.env</code> or enter here (session only)</div>
+            </div>
+            <div class="form-actions">
+              <button class="bw-btn" @click="cancelClientIdForm">CANCEL</button>
+              <button class="bw-btn bw-btn-inverse" :disabled="!clientIdInput.trim()" @click="saveClientId">SAVE</button>
+            </div>
+          </div>
+
+          <div v-if="accountError && !showClientIdForm" class="form-error">{{ accountError }}</div>
         </div>
 
         <!-- Step 2: Collections -->
@@ -489,6 +654,14 @@ onMounted(async () => {
       </div>
     </div>
   </div>
+  <ImportDialog
+    :visible="importVisible"
+    :backendType="importBackend"
+    :token="importToken"
+    :label="importLabel"
+    @close="onImportComplete"
+    @import="onImportComplete"
+  />
 </template>
 
 <style scoped>
@@ -717,6 +890,99 @@ onMounted(async () => {
 }
 
 .btn-remove:hover { opacity: 1; }
+
+/* ── OAuth Connect Grid ── */
+.oauth-connect-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.oauth-connect-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border: 1px solid #1a1a1a;
+  border-radius: 8px;
+  background: #0d0d0d;
+  transition: all 0.15s;
+}
+
+.oauth-connect-card.connected {
+  border-color: #00ff41;
+  background: rgba(0, 255, 65, 0.03);
+}
+
+.oauth-connect-card.connecting {
+  border-color: #febc2e;
+  background: rgba(254, 188, 46, 0.03);
+}
+
+.oauth-connect-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: #111;
+}
+
+.oauth-connect-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: #e0e0e0;
+  letter-spacing: 1px;
+}
+
+.oauth-connect-status {
+  font-size: 8px;
+  letter-spacing: 1px;
+}
+
+.status-connected {
+  color: #00ff41;
+  font-weight: 700;
+}
+
+.status-connecting {
+  color: #febc2e;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-disconnected {
+  color: #555;
+}
+
+.connect-btn {
+  margin-top: 4px;
+  padding: 4px 16px;
+  font-size: 9px;
+}
+
+.client-id-form {
+  border-color: #febc2e;
+}
+
+.hint-text {
+  font-size: 9px;
+  color: #555;
+  font-style: italic;
+  margin-top: 2px;
+}
+
+.hint-text code {
+  color: #888;
+  background: #111;
+  padding: 0 3px;
+  border-radius: 2px;
+}
 
 .add-account-trigger {
   display: flex;
