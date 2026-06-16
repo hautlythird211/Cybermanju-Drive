@@ -240,13 +240,11 @@ jobs:
     name: Build Linux (Flatpak)
     runs-on: ubuntu-latest
     needs: [rust-check, linux-build]
-    if: always()
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Download Debian package
-        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: release-linux-deb
@@ -463,10 +461,23 @@ jobs:
 
       - name: Limit Android ABIs to arm64-v8a and x86_64 only
         run: |
-          sed -i '/armeabi/d; /"x86"/d' src-tauri/gen/android/app/build.gradle.kts || true
-
-      - name: "Debug: check Gradle config"
-        run: cat src-tauri/gen/android/app/build.gradle.kts
+          python3 -c "
+import re
+with open('src-tauri/gen/android/app/build.gradle.kts') as f:
+    content = f.read()
+# Remove armeabi-v7a and x86 from abiFilters
+content = re.sub(r'\\\"armeabi-v7a\\\"[\\s,]*', '', content)
+content = re.sub(r'\\\"x86\\\"[\\s,]*', '', content)
+content = re.sub(r',\\s*,', ',', content)
+content = re.sub(r'\\[\\s*,', '[', content)
+content = re.sub(r',\\s*\\]', ']', content)
+with open('src-tauri/gen/android/app/build.gradle.kts', 'w') as f:
+    f.write(content)
+print('Updated ABIs')
+"
+        # Also remove unnecessary Android targets
+      - name: Remove armv7 Rust target
+        run: rustup target remove armv7-linux-androideabi || true
 
       - name: Build Android APK
         run: npx tauri android build
