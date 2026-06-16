@@ -11,7 +11,7 @@ use x25519_dalek::{PublicKey, StaticSecret};
 
 use ml_kem::kem::Ciphertext;
 use ml_kem::kem::{Decapsulate, Encapsulate, Kem};
-use ml_kem::{DecapsulationKey1024, EncapsulationKey1024, KeySizeUser, MlKem1024};
+use ml_kem::{DecapsulationKey1024, EncapsulationKey1024, MlKem1024};
 
 type HmacSha512 = Hmac<Sha512>;
 

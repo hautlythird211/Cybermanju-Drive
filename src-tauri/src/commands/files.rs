@@ -4,7 +4,6 @@ use tauri::State;
 
 use crate::db::schema::FileNode;
 use crate::db::schema::LooseGroup;
-use crate::sync::models::SyncBackendType as SyncBackendTypeModel;
 use crate::AppState;
 
 /// List all file nodes whose parent_id matches the given parent_path.
