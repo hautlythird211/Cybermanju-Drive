@@ -78,18 +78,25 @@ jobs:
       - name: Build WASM
         run: npm run wasm:build
 
-      - name: Upload WASM artifacts
+      - name: Upload WASM web artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dist-wasm
           path: dist-wasm/
           retention-days: 30
 
+      - name: Upload WASM node module
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-node-module
+          path: node_modules/cybermanju-drive-wasm/
+          retention-days: 30
+
   # ─── Windows: Build Desktop ──────────────────────────────────────
   windows-build:
     name: Build Windows
     runs-on: windows-latest
-    needs: rust-check
+    needs: [rust-check, wasm-build]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -108,8 +115,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Download pre-built WASM
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-node-module
+          path: node_modules/cybermanju-drive-wasm
 
       - name: Build Tauri app
         run: npm run tauri build
@@ -131,7 +141,7 @@ jobs:
   linux-build:
     name: Build Linux (deb+AppImage+rpm)
     runs-on: ubuntu-latest
-    needs: rust-check
+    needs: [rust-check, wasm-build]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -162,8 +172,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Download pre-built WASM
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-node-module
+          path: node_modules/cybermanju-drive-wasm
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
@@ -263,7 +276,7 @@ jobs:
   arch-build:
     name: Build Linux (Arch/CachyOS)
     runs-on: ubuntu-latest
-    needs: [rust-check, linux-build]
+    needs: [rust-check, wasm-build, linux-build]
     container:
       image: archlinux:latest
     steps:
@@ -294,6 +307,15 @@ jobs:
       - name: Fix ownership
         run: chown -R builder:builder $GITHUB_WORKSPACE
 
+      - name: Download pre-built WASM
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-node-module
+          path: node_modules/cybermanju-drive-wasm
+
+      - name: Fix WASM ownership
+        run: chown -R builder:builder $GITHUB_WORKSPACE/node_modules/cybermanju-drive-wasm
+
       - name: Install Rust
         run: |
           sudo -u builder bash -c 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y'
@@ -301,9 +323,6 @@ jobs:
 
       - name: Install Node.js
         run: pacman -S --noconfirm nodejs npm
-
-      - name: Install wasm-pack
-        run: sudo -u builder bash -c 'curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh'
 
       - name: Build Arch package
         run: |
@@ -335,7 +354,7 @@ jobs:
   macos-build:
     name: Build macOS
     runs-on: macos-latest
-    needs: rust-check
+    needs: [rust-check, wasm-build]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -349,8 +368,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Download pre-built WASM
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-node-module
+          path: node_modules/cybermanju-drive-wasm
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
@@ -377,7 +399,7 @@ jobs:
   android-build:
     name: Build Android
     runs-on: ubuntu-latest
-    needs: rust-check
+    needs: [rust-check, wasm-build]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -405,15 +427,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Download pre-built WASM
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-node-module
+          path: node_modules/cybermanju-drive-wasm
+
       - name: Install Rust targets
         run: |
           rustup target add aarch64-linux-android i686-linux-android x86_64-linux-android
 
       - name: Install cargo-ndk
         run: cargo install cargo-ndk
-
-      - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
