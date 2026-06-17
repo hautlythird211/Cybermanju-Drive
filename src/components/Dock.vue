@@ -99,6 +99,9 @@ const dockApps = computed<DockApp[]>(() => [
   { panelType: 'trash', label: 'Trash', icon: 'delete-outline', category: 'system' },
   { panelType: 'users', label: 'Users', icon: 'account-group-outline', category: 'system' },
   { panelType: 'accounts', label: 'Accounts', icon: 'account-outline', category: 'system' },
+  { panelType: 'terminal', label: 'Terminal', icon: 'console', category: 'system' },
+  { panelType: 'system-monitor', label: 'System Monitor', icon: 'chart-line-variant', category: 'system' },
+  { panelType: 'task-manager', label: 'Task Manager', icon: 'memory', category: 'system' },
 ])
 
 const minimizedWindows = computed(() =>
@@ -191,95 +194,93 @@ onUnmounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 60px;
-  padding: 0 16px;
-  background: transparent;
+  height: 48px;
+  padding: 0 12px;
   z-index: 50;
   pointer-events: none;
+  position: relative;
+  overflow: visible;
 }
 
 .dock {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 10px;
-  background: var(--bg-glass);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--border-glass);
-  border-radius: 14px;
-  box-shadow: var(--shadow-glass), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  gap: 2px;
+  padding: 4px 8px;
+  background: rgba(12, 12, 12, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
   pointer-events: auto;
 }
 
 .dock-item {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 4px 6px;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   cursor: pointer;
-  border-radius: var(--radius-lg);
-  transition: all var(--transition-fast);
+  border-radius: 8px;
   position: relative;
-  min-width: 44px;
   will-change: transform;
   outline: none;
+  transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .dock-item:focus-visible {
-  box-shadow: var(--focus-ring);
+  box-shadow: 0 0 0 2px rgba(0, 255, 65, 0.4);
 }
 
 .dock-item:hover {
-  background: rgba(255, 255, 255, 0.06);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 .dock-item:active {
-  transform: translateY(0px);
+  transform: scale(0.92);
 }
 
 .dock-item.active {
-  background: var(--accent-dim);
+  background: rgba(0, 255, 65, 0.06);
 }
 
 .dock-icon {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-elevated);
-  border-radius: var(--radius-lg);
-  transition: all var(--transition-fast);
-  border: 1px solid var(--border-subtle);
   position: relative;
 }
 
-.dock-item:hover .dock-icon {
-  background: var(--bg-overlay);
-  border-color: var(--border-medium);
+.dock-iconify {
+  color: rgba(255, 255, 255, 0.55);
+  transition: color 0.15s;
 }
 
-.dock-item.active .dock-icon {
-  background: var(--accent-dim);
-  border-color: rgba(0, 255, 65, 0.2);
+.dock-item.active .dock-iconify {
+  color: rgba(0, 255, 65, 0.9);
 }
 
-.dock-item.active:hover .dock-icon {
-  background: rgba(0, 255, 65, 0.15);
-  border-color: rgba(0, 255, 65, 0.3);
+.dock-item:hover .dock-iconify {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.dock-icon.minimized {
+  opacity: 0.35;
 }
 
 .dock-badge {
   position: absolute;
-  top: -4px;
-  right: -6px;
-  background: var(--danger);
+  top: -3px;
+  right: -5px;
+  background: #ff5f57;
   color: #fff;
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: 7px;
   font-weight: 700;
   min-width: 14px;
   height: 14px;
@@ -288,60 +289,49 @@ onUnmounted(() => {
   justify-content: center;
   border-radius: 7px;
   padding: 0 3px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border: 1.5px solid rgba(0, 0, 0, 0.4);
   pointer-events: none;
-}
-
-.dock-iconify {
-  color: var(--text-secondary);
-  transition: color var(--transition-normal);
-}
-
-.dock-item.active .dock-iconify {
-  color: var(--accent);
-}
-
-.dock-item:hover .dock-iconify {
-  color: var(--text-primary);
-}
-
-.dock-icon.minimized {
-  opacity: 0.5;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .dock-indicator {
-  height: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .indicator-dot {
-  width: 4px;
-  height: 4px;
+  width: 3px;
+  height: 3px;
   border-radius: 50%;
-  background: var(--border-medium);
-  transition: all var(--transition-normal);
+  background: rgba(255, 255, 255, 0.2);
+  transition: all 0.2s;
 }
 
 .indicator-dot.active {
-  background: var(--accent);
-  width: 16px;
+  background: rgba(0, 255, 65, 0.7);
+  width: 12px;
   border-radius: 2px;
+  height: 2.5px;
 }
 
 .indicator-dot.muted {
-  background: var(--border-subtle);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .minimized-item .dock-icon {
-  opacity: 0.4;
+  opacity: 0.3;
 }
 
 .dock-divider {
   width: 1px;
-  height: 28px;
-  background: var(--border-glass);
+  height: 20px;
+  background: rgba(255, 255, 255, 0.06);
   margin: 0 4px;
+}
+
+.dock-label {
+  display: none;
 }
 </style>

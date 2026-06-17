@@ -99,9 +99,9 @@ onUnmounted(() => {
 <template>
   <Teleport to="body">
     <Transition :css="false" @enter="onEnter" @leave="onLeave">
-      <div v-if="visible" class="os-modal__overlay" ref="overlayRef" @click.self="onOverlayClick">
+      <div v-if="visible" class="os-modal__overlay gpu" ref="overlayRef" @click.self="onOverlayClick">
         <div
-          :class="cls"
+          :class="[...cls, 'gpu']"
           ref="panelRef"
           role="dialog"
           :aria-modal="true"
@@ -136,7 +136,8 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   z-index: 10000;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
   will-change: opacity;
 }
 
@@ -161,15 +162,16 @@ onUnmounted(() => {
 
 .os-modal--glass {
   background: var(--bg-glass-heavy);
-  backdrop-filter: blur(var(--glass-blur-heavy));
-  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
   border: 1px solid var(--border-glass);
+  box-shadow: var(--shadow-glass), var(--panel-inset);
 }
 
 .os-modal--neon {
   background: var(--bg-surface);
   border: 1px solid rgba(0, 255, 65, 0.3);
-  box-shadow: 0 0 24px var(--accent-dim);
+  box-shadow: 0 0 24px var(--accent-dim), var(--glow-accent);
 }
 
 .os-modal--gothic {
@@ -191,6 +193,9 @@ onUnmounted(() => {
   padding: 12px 16px;
   border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
+  background: linear-gradient(90deg, var(--border-subtle), var(--accent-dim), var(--border-subtle));
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
 }
 
 .os-modal__title {
@@ -215,8 +220,9 @@ onUnmounted(() => {
   transition: all var(--transition-fast);
 }
 .os-modal__close:hover {
-  background: var(--bg-overlay);
-  color: var(--text-primary);
+  background: var(--accent-dim);
+  color: var(--text-accent);
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 
 .os-modal__body {

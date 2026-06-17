@@ -30,7 +30,7 @@ const cls = computed(() => [
 </script>
 
 <template>
-  <span :class="cls" :aria-label="ariaLabel || undefined">
+  <span :class="[...cls, 'gpu']" :aria-label="ariaLabel || undefined">
     <span v-if="dot" class="os-badge__dot" />
     <slot />
   </span>
@@ -62,6 +62,8 @@ const cls = computed(() => [
 
 .os-badge--accent {
   background: var(--gradient-accent);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
   border: 1px solid rgba(0, 255, 65, 0.2);
   color: var(--text-accent);
 }
@@ -70,6 +72,10 @@ const cls = computed(() => [
   background: var(--danger-dim);
   border: 1px solid rgba(255, 95, 87, 0.2);
   color: var(--text-danger);
+}
+.os-badge--danger.os-badge--pulse {
+  box-shadow: 0 0 8px var(--danger);
+  animation: badge-pulse 1.5s ease-in-out infinite;
 }
 
 .os-badge--success {
@@ -122,5 +128,10 @@ const cls = computed(() => [
 
 .os-badge--glow {
   box-shadow: 0 0 8px currentColor;
+}
+
+.os-badge:hover {
+  filter: brightness(1.2);
+  transition: filter var(--duration-fast) var(--ease-spring);
 }
 </style>

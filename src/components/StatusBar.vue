@@ -55,6 +55,7 @@
       <span class="sb-clickable" @click="store.commandPaletteOpen = true" title="COMMAND PALETTE (CTRL+K)" aria-label="OPEN COMMAND PALETTE" role="button" tabindex="0" @keydown.enter="store.commandPaletteOpen = true" @keydown.space.prevent="store.commandPaletteOpen = true">CMD+K</span>
       <span class="sb-div">|</span>
       <span class="sb-tech">{{ isWebMode() ? 'WEB MODE' : 'TAURI MODE' }}</span>
+      <SystemTray />
     </div>
   </footer>
 </template>
@@ -64,6 +65,7 @@ import { computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 import { isWebMode } from '@/composables/useTauri'
+import SystemTray from '@/components/SystemTray.vue'
 
 const store = useAppStore()
 const isSyncActive = computed(() =>
@@ -182,5 +184,52 @@ const isSyncActive = computed(() =>
   .sb-path {
     max-width: 120px;
   }
+}
+
+/* Enhanced status bar glass */
+.status-bar {
+  backdrop-filter: blur(var(--glass-blur-xl)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl)) !important;
+  box-shadow: var(--shadow-glass), var(--panel-inset), 0 -1px 0 rgba(0, 255, 65, 0.08) !important;
+  position: relative;
+}
+
+/* Top accent glow line */
+.status-bar::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.15), rgba(90, 240, 255, 0.15), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 4s ease-in-out infinite;
+}
+
+/* Status items enhancement */
+.status-item {
+  transition: all var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+}
+
+.status-item:hover {
+  background: var(--bg-glass);
+}
+
+.status-item:active {
+  transform: scale(0.97);
+}
+
+/* Clickable status items with focus ring */
+.status-item.clickable:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-deep), 0 0 0 4px var(--accent);
+  border-radius: 4px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 </style>

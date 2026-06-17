@@ -53,7 +53,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div :class="cls" role="status" aria-label="Loading" aria-busy="true">
+  <div :class="[...cls, 'gpu']" role="status" aria-label="Loading" aria-busy="true">
     <template v-if="skeleton">
       <div class="os-loading__skeleton">
         <slot />
@@ -125,6 +125,17 @@ onUnmounted(() => {
 .os-loading__skeleton {
   width: 100%;
   animation: bw-pulse 1.5s ease-in-out infinite;
+  position: relative;
+  overflow: hidden;
+}
+.os-loading__skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+  background-size: 200% 100%;
+  animation: shimmer-move 1.5s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .os-loading__indicator {

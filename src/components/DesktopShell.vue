@@ -1,5 +1,11 @@
 <template>
   <div class="desktop-shell" @contextmenu.prevent="onDesktopContext">
+    <!-- Animated ambient background -->
+    <div class="desktop-ambient" aria-hidden="true">
+      <div class="ambient-orb ambient-orb--1"></div>
+      <div class="ambient-orb ambient-orb--2"></div>
+      <div class="ambient-orb ambient-orb--3"></div>
+    </div>
     <div class="desktop-wallpaper">
       <slot name="wallpaper" />
     </div>
@@ -8,13 +14,15 @@
       class="desktop-menubar"
     />
 
-    <div
-      ref="workspaceRef"
-      class="desktop-workspace"
-      @touchstart="onTouchStart"
-      @touchend="onTouchEnd"
-      @wheel="onWheel"
-    >
+    <div class="desktop-content gpu-layer">
+      <div
+        ref="workspaceRef"
+        class="desktop-workspace"
+        @touchstart="onTouchStart"
+        @touchmove="onTouchMove"
+        @touchend="onTouchEnd"
+        @wheel="onWheel"
+      >
       <div v-if="overview" ref="overviewRef" class="overview-overlay" @click.self="exitOverview">
         <div class="overview-header">MISSION CONTROL</div>
         <div class="overview-grid">
@@ -64,8 +72,8 @@
           @minimize="(id: string) => wm.minimize(id)"
           @focus="(id: string) => wm.focus(id)"
           @move="(id: string, x: number, y: number) => wm.updatePosition(id, x, y)"
-          @resize="(id: string, w: number, h: number) => wm.updateSize(id, w, h)"
         />
+      </div>
       </div>
     </div>
 
@@ -119,18 +127,14 @@ const allScreens = computed(() => {
 })
 
 function getTileStyle(index: number) {
-  const perScreen = 4
-  const pos = index % perScreen
-  const cols = 2
-  const row = Math.floor(pos / cols)
-  const col = pos % cols
-  const padding = 6
-  const gap = 6
+  const pos = index % 4
+  const col = pos % 2
+  const row = Math.floor(pos / 2)
   return {
-    left: `${col * 50 + padding + (col > 0 ? gap * col / 2 : 0)}%`,
-    top: `${row * 50 + padding + (row > 0 ? gap * row / 2 : 0)}%`,
-    width: `calc(50% - ${padding * 2 + gap}px)`,
-    height: `calc(50% - ${padding * 2 + gap}px)`,
+    left: `${col * 50}%`,
+    top: `${row * 50}%`,
+    width: '50%',
+    height: '50%',
   }
 }
 
@@ -161,18 +165,35 @@ let touchStartX = 0
 let touchStartY = 0
 let touchStartTime = 0
 let touchFingerCount = 0
+let touchMoved = false
 
 function onTouchStart(e: TouchEvent) {
   touchFingerCount = e.touches.length
-  touchStartX = [...e.touches].reduce((s, t) => s + t.clientX, 0) / e.touches.length
-  touchStartY = [...e.touches].reduce((s, t) => s + t.clientY, 0) / e.touches.length
+  const avgX = [...e.touches].reduce((s, t) => s + t.clientX, 0) / e.touches.length
+  const avgY = [...e.touches].reduce((s, t) => s + t.clientY, 0) / e.touches.length
+  touchStartX = avgX
+  touchStartY = avgY
   touchStartTime = Date.now()
+  touchMoved = false
+}
+
+function onTouchMove(e: TouchEvent) {
+  e.preventDefault()
+  touchMoved = true
+}
+
+function inCenterZone(x: number, y: number): boolean {
+  const w = window.innerWidth
+  const h = window.innerHeight
+  const marginX = w * 0.2
+  const marginY = h * 0.25
+  return x > marginX && x < w - marginX && y > marginY && y < h - marginY
 }
 
 function onTouchEnd(e: TouchEvent) {
   if (touchFingerCount === 0) return
   const dt = Date.now() - touchStartTime
-  if (dt > 500) { touchFingerCount = 0; return }
+  if (dt > 600) { touchFingerCount = 0; return }
   if (e.changedTouches.length === 0) { touchFingerCount = 0; return }
 
   const endX = [...e.changedTouches].reduce((s, t) => s + t.clientX, 0) / e.changedTouches.length
@@ -181,23 +202,24 @@ function onTouchEnd(e: TouchEvent) {
   const dy = endY - touchStartY
   const absDx = Math.abs(dx)
   const absDy = Math.abs(dy)
-  const minDist = 50
+  const minDist = 40
 
   if (absDx < minDist && absDy < minDist) { touchFingerCount = 0; return }
 
-  // 3-finger swipe up/down → toggle overview
+  // 3-finger swipe up from center → toggle overview (mission control)
   if (touchFingerCount >= 3) {
-    if (dy < 0) overview.value = true
-    else if (overview.value) exitOverview()
+    if (dy < 0 && inCenterZone(touchStartX, touchStartY)) {
+      overview.value = true
+    } else if (overview.value) {
+      exitOverview()
+    }
     touchFingerCount = 0
     return
   }
 
   // 2-finger horizontal swipe → navigate screens
-  if (touchFingerCount === 2 || touchFingerCount === 1) {
-    if (absDx > absDy) {
-      navigateScreen(dx > 0 ? -1 : 1)
-    }
+  if (touchFingerCount === 2 && absDx > absDy) {
+    navigateScreen(dx > 0 ? -1 : 1)
   }
 
   touchFingerCount = 0
@@ -292,6 +314,7 @@ onUnmounted(() => {
   width: 100vw;
   position: relative;
   overflow: hidden;
+  contain: layout style;
 }
 
 .desktop-wallpaper {
@@ -482,5 +505,83 @@ onUnmounted(() => {
   left: 50%;
   transform: translateX(-50%);
   z-index: 200;
+}
+
+/* ── Ambient background ── */
+.desktop-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ambient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  will-change: transform;
+}
+
+.ambient-orb--1 {
+  width: clamp(300px, 50vw, 600px);
+  height: clamp(300px, 50vw, 600px);
+  background: radial-gradient(circle, rgba(0, 255, 65, 0.12), transparent 70%);
+  top: -10%;
+  left: -10%;
+  animation: ambient-drift 20s ease-in-out infinite;
+}
+
+.ambient-orb--2 {
+  width: clamp(400px, 60vw, 700px);
+  height: clamp(400px, 60vw, 700px);
+  background: radial-gradient(circle, rgba(90, 240, 255, 0.08), transparent 70%);
+  bottom: -15%;
+  right: -10%;
+  animation: ambient-drift 25s ease-in-out infinite reverse;
+}
+
+.ambient-orb--3 {
+  width: clamp(200px, 30vw, 400px);
+  height: clamp(200px, 30vw, 400px);
+  background: radial-gradient(circle, rgba(255, 107, 157, 0.06), transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: ambient-drift 30s ease-in-out infinite;
+  animation-delay: -10s;
+}
+
+.desktop-content {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+}
+
+@keyframes ambient-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(5%, 3%) scale(1.05); }
+  50% { transform: translate(-3%, 5%) scale(0.95); }
+  75% { transform: translate(4%, -2%) scale(1.02); }
+}
+
+/* ── Screen transitions ── */
+.screen-enter-active,
+.screen-leave-active {
+  transition: opacity var(--duration-slow) cubic-bezier(0.22, 1, 0.36, 1),
+              transform var(--duration-slow) cubic-bezier(0.22, 1, 0.36, 1),
+              filter var(--duration-slow) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.screen-enter-from {
+  opacity: 0;
+  transform: scale(0.97) translateY(8px);
+  filter: blur(4px);
+}
+
+.screen-leave-to {
+  opacity: 0;
+  transform: scale(0.97) translateY(-8px);
+  filter: blur(4px);
 }
 </style>

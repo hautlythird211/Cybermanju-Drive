@@ -74,7 +74,7 @@ onUnmounted(() => {
   <section :class="cls">
     <div
       v-if="title || icon || $slots.header"
-      class="os-section__header"
+      class="os-section__header gpu"
       @click="toggle"
       :aria-expanded="collapsible ? open : undefined"
       :role="collapsible ? 'button' : undefined"
@@ -130,7 +130,7 @@ onUnmounted(() => {
 .os-section__chevron {
   font-size: var(--font-size-xs);
   color: var(--text-muted);
-  transition: transform var(--transition-fast);
+  transition: transform var(--duration-fast) var(--ease-spring);
 }
 
 .os-section--collapsed .os-section__chevron {
@@ -145,4 +145,12 @@ onUnmounted(() => {
 .os-section--gothic .os-section__header { color: var(--text-pink); }
 .os-section--cute .os-section__header { color: var(--text-pink); }
 .os-section--glass .os-section__header { color: var(--text-primary); }
+.os-section--glass .os-section__body {
+  background: var(--bg-glass);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+}
 </style>

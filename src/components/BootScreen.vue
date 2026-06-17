@@ -176,7 +176,9 @@ onMounted(() => {
 
 watch(ready, (val) => {
   if (val) {
-    setTimeout(() => inputRef.value?.focus(), 100)
+    setTimeout(() => {
+      if (!dismissing.value) dismissBoot()
+    }, 1500)
   }
 })
 

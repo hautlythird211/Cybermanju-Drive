@@ -71,7 +71,7 @@ onUnmounted(() => {
     <div @click="toggle" :aria-expanded="open" aria-haspopup="dialog" role="button" tabindex="0" @keydown.enter="toggle" @keydown.space.prevent="toggle">
       <slot name="trigger" />
     </div>
-    <div v-if="open" :class="cls" :style="style" ref="popoverRef" role="dialog" @click="closeOnClick && close()">
+    <div v-if="open" :class="[...cls, 'gpu']" :style="style" ref="popoverRef" role="dialog" @click="closeOnClick && close()">
       <slot />
     </div>
   </div>
@@ -87,12 +87,12 @@ onUnmounted(() => {
   position: absolute;
   z-index: 5000;
   background: var(--bg-glass-heavy);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-lg);
   padding: 8px;
-  box-shadow: var(--shadow-dropdown);
+  box-shadow: var(--shadow-dropdown), var(--glow-accent);
   min-width: 120px;
   will-change: transform, opacity;
 }

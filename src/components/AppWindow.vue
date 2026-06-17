@@ -1,5 +1,5 @@
 <template>
-  <OsWindow
+  <OsWindow class="app-window"
     :title="win.title"
     :icon="win.icon"
     variant="glass"
@@ -16,7 +16,6 @@
     @minimize="onMinimize"
     @focus="$emit('focus', win.id)"
     @move="(x, y) => $emit('move', win.id, x, y)"
-    @resize="(w, h) => $emit('resize', win.id, w, h)"
   >
     <div ref="windowRef" class="app-window-content">
       <component :is="win.component" v-bind="win.props" @close="onClose" />
@@ -46,7 +45,6 @@ const emit = defineEmits<{
   minimize: [id: string]
   focus: [id: string]
   move: [id: string, x: number, y: number]
-  resize: [id: string, w: number, h: number]
 }>()
 
 onMounted(() => {
@@ -88,5 +86,17 @@ onUnmounted(() => {
 
 .app-window-content > :deep(*) {
   flex: 1;
+}
+
+/* Enhanced glass for app windows */
+.app-window {
+  contain: layout style;
+  isolation: isolate;
+}
+
+.app-window.variant-glass {
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
+  box-shadow: var(--shadow-glass), var(--panel-inset), var(--glow-accent);
 }
 </style>

@@ -139,7 +139,7 @@ onUnmounted(() => {
 <template>
   <div
     ref="containerRef"
-    :class="cls"
+    :class="[...cls, 'gpu']"
     role="combobox"
     :aria-expanded="open"
     aria-haspopup="listbox"
@@ -276,7 +276,8 @@ onUnmounted(() => {
   right: 0;
   margin-top: 4px;
   background: var(--bg-glass-heavy);
-  backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-lg);
   padding: 4px;
@@ -301,6 +302,8 @@ onUnmounted(() => {
 .os-select__option--selected {
   color: var(--text-accent);
   background: var(--accent-dim);
+  border-left: 2px solid var(--accent);
+  padding-left: 8px;
 }
 .os-select__option--focused {
   outline: 1px solid var(--accent);

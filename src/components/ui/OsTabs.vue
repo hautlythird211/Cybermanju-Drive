@@ -89,7 +89,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="tablistRef" :class="cls" role="tablist" @keydown="onKeydown">
+  <div ref="tablistRef" :class="[...cls, 'gpu']" role="tablist" @keydown="onKeydown">
     <button
       v-for="tab in tabs"
       :key="tab.id"
@@ -162,6 +162,8 @@ onUnmounted(() => {
 
 .os-tabs__tab:hover {
   color: var(--text-secondary);
+  transform: translateY(-1px);
+  transition: transform var(--duration-fast) var(--ease-spring), color var(--duration-fast) var(--ease-spring);
 }
 
 .os-tabs__tab--active {
@@ -190,9 +192,10 @@ onUnmounted(() => {
   height: 2px;
   background: var(--accent);
   border-radius: var(--radius-full);
-  transition: width var(--transition-normal), transform var(--transition-normal);
+  transition: width var(--duration-normal) var(--ease-spring), transform var(--duration-normal) var(--ease-spring);
   will-change: transform, width;
   pointer-events: none;
+  box-shadow: 0 0 6px var(--accent-glow);
 }
 
 /* variant: default */

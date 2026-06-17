@@ -138,4 +138,31 @@ function onClose() { emit('close') }
 .unbox-layer-algo { flex: 1; color: var(--text-secondary); font-weight: 600; }
 .unbox-tag-list { display: flex; flex-wrap: wrap; gap: 3px; }
 .text-muted { color: var(--text-muted) !important; }
+
+.dialog-overlay {
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
+}
+
+.dialog-panel {
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
+  background: var(--bg-glass-heavy);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-elevated), var(--glow-accent), var(--panel-inset);
+  contain: layout style;
+}
+
+.dialog-title {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
 </style>

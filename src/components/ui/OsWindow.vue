@@ -13,7 +13,6 @@ const props = withDefaults(defineProps<{
   closable?: boolean
   minimizable?: boolean
   maximizable?: boolean
-  resizable?: boolean
   draggable?: boolean
   noPadding?: boolean
   x?: number
@@ -29,7 +28,6 @@ const props = withDefaults(defineProps<{
   closable: true,
   minimizable: true,
   maximizable: false,
-  resizable: false,
   draggable: true,
   noPadding: false,
   x: 0,
@@ -45,7 +43,6 @@ const emit = defineEmits<{
   maximize: []
   focus: []
   move: [x: number, y: number]
-  resize: [w: number, h: number]
   'close-complete': []
 }>()
 
@@ -125,7 +122,7 @@ onUnmounted(() => { stopDrag() })
 <template>
   <div
     ref="windowRef"
-    class="os-window"
+    class="os-window gpu"
     :class="[`os-window--${variant}`, `os-window--${size}`, { focused, exiting: isExiting }]"
     :style="[windowStyle, { willChange: draggable ? 'left, top, transform, opacity, box-shadow' : 'transform, opacity, box-shadow' }]"
     role="window"
@@ -153,126 +150,81 @@ onUnmounted(() => { stopDrag() })
   position: absolute;
   display: flex;
   flex-direction: column;
-  border-radius: var(--radius-xl);
+  border-radius: 10px;
   overflow: hidden;
-  transition: box-shadow var(--transition-normal), border-color var(--transition-normal);
+  transition: box-shadow 0.2s, border-color 0.2s;
   will-change: transform, opacity, box-shadow;
+  contain: layout style;
+  background: rgba(14, 14, 14, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+.os-window.focused {
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 255, 65, 0.15);
 }
 
-.os-window--default {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-window), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-.os-window--default.focused {
-  border-color: var(--border-medium);
-  box-shadow: 0 12px 48px rgba(0, 255, 65, 0.08), var(--shadow-window), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
+.os-window--default { background: rgba(14, 14, 14, 0.96); }
+.os-window--glass { background: rgba(10, 10, 10, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+.os-window--neon { border-color: rgba(0, 255, 65, 0.15); }
+.os-window--neon.focused { border-color: rgba(0, 255, 65, 0.3); }
+.os-window--gothic { background: rgba(10, 5, 5, 0.96); border-color: rgba(60, 15, 15, 0.6); }
+.os-window--gothic.focused { border-color: rgba(80, 20, 20, 0.8); }
+.os-window--cute { background: rgba(16, 10, 14, 0.96); border-color: rgba(255, 107, 157, 0.1); }
+.os-window--cute.focused { border-color: rgba(255, 107, 157, 0.25); }
 
-.os-window--glass {
-  background: var(--bg-glass-heavy);
-  backdrop-filter: blur(var(--glass-blur-heavy));
-  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
-  border: 1px solid var(--border-glass);
-  box-shadow: var(--shadow-glass);
-}
-.os-window--glass.focused {
-  border-color: var(--border-glass-hover);
-  box-shadow: 0 0 24px var(--accent-dim), var(--shadow-glass);
-}
-
-.os-window--neon {
-  background: var(--bg-surface);
-  border: 1px solid rgba(0, 255, 65, 0.2);
-  box-shadow: 0 0 16px var(--accent-dim), var(--shadow-window);
-}
-.os-window--neon.focused {
-  border-color: rgba(0, 255, 65, 0.4);
-  box-shadow: 0 0 32px var(--accent-glow), var(--shadow-window);
-}
-
-.os-window--gothic {
-  background: linear-gradient(180deg, #150808 0%, #0a0303 100%);
-  border: 1px solid #2a1010;
-  box-shadow: 0 8px 32px rgba(60, 10, 20, 0.3);
-}
-.os-window--gothic.focused {
-  border-color: #3a1a1a;
-  box-shadow: 0 8px 32px rgba(60, 10, 20, 0.5), 0 0 16px rgba(255, 107, 157, 0.08);
-}
-
-.os-window--cute {
-  background: linear-gradient(135deg, rgba(255, 107, 157, 0.06), rgba(179, 136, 255, 0.06));
-  border: 1px solid rgba(255, 107, 157, 0.15);
-  border-radius: var(--radius-2xl);
-}
-.os-window--cute.focused {
-  border-color: rgba(255, 107, 157, 0.3);
-  box-shadow: 0 0 16px rgba(255, 107, 157, 0.08);
-}
-
-.os-window--sm { width: 360px; min-height: 240px; }
-.os-window--md { width: 560px; min-height: 360px; }
-.os-window--lg { width: 720px; min-height: 480px; }
-.os-window--xl { width: 900px; min-height: 600px; }
+.os-window--sm { width: 360px; min-height: 200px; }
+.os-window--md { width: 520px; min-height: 300px; }
+.os-window--lg { width: 680px; min-height: 400px; }
+.os-window--xl { width: 840px; min-height: 500px; }
 .os-window--full { width: 100%; height: 100%; }
 
 .os-window__titlebar {
   display: flex;
   align-items: center;
-  height: 34px;
-  padding: 0 12px;
-  background: var(--bg-elevated);
-  border-bottom: 1px solid var(--border-subtle);
+  height: 28px;
+  padding: 0 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   cursor: default;
   user-select: none;
   flex-shrink: 0;
-  gap: 8px;
+  gap: 6px;
 }
 
-.os-window--glass .os-window__titlebar {
-  background: rgba(0, 0, 0, 0.3);
-}
-.os-window--neon .os-window__titlebar {
-  background: var(--bg-elevated);
-  border-bottom: 1px solid rgba(0, 255, 65, 0.15);
-}
-.os-window--gothic .os-window__titlebar {
-  background: #1a0808;
-  border-bottom: 1px solid #2a1010;
-}
-.os-window--cute .os-window__titlebar {
-  background: rgba(255, 107, 157, 0.05);
-  border-bottom: 1px solid rgba(255, 107, 157, 0.1);
-}
+.os-window--glass .os-window__titlebar { background: rgba(0, 0, 0, 0.25); }
+.os-window--neon .os-window__titlebar { border-bottom-color: rgba(0, 255, 65, 0.08); }
+.os-window--gothic .os-window__titlebar { border-bottom-color: rgba(60, 15, 15, 0.4); }
+.os-window--cute .os-window__titlebar { border-bottom-color: rgba(255, 107, 157, 0.08); }
 
 .os-window__dots {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   flex-shrink: 0;
 }
 
 .os-window__dot {
-  width: 11px;
-  height: 11px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   cursor: pointer;
-  transition: filter var(--transition-fast);
+  transition: opacity 0.15s;
+  opacity: 0.7;
 }
-.os-window__dot:hover { filter: brightness(1.3); }
+.os-window__dot:hover { opacity: 1; }
 
 .os-window__dot--close { background: #ff5f57; }
 .os-window__dot--minimize { background: #febc2e; }
 .os-window__dot--maximize { background: #28c840; }
 
-.os-window__title-icon { flex-shrink: 0; opacity: 0.7; }
+.os-window__title-icon { flex-shrink: 0; opacity: 0.5; }
 
 .os-window__title-label {
   font-family: var(--font-mono);
-  font-size: var(--font-size-base);
+  font-size: 10px;
   font-weight: 600;
-  color: var(--text-secondary);
-  letter-spacing: 0.3px;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.5px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -284,7 +236,7 @@ onUnmounted(() => { stopDrag() })
   flex: 1;
   overflow: auto;
   position: relative;
-  padding: 12px;
+  padding: 8px;
 }
 
 .os-window__content--no-pad {

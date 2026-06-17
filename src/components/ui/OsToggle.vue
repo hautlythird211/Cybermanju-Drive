@@ -80,7 +80,7 @@ onUnmounted(() => {
     @click="toggle"
     @keydown="onKeydown"
   >
-    <div ref="trackRef" class="os-toggle__track">
+    <div ref="trackRef" class="os-toggle__track gpu-layer">
       <div ref="thumbRef" class="os-toggle__thumb" />
     </div>
     <span v-if="label" class="os-toggle__label">{{ label }}</span>
@@ -104,7 +104,7 @@ onUnmounted(() => {
 .os-toggle__track {
   position: relative;
   border-radius: var(--radius-full);
-  transition: all var(--transition-normal);
+  transition: all var(--duration-normal) var(--ease-spring);
   flex-shrink: 0;
   will-change: transform, opacity;
 }
@@ -135,8 +135,12 @@ onUnmounted(() => {
   left: 2px;
   background: var(--text-muted);
   border-radius: 50%;
-  transition: all var(--transition-normal);
+  transition: all var(--duration-normal) var(--ease-spring);
   will-change: transform;
+}
+
+.os-toggle--on .os-toggle__thumb {
+  box-shadow: 0 0 6px var(--accent-glow);
 }
 
 .os-toggle--sm .os-toggle__thumb { width: 10px; height: 10px; }

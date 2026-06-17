@@ -41,7 +41,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div :class="cls" ref="panelRef">
+  <div :class="[...cls, 'gpu']" ref="panelRef">
     <slot />
   </div>
 </template>
@@ -51,6 +51,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   will-change: transform, opacity;
+  contain: layout style;
 }
 
 .os-panel--full-height {
@@ -74,10 +75,11 @@ onUnmounted(() => {
 .os-panel--glass {
   position: relative;
   background: var(--bg-glass);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-glass), var(--panel-inset);
 }
 .os-panel--glass::before {
   content: '';
@@ -92,6 +94,7 @@ onUnmounted(() => {
 .os-panel--neon {
   border: 1px solid rgba(0, 255, 65, 0.15);
   border-radius: var(--radius-lg);
+  box-shadow: var(--glow-accent);
 }
 
 .os-panel--gothic {

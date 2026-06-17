@@ -94,7 +94,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div :class="cls">
+  <div :class="[...cls, 'gpu']">
     <table class="os-table__table" role="table">
       <thead>
         <tr>
@@ -163,9 +163,9 @@ onUnmounted(() => {
 }
 
 .os-table--default { color: var(--text-secondary); }
-.os-table--default th { border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); }
+.os-table--default th { border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); box-shadow: 0 1px 0 var(--accent-dim); }
 .os-table--default td { border-bottom: 1px solid var(--border-subtle); }
-.os-table--default tbody tr:hover { background: var(--bg-overlay); }
+.os-table--default tbody tr:hover { background: var(--bg-overlay); transition: background var(--duration-fast) var(--ease-spring); }
 
 .os-table--glass { color: var(--text-secondary); }
 .os-table--glass th { border-bottom: 1px solid var(--border-glass); color: var(--text-muted); }
@@ -191,7 +191,7 @@ onUnmounted(() => {
 .os-table--md th, .os-table--md td { padding: 6px 12px; font-size: var(--font-size-base); }
 .os-table--lg th, .os-table--lg td { padding: 8px 16px; font-size: var(--font-size-md); }
 
-.os-table--striped tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+.os-table--striped tbody tr:nth-child(even) { background: var(--overlay-light); }
 
 .os-table--compact th, .os-table--compact td { padding: 3px 6px; }
 

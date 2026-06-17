@@ -31,6 +31,9 @@ const style = computed(() => {
   overflow-x: hidden;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+  contain: paint;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 500px;
 }
 
 .os-scrollarea--default {
@@ -54,5 +57,5 @@ const style = computed(() => {
 .os-scrollarea::-webkit-scrollbar { width: 6px; }
 .os-scrollarea::-webkit-scrollbar-track { background: transparent; }
 .os-scrollarea::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 3px; }
-.os-scrollarea::-webkit-scrollbar-thumb:hover { background: var(--border-medium); }
+.os-scrollarea::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 </style>

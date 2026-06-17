@@ -240,4 +240,65 @@ onUnmounted(() => {
 }
 
 .text-muted { color: var(--text-muted) !important; }
+
+/* Enhanced glass sections */
+.settings-section {
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
+  background: var(--bg-glass-heavy);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-glass), var(--panel-inset);
+  transition: transform var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1);
+  contain: layout style;
+}
+
+.settings-section:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-elevated), var(--panel-inset-strong);
+}
+
+.settings-section-header {
+  position: relative;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.settings-section-header::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 60px;
+  height: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+  border-radius: 1px;
+}
+
+/* Setting rows */
+.setting-row {
+  transition: background var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1);
+  border-radius: 6px;
+}
+
+.setting-row:hover {
+  background: var(--overlay-light);
+}
+
+/* Select/slider enhancements */
+.setting-select, .setting-slider {
+  transition: all var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Menu settings with hover lift */
+.menu-setting-card {
+  transition: transform var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1);
+  contain: layout style;
+}
+
+.menu-setting-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-elevated);
+}
 </style>

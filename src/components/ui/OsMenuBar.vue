@@ -134,7 +134,7 @@ onUnmounted(() => {
 <template>
   <div
     ref="menubarRef"
-    :class="['os-menubar', `os-menubar--${props.variant}`]"
+    :class="['os-menubar', `os-menubar--${props.variant}`, 'gpu']"
     :style="{ height: height + 'px' }"
     role="menubar"
     :aria-label="'Menu bar'"
@@ -238,8 +238,8 @@ onUnmounted(() => {
 
 .os-menubar--glass {
   background: var(--bg-glass);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
   border-bottom: 1px solid var(--border-glass);
 }
 
@@ -289,12 +289,12 @@ onUnmounted(() => {
   left: 0;
   min-width: 200px;
   background: var(--bg-glass-heavy);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-lg);
   padding: 4px;
-  box-shadow: var(--shadow-dropdown);
+  box-shadow: var(--shadow-dropdown), var(--glow-accent);
   z-index: 1000;
   will-change: transform, opacity;
 }
@@ -313,6 +313,7 @@ onUnmounted(() => {
 .os-menubar__item:hover {
   background: var(--bg-overlay);
   color: var(--text-primary);
+  transform: translateX(2px);
 }
 
 .os-menubar__item--disabled {
@@ -339,12 +340,12 @@ onUnmounted(() => {
   top: -4px;
   min-width: 180px;
   background: var(--bg-glass-heavy);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-lg);
   padding: 4px;
-  box-shadow: var(--shadow-dropdown);
+  box-shadow: var(--shadow-dropdown), var(--glow-accent);
   will-change: transform, opacity;
 }
 </style>

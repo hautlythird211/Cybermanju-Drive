@@ -18,6 +18,9 @@ import FilePreview from '@/components/FilePreview.vue'
 import ImportWindow from '@/components/ImportWindow.vue'
 import TransferWindow from '@/components/TransferWindow.vue'
 import WindowContent from '@/components/WindowContent.vue'
+import SystemMonitor from '@/components/SystemMonitor.vue'
+import TaskManager from '@/components/TaskManager.vue'
+import Terminal from '@/components/Terminal.vue'
 
 export interface WindowState {
   id: string
@@ -42,31 +45,34 @@ type SizeMap = { [K in PanelType]?: { width: number; height: number } } & {
   permissions?: { width: number; height: number }
 }
 const defaultSizes: SizeMap = {
-  files: { width: 900, height: 580 },
-  search: { width: 600, height: 480 },
-  collections: { width: 500, height: 420 },
-  faces: { width: 600, height: 460 },
-  map: { width: 720, height: 520 },
-  code: { width: 650, height: 500 },
-  users: { width: 520, height: 460 },
-  sync: { width: 580, height: 440 },
-  settings: { width: 560, height: 520 },
-  trash: { width: 500, height: 400 },
-  activity: { width: 540, height: 400 },
-  favorites: { width: 420, height: 360 },
-  recent: { width: 420, height: 360 },
-  accounts: { width: 480, height: 400 },
-  'loose-groups': { width: 440, height: 380 },
-  style: { width: 440, height: 360 },
-  storage: { width: 580, height: 480 },
-  dashboard: { width: 600, height: 460 },
-  webdash: { width: 640, height: 500 },
-  encryption: { width: 480, height: 420 },
-  compression: { width: 480, height: 420 },
-  permissions: { width: 440, height: 380 },
-  preview: { width: 480, height: 540 },
-  import: { width: 640, height: 520 },
-  transfer: { width: 540, height: 600 },
+  files: { width: 620, height: 440 },
+  search: { width: 440, height: 380 },
+  collections: { width: 380, height: 340 },
+  faces: { width: 420, height: 360 },
+  map: { width: 520, height: 400 },
+  code: { width: 480, height: 400 },
+  users: { width: 400, height: 360 },
+  sync: { width: 440, height: 360 },
+  settings: { width: 440, height: 420 },
+  trash: { width: 400, height: 340 },
+  activity: { width: 400, height: 340 },
+  favorites: { width: 360, height: 300 },
+  recent: { width: 360, height: 300 },
+  accounts: { width: 380, height: 340 },
+  'loose-groups': { width: 360, height: 320 },
+  style: { width: 360, height: 300 },
+  storage: { width: 440, height: 380 },
+  dashboard: { width: 460, height: 380 },
+  webdash: { width: 480, height: 400 },
+  encryption: { width: 380, height: 340 },
+  compression: { width: 380, height: 340 },
+  permissions: { width: 360, height: 320 },
+  preview: { width: 380, height: 420 },
+  import: { width: 480, height: 400 },
+  transfer: { width: 420, height: 460 },
+  'system-monitor': { width: 520, height: 400 },
+  'task-manager': { width: 540, height: 420 },
+  terminal: { width: 480, height: 360 },
 }
 
 const inlinePanels: PanelType[] = [
@@ -92,6 +98,9 @@ const panelComponentMap: Record<string, Component> = {
   import: ImportWindow,
   transfer: TransferWindow,
   webdash: WebDashboardPanel,
+  'system-monitor': SystemMonitor,
+  'task-manager': TaskManager,
+  terminal: Terminal,
 }
 
 function getComponent(panelType: PanelType): Component | null {

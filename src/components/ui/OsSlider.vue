@@ -103,7 +103,7 @@ onUnmounted(() => {
       class="os-slider__input"
       @input="onInput"
     />
-    <div class="os-slider__track">
+    <div class="os-slider__track gpu">
       <div ref="fillRef" class="os-slider__fill" :style="{ width: percent + '%' }" />
     </div>
     <div class="os-slider__thumb" :style="{ left: percent + '%' }" />
@@ -149,6 +149,7 @@ onUnmounted(() => {
   height: 100%;
   border-radius: var(--radius-full);
   will-change: width;
+  transition: width var(--duration-normal) var(--ease-spring);
 }
 
 .os-slider--default .os-slider__fill { background: var(--accent); }
@@ -165,6 +166,12 @@ onUnmounted(() => {
   pointer-events: none;
   z-index: 1;
   will-change: transform;
+  transition: box-shadow var(--duration-fast) var(--ease-spring);
+}
+
+.os-slider:active .os-slider__thumb,
+.os-slider:focus-within .os-slider__thumb {
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 
 .os-slider--sm .os-slider__thumb { width: 10px; height: 10px; margin-left: 0; }

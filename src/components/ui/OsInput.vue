@@ -86,7 +86,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div ref="wrapperRef" :class="cls">
+  <div ref="wrapperRef" :class="[...cls, 'gpu']">
     <span v-if="prefix" class="os-input__prefix">{{ prefix }}</span>
     <textarea
       v-if="isTextarea"
@@ -136,9 +136,14 @@ onMounted(() => {
   align-items: center;
   gap: 4px;
   border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
+  transition: all var(--duration-fast) var(--ease-spring);
   overflow: hidden;
   will-change: box-shadow;
+  contain: layout style;
+}
+
+.os-input-wrapper:focus-within {
+  box-shadow: var(--focus-ring);
 }
 
 .os-input-wrapper:focus-within {
@@ -193,10 +198,11 @@ onMounted(() => {
 /* variant: glass */
 .os-input--glass {
   background: var(--bg-glass);
-  backdrop-filter: blur(var(--glass-blur-light));
-  -webkit-backdrop-filter: blur(var(--glass-blur-light));
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
   border: 1px solid var(--border-glass);
   color: var(--text-primary);
+  box-shadow: var(--panel-inset);
 }
 .os-input--glass:focus-within {
   border-color: var(--border-glass-hover);
@@ -212,7 +218,7 @@ onMounted(() => {
 }
 .os-input--neon:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 12px var(--accent-dim);
+  box-shadow: var(--glow-accent), 0 0 12px var(--accent-dim);
 }
 
 /* variant: gothic */

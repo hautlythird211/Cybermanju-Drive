@@ -108,7 +108,7 @@ onUnmounted(() => {
 <template>
   <button
     ref="btnRef"
-    :class="cls"
+    :class="[...cls, 'gpu']"
     :disabled="disabled || loading"
     :role="variant === 'cute' ? 'button' : undefined"
     :aria-disabled="disabled || loading || undefined"
@@ -142,7 +142,7 @@ onUnmounted(() => {
   letter-spacing: 0.5px;
   cursor: pointer;
   user-select: none;
-  transition: all var(--transition-fast);
+  transition: all var(--duration-fast) var(--ease-spring);
   white-space: nowrap;
   position: relative;
   overflow: hidden;
@@ -172,7 +172,10 @@ onUnmounted(() => {
 .os-btn--lg { padding: 8px 20px; font-size: var(--font-size-md); height: 34px; }
 
 .os-btn--block { width: 100%; }
-.os-btn--pill { border-radius: var(--radius-full); }
+.os-btn--pill {
+  border-radius: var(--radius-full);
+  border-image: linear-gradient(135deg, var(--accent-dim), var(--accent)) 1;
+}
 
 /* variant: default */
 .os-btn--default {
@@ -222,10 +225,11 @@ onUnmounted(() => {
 /* variant: glass */
 .os-btn--glass {
   background: var(--bg-glass);
-  backdrop-filter: blur(var(--glass-blur-light));
-  -webkit-backdrop-filter: blur(var(--glass-blur-light));
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
   border: 1px solid var(--border-glass);
   color: var(--text-secondary);
+  box-shadow: var(--panel-inset);
 }
 .os-btn--glass:hover {
   background: rgba(255, 255, 255, 0.1);
@@ -243,7 +247,7 @@ onUnmounted(() => {
 }
 .os-btn--neon:hover {
   background: var(--accent-dim);
-  box-shadow: 0 0 16px var(--accent-glow), inset 0 0 12px rgba(0, 255, 65, 0.1);
+  box-shadow: var(--glow-accent), 0 0 16px var(--accent-glow), inset 0 0 12px rgba(0, 255, 65, 0.1);
 }
 
 /* variant: gothic */

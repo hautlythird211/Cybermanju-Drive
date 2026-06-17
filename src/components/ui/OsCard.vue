@@ -78,7 +78,7 @@ onUnmounted(() => {
 <template>
   <component
     :is="as"
-    :class="cls"
+    :class="[...cls, 'gpu']"
     ref="cardRef"
     :aria-label="title || undefined"
     @mouseenter="onMouseEnter"
@@ -99,8 +99,9 @@ onUnmounted(() => {
 <style scoped>
 .os-card {
   border-radius: var(--radius-lg);
-  transition: all var(--transition-normal);
+  transition: all var(--duration-normal);
   will-change: transform, box-shadow;
+  contain: layout style;
 }
 
 /* padding */
@@ -120,9 +121,10 @@ onUnmounted(() => {
 /* variant: glass */
 .os-card--glass {
   position: relative;
+  isolation: isolate;
   background: var(--bg-glass);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
   border: 1px solid var(--border-glass);
   box-shadow: var(--shadow-glass);
 }
@@ -130,10 +132,19 @@ onUnmounted(() => {
   content: '';
   position: absolute;
   inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 255, 65, 0.03) 0%,
+    rgba(90, 240, 255, 0.02) 25%,
+    transparent 50%,
+    rgba(255, 107, 157, 0.02) 75%,
+    rgba(179, 136, 255, 0.03) 100%
+  );
+  background-size: 200% 200%;
+  animation: ambient-drift 12s ease-in-out infinite;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(255,255,255,0.06), transparent 50%);
   pointer-events: none;
-  z-index: 0;
 }
 
 /* variant: neon */
@@ -195,6 +206,11 @@ onUnmounted(() => {
 .os-card--hover:hover {
   border-color: var(--border-medium);
   box-shadow: var(--shadow-dropdown);
+}
+
+.os-card--hoverable:hover {
+  transform: translateY(-2px);
+  transition: transform var(--duration-fast) var(--ease-spring), box-shadow var(--duration-fast) var(--ease-spring);
 }
 
 .os-card--glow {

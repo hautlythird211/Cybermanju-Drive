@@ -51,6 +51,8 @@ const cls = computed(() => [
 .os-divider--gradient {
   position: relative;
   background: var(--gradient-accent);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
 }
 .os-divider--gradient:not(.os-divider--labeled)::before {
   content: '';
@@ -60,6 +62,20 @@ const cls = computed(() => [
   background: var(--gradient-accent);
   opacity: 0.4;
   z-index: -1;
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+.os-divider--gradient::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  filter: blur(4px);
+  background: var(--gradient-accent);
+  opacity: 0.15;
+  z-index: -2;
+  background-size: 200% 100%;
+  animation: shimmer 4s ease-in-out infinite reverse;
 }
 
 .os-divider--labeled {

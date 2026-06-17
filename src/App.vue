@@ -15,6 +15,9 @@ import { kvGet } from '@/wasm/storage'
 import DesktopShell from '@/components/DesktopShell.vue'
 import LandingPage from '@/components/LandingPage.vue'
 import BootScreen from '@/components/BootScreen.vue'
+import PostScreen from '@/components/PostScreen.vue'
+import BootLoader from '@/components/BootLoader.vue'
+import LoginScreen from '@/components/LoginScreen.vue'
 import SetupWizard from '@/components/SetupWizard.vue'
 import CanvasEngine from '@/components/CanvasEngine.vue'
 import NotificationStack from '@/components/NotificationStack.vue'
@@ -499,7 +502,7 @@ function handleUpload() {
 }
 
 const needsSetup = ref<boolean | null>(null)
-const bootComplete = ref(false)
+const bootPhase = ref<'post' | 'bootloader' | 'kernel' | 'login' | 'desktop'>('post')
 
 onMounted(async () => {
   store.currentPanel = 'landing'
@@ -513,8 +516,21 @@ onMounted(async () => {
   }
 })
 
-function onBootComplete() {
-  bootComplete.value = true
+function onPostComplete() {
+  bootPhase.value = 'bootloader'
+}
+
+function onBootloaderSelect(mode: string) {
+  bootPhase.value = 'kernel'
+}
+
+function onKernelBootComplete() {
+  bootPhase.value = 'login'
+}
+
+function onLoginComplete(user: string) {
+  localStorage.setItem('cybermanju_username', user)
+  bootPhase.value = 'desktop'
 }
 
 function onSetupComplete() {
@@ -524,7 +540,7 @@ function onSetupComplete() {
 }
 
 function handleLandingLaunch() {
-  if (needsSetup.value !== false) return // null (still loading) or true (wizard shows)
+  if (needsSetup.value !== false) return
   store.currentPanel = 'files'
   wm.open('files')
 }
@@ -532,8 +548,11 @@ function handleLandingLaunch() {
 
 <template>
   <div class="cybermanju-shell">
-    <BootScreen v-if="!bootComplete" @complete="onBootComplete" />
-    <template v-if="bootComplete">
+    <PostScreen v-if="bootPhase === 'post'" @complete="onPostComplete" />
+    <BootLoader v-else-if="bootPhase === 'bootloader'" @select="onBootloaderSelect" />
+    <BootScreen v-else-if="bootPhase === 'kernel'" @complete="onKernelBootComplete" />
+    <LoginScreen v-else-if="bootPhase === 'login'" @login="onLoginComplete" />
+    <template v-if="bootPhase === 'desktop'">
       <LandingPage
         v-if="store.currentPanel === 'landing' && needsSetup !== true"
         :key="'landing'"

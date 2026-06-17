@@ -94,7 +94,7 @@ onUnmounted(() => {
 <template>
   <div
     ref="sidebarRef"
-    :class="cls"
+    :class="[...cls, 'gpu-layer']"
     :style="style"
     role="navigation"
     :aria-label="collapsed ? 'Collapsed sidebar' : 'Sidebar navigation'"
@@ -179,9 +179,10 @@ onUnmounted(() => {
 
 .os-sidebar--glass {
   background: var(--bg-glass);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
   border-right: 1px solid var(--border-glass);
+  box-shadow: var(--panel-inset);
 }
 
 .os-sidebar--neon {
@@ -248,6 +249,8 @@ onUnmounted(() => {
 .os-sidebar__item--active {
   background: var(--accent-dim);
   color: var(--text-accent);
+  border-left: 2px solid var(--accent);
+  box-shadow: inset 2px 0 8px var(--accent-glow);
 }
 
 .os-sidebar__item--disabled {

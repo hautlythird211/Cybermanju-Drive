@@ -292,4 +292,59 @@ onUnmounted(() => {
   color: var(--text-accent);
   font-weight: 600;
 }
+
+/* Enhanced glass stats */
+.storage-stat {
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
+  background: var(--bg-glass-heavy);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-glass), var(--panel-inset);
+  contain: layout style;
+  transition: transform var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.storage-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-elevated), var(--panel-inset-strong), var(--glow-accent);
+}
+
+/* Stat value glow */
+.stat-value {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Progress fill enhancement */
+.storage-progress-fill {
+  background: linear-gradient(90deg, var(--accent), var(--accent-dim), var(--accent));
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+  box-shadow: 0 0 8px var(--accent-glow);
+  transition: width var(--duration-slow) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Storage card */
+.storage-card {
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
+  background: var(--bg-glass-heavy);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-glass), var(--panel-inset);
+  contain: layout style;
+  transition: transform var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.storage-card:hover {
+  transform: translateY(-1px);
+}
+
+/* Disk label enhancement */
+.disk-label {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
 </style>

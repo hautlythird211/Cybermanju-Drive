@@ -59,7 +59,7 @@ onMounted(async () => {
 <template>
   <div
     ref="quadrantRef"
-    :class="cls"
+    :class="[...cls, 'gpu']"
     :style="style"
     role="grid"
     :aria-label="ariaLabel"
@@ -178,12 +178,13 @@ onMounted(async () => {
   overflow: auto;
   position: relative;
   will-change: transform, opacity;
+  contain: layout style;
 }
 
 .os-quadrant--glass .os-quadrant__cell {
   background: var(--bg-glass);
-  backdrop-filter: blur(var(--glass-blur-light));
-  -webkit-backdrop-filter: blur(var(--glass-blur-light));
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-md);
 }

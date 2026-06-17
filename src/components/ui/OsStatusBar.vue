@@ -29,7 +29,7 @@ const cls = computed(() => [
 </script>
 
 <template>
-  <div :class="cls" :style="{ height: height + 'px' }" role="status" aria-live="polite">
+  <div :class="[...cls, 'gpu-layer']" :style="{ height: height + 'px' }" role="status" aria-live="polite">
     <div class="os-statusbar__left">
       <slot name="left" />
       <div
@@ -85,10 +85,23 @@ const cls = computed(() => [
 
 .os-statusbar--glass {
   background: var(--bg-glass);
-  backdrop-filter: blur(var(--glass-blur-light));
-  -webkit-backdrop-filter: blur(var(--glass-blur-light));
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
   border-top: 1px solid var(--border-glass);
   color: var(--text-muted);
+  position: relative;
+}
+
+.os-statusbar--glass::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--border-subtle), var(--accent-dim), var(--border-subtle));
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
 }
 
 .os-statusbar--neon {
@@ -129,6 +142,11 @@ const cls = computed(() => [
 .os-statusbar__item--clickable:hover {
   background: var(--bg-overlay);
   color: var(--text-primary);
+}
+
+.os-statusbar__item--clickable:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
 }
 
 .os-statusbar__label {

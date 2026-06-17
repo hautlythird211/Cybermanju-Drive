@@ -42,7 +42,7 @@ const style = computed(() => {
 <template>
   <Icon
     :icon="icon"
-    :class="cls"
+    :class="[...cls, 'gpu']"
     :style="style"
     :aria-hidden="ariaLabel ? undefined : 'true'"
     :aria-label="ariaLabel || undefined"
@@ -73,7 +73,7 @@ const style = computed(() => {
 }
 
 .os-icon--spin {
-  animation: bw-spin 1s linear infinite;
+  animation: bw-spin var(--duration-slow) linear infinite;
 }
 
 .os-icon--pulse {

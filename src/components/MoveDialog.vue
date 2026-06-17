@@ -403,4 +403,31 @@ function onCancel() {
 .conflict-row { font-size: var(--font-size-xs); color: #f0b27a; padding: 2px 6px; background: rgba(240,178,122,0.06); border-radius: var(--radius-sm); }
 .text-muted { color: var(--text-muted) !important; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.dialog-overlay {
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
+}
+
+.dialog-panel {
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
+  background: var(--bg-glass-heavy);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-elevated), var(--glow-accent), var(--panel-inset);
+  contain: layout style;
+}
+
+.dialog-title {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
 </style>

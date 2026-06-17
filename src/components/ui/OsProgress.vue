@@ -70,7 +70,7 @@ onUnmounted(() => {
     <div class="os-progress__track">
       <div
         ref="barRef"
-        class="os-progress__bar"
+        class="os-progress__bar gpu"
         :style="{ width: indeterminate ? '40%' : percent + '%' }"
       />
     </div>
@@ -103,6 +103,19 @@ onUnmounted(() => {
   height: 100%;
   border-radius: var(--radius-full);
   will-change: width;
+  transition: width var(--duration-normal) var(--ease-spring);
+  position: relative;
+  overflow: hidden;
+}
+
+.os-progress__bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .os-progress--accent .os-progress__bar { background: var(--accent); box-shadow: 0 0 6px var(--accent-glow); }

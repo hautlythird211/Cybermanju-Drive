@@ -66,7 +66,7 @@ onUnmounted(() => {
       v-if="show"
       :id="uid"
       ref="tooltipRef"
-      :class="['os-tooltip', `os-tooltip--${position}`]"
+      :class="['os-tooltip', `os-tooltip--${position}`, 'gpu']"
       role="tooltip"
     >
       {{ text }}
@@ -94,7 +94,7 @@ onUnmounted(() => {
   border-radius: var(--radius-sm);
   white-space: nowrap;
   pointer-events: none;
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-card), var(--glow-accent);
   will-change: transform, opacity;
 }
 

@@ -154,9 +154,10 @@ onUnmounted(() => {
 
 .os-dock--glass {
   background: var(--bg-glass);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
   border: 1px solid var(--border-glass);
+  box-shadow: var(--shadow-glass), var(--panel-inset);
 }
 
 .os-dock--neon {
@@ -194,6 +195,7 @@ onUnmounted(() => {
 
 .os-dock__item--active {
   background: var(--accent-dim);
+  box-shadow: 0 0 12px var(--accent-glow);
 }
 .os-dock__item--active::after {
   content: '';
@@ -205,6 +207,10 @@ onUnmounted(() => {
   height: 4px;
   border-radius: 50%;
   background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
+  background: linear-gradient(90deg, var(--accent), var(--info), var(--accent));
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
 }
 
 .os-dock--left .os-dock__item--active::after,

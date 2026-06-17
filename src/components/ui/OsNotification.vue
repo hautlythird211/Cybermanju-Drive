@@ -73,7 +73,7 @@ onUnmounted(() => {
 <template>
   <div
     ref="notificationRef"
-    :class="cls"
+    :class="[...cls, 'gpu']"
     :style="offsetStyle"
     role="alert"
     aria-live="polite"
@@ -102,12 +102,13 @@ onUnmounted(() => {
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
   box-shadow: var(--shadow-dropdown);
-  transition: all 0.2s ease;
+  transition: all var(--duration-fast) var(--ease-spring);
   transform: translateX(100%);
   opacity: 0;
   max-width: 380px;
   pointer-events: auto;
   will-change: transform, opacity;
+  contain: layout style;
 }
 
 .os-notification--visible {
@@ -127,21 +128,27 @@ onUnmounted(() => {
 }
 
 .os-notification--accent {
-  background: var(--accent-dim);
+  background: var(--bg-glass-heavy);
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
   border: 1px solid rgba(0, 255, 65, 0.2);
   color: var(--text-accent);
+  box-shadow: var(--shadow-dropdown), var(--glow-accent);
+  border-left: 3px solid var(--accent);
 }
 
 .os-notification--danger {
   background: var(--danger-dim);
   border: 1px solid rgba(255, 95, 87, 0.2);
   color: var(--text-danger);
+  border-left: 3px solid var(--danger);
 }
 
 .os-notification--success {
   background: var(--success-dim);
   border: 1px solid rgba(40, 200, 64, 0.2);
   color: var(--text-success);
+  border-left: 3px solid var(--success);
 }
 
 .os-notification--warning {
@@ -154,6 +161,7 @@ onUnmounted(() => {
   background: var(--info-dim);
   border: 1px solid rgba(90, 240, 255, 0.2);
   color: var(--text-info);
+  border-left: 3px solid var(--info);
 }
 
 .os-notification--pink {

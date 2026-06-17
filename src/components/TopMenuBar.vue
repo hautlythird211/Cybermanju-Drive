@@ -662,4 +662,71 @@ onUnmounted(() => {
   color: var(--text-muted);
   line-height: 1.2;
 }
+
+/* Enhanced menubar glass */
+.menu-bar {
+  backdrop-filter: blur(var(--glass-blur-xl)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl)) !important;
+  box-shadow: var(--shadow-glass), var(--panel-inset), 0 1px 0 rgba(0, 255, 65, 0.08) !important;
+  position: relative;
+  z-index: var(--z-overlay);
+}
+
+/* Bottom accent glow line */
+.menu-bar::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.2), rgba(90, 240, 255, 0.2), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 4s ease-in-out infinite;
+}
+
+/* Menu items enhancement */
+.menu-item {
+  position: relative;
+  transition: all var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.menu-item:hover {
+  background: var(--bg-glass);
+  transform: translateY(0);
+}
+
+.menu-item:active {
+  transform: scale(0.97);
+}
+
+/* Enhanced dropdown glass */
+.menu-dropdown {
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
+  background: var(--bg-glass-heavy) !important;
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-elevated), var(--glow-accent);
+}
+
+.menu-dropdown-item {
+  transition: all var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+}
+
+.menu-dropdown-item:hover {
+  background: rgba(0, 255, 65, 0.08);
+  padding-left: 2px;
+}
+
+/* Separator enhancement */
+.menu-separator {
+  border-color: var(--border-subtle);
+  margin: 4px 8px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 </style>
