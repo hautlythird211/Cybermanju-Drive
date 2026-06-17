@@ -383,3 +383,11 @@ export async function markFileSynced(fileId: string): Promise<void> {
   }
   await storage.storeSyncEntry(entry)
 }
+
+export async function testMegaConnection(email: string, password: string, secondFactorCode?: string): Promise<boolean> {
+  const { Storage } = await import('megajs')
+  const storage = new Storage({ email, password, secondFactorCode, autoload: false, autologin: true, keepalive: false })
+  await storage.ready
+  storage.close()
+  return true
+}

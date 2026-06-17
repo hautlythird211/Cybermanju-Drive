@@ -709,7 +709,7 @@ export const useAppStore = defineStore('cybermanju', () => {
       return await invoke<boolean>('test_sync_connection', { config })
     } catch (e) {
       notifyError('Sync connection test failed', e)
-      return false
+      throw e
     }
   }
 

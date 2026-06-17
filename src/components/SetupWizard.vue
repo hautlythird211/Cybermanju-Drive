@@ -53,6 +53,7 @@ const megaPassword = ref('')
 const megaLabel = ref('')
 const megaVerifying = ref(false)
 const megaVerifyError = ref('')
+const mega2FACode = ref('')
 
 // ── Client ID fallback form ──
 const showClientIdForm = ref<string | null>(null)
@@ -225,6 +226,7 @@ function openMegaModal() {
   megaPassword.value = ''
   megaLabel.value = 'Mega'
   megaVerifyError.value = ''
+  mega2FACode.value = ''
   showMegaModal.value = true
 }
 
@@ -232,6 +234,7 @@ function closeMegaModal() {
   showMegaModal.value = false
   megaVerifying.value = false
   megaVerifyError.value = ''
+  mega2FACode.value = ''
 }
 
 async function verifyAndConnectMega() {
@@ -247,13 +250,14 @@ async function verifyAndConnectMega() {
     const label = megaLabel.value.trim() || 'Mega'
     const token = `${megaEmail.value.trim()}|${megaPassword.value}`
 
-    const testConfig: SyncConfig = {
+    const testConfig: SyncConfig & { secondFactorCode?: string } = {
       id: '',
       backendType: 'mega',
       enabled: true,
       name: label,
       basePath: '/',
       token,
+      secondFactorCode: mega2FACode.value.trim() || undefined,
       autoSync: false,
       compressBeforeUpload: false,
       createPreviews: false,
@@ -261,11 +265,7 @@ async function verifyAndConnectMega() {
       maxConcurrentUploads: 1,
     }
 
-    const ok = await store.testSyncConnection(testConfig)
-    if (!ok) {
-      megaVerifyError.value = 'CONNECTION FAILED — check your email and password'
-      return
-    }
+    await store.testSyncConnection(testConfig)
 
     accounts.value.push({
       providerId: 'mega',
@@ -519,14 +519,16 @@ onMounted(async () => {
               v-for="p in AVAILABLE_PROVIDERS"
               :key="p.id"
               class="oauth-connect-card"
-              :class="{ connected: isConnected(p.id), connecting: isConnecting === p.id }"
+              :class="{
+                connected: isConnected(p.id),
+                connecting: isConnecting === p.id,
+                'card-clickable': !isConnected(p.id),
+              }"
+              :tabindex="!isConnected(p.id) ? 0 : undefined"
+              @click="!isConnected(p.id) ? connectOAuth(p.id) : undefined"
+              @keydown.enter="!isConnected(p.id) ? connectOAuth(p.id) : undefined"
             >
-              <div
-                class="oauth-connect-icon"
-                :class="{ clickable: p.id === 'mega' && !isConnected(p.id) }"
-                :title="p.id === 'mega' && !isConnected(p.id) ? 'CLICK TO CONNECT' : ''"
-                @click="p.id === 'mega' && !isConnected(p.id) ? connectOAuth('mega') : undefined"
-              >
+              <div class="oauth-connect-icon">
                 <Icon :icon="providerIcon(p.id)" width="24" height="24" />
               </div>
               <div class="oauth-connect-name">{{ p.label }}</div>
@@ -539,10 +541,10 @@ onMounted(async () => {
                 <span v-else class="status-disconnected">NOT CONNECTED</span>
               </div>
               <button
-                v-if="p.oauth && p.id !== 'mega' && !isConnected(p.id)"
+                v-if="p.oauth && !isConnected(p.id)"
                 class="bw-btn bw-btn-inverse connect-btn"
                 :disabled="isConnecting !== null"
-                @click="connectOAuth(p.id)"
+                @click.stop="connectOAuth(p.id)"
               >
                 [ CONNECT ]
               </button>
@@ -721,6 +723,18 @@ onMounted(async () => {
           <div class="form-row">
             <label>LABEL (OPTIONAL)</label>
             <input v-model="megaLabel" class="bw-input" placeholder="e.g. My Mega" />
+          </div>
+          <div class="form-row">
+            <label>2FA CODE (OPTIONAL)</label>
+            <input
+              v-model="mega2FACode"
+              class="bw-input"
+              placeholder="Six-digit authenticator code"
+              autocomplete="one-time-code"
+              inputmode="numeric"
+              maxlength="6"
+              @keyup.enter="verifyAndConnectMega"
+            />
           </div>
           <div v-if="megaVerifyError" class="mega-modal-error">{{ megaVerifyError }}</div>
           <div v-if="megaVerifying" class="mega-modal-verifying">
@@ -1019,14 +1033,19 @@ onMounted(async () => {
   background: #111;
 }
 
-.oauth-connect-icon.clickable {
+.oauth-connect-card.card-clickable {
   cursor: pointer;
-  transition: all 0.15s;
 }
 
-.oauth-connect-icon.clickable:hover {
-  background: #1a1a1a;
-  box-shadow: 0 0 12px rgba(217, 39, 46, 0.15);
+.oauth-connect-card.card-clickable:hover {
+  border-color: #333;
+  background: #111;
+}
+
+.oauth-connect-card.card-clickable:focus-visible {
+  outline: none;
+  border-color: #00ff41;
+  box-shadow: 0 0 12px rgba(0, 255, 65, 0.15);
 }
 
 .oauth-connect-name {

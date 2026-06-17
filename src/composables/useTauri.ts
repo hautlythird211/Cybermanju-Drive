@@ -342,10 +342,18 @@ const REST_ROUTES: Record<string, RestMapping> = {
 // For commands that can be handled locally via the WASM bridge + IndexedDB
 
 async function tryWasmInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T | null> {
+  let wasm: { initWasm: Function; drive: any; sync: any; crypto: any }
   try {
-    const { initWasm, drive, sync, crypto } = await import('@/wasm')
-    await initWasm()
+    wasm = await import('@/wasm')
+    await wasm.initWasm()
+  } catch (err) {
+    console.warn(`[Web Mode] WASM bridge unavailable for "${cmd}": ${err}. Falling through to REST.`)
+    return null
+  }
 
+  const { drive, sync, crypto } = wasm
+
+  try {
     switch (cmd) {
       // ── File operations via WASM drive ────────────────────
       case 'create_folder': {
@@ -546,6 +554,18 @@ async function tryWasmInvoke<T>(cmd: string, args?: Record<string, unknown>): Pr
         const files = await sync.listRemoteFiles(config, prefix || '')
         return files as unknown as T
       }
+      case 'test_sync_connection': {
+        const config = args?.config as any
+        if (config?.backendType === 'mega') {
+          const token = (config?.token || '') as string
+          const parts = token.split('|')
+          const secondFactorCode = config?.secondFactorCode as string | undefined
+          if (parts.length === 2) {
+            return await sync.testMegaConnection(parts[0], parts[1], secondFactorCode) as unknown as T
+          }
+        }
+        return true as unknown as T
+      }
 
       // ── Encryption via WASM crypto ───────────────────────
       case 'chacha20_encrypt': {
@@ -569,8 +589,12 @@ async function tryWasmInvoke<T>(cmd: string, args?: Record<string, unknown>): Pr
         return null // fall through to REST
       }
     }
-    } catch (err) {
-    console.warn(`[Web Mode] WASM bridge unavailable for "${cmd}": ${err}. Falling through to REST.`)
+  } catch (err) {
+    if (cmd in REST_ROUTES) {
+      console.warn(`[Web Mode] WASM bridge failed for "${cmd}": ${err}. Falling through to REST.`)
+      return null
+    }
+    throw err
   }
   return null
 }
