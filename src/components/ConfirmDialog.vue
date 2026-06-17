@@ -1,28 +1,23 @@
 <template>
-  <Teleport to="body">
-    <div
-      v-if="visible"
-      class="confirm-overlay"
-      @click.self="handleCancel"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="title"
-    >
-      <div ref="dialogRef" class="confirm-modal">
-        <div class="confirm-header">{{ title }}</div>
-        <div class="confirm-body">{{ message }}</div>
-        <div class="confirm-actions">
-          <button ref="cancelBtnRef" class="confirm-btn cancel" @click="handleCancel">{{ cancelText }}</button>
-          <button ref="confirmBtnRef" class="confirm-btn ok" @click="handleConfirm">{{ confirmText }}</button>
-        </div>
-      </div>
-    </div>
-  </Teleport>
+  <OsModal
+    :visible="visible"
+    :title="title"
+    variant="glass"
+    size="sm"
+    :closable="true"
+    @update:visible="$emit('update:visible', $event)"
+    @close="$emit('cancel')"
+  >
+    <div class="confirm-body">{{ message }}</div>
+    <template #footer>
+      <OsButton variant="ghost" size="sm" @click="handleCancel">{{ cancelText }}</OsButton>
+      <OsButton variant="neon" size="sm" @click="handleConfirm">{{ confirmText }}</OsButton>
+    </template>
+  </OsModal>
 </template>
 
 <script setup lang="ts">
-import { ref, toRef } from 'vue'
-import { useFocusTrap } from '@/composables/useFocusTrap'
+import { OsModal, OsButton } from '@/components/ui'
 
 const props = withDefaults(defineProps<{
   visible: boolean
@@ -43,84 +38,16 @@ const emit = defineEmits<{
   'update:visible': [value: boolean]
 }>()
 
-const dialogRef = ref<HTMLElement | null>(null)
-const cancelBtnRef = ref<HTMLElement | null>(null)
-const confirmBtnRef = ref<HTMLElement | null>(null)
-
-useFocusTrap(dialogRef, toRef(props, 'visible'))
-
 function handleConfirm() { emit('confirm'); emit('update:visible', false) }
 function handleCancel() { emit('cancel'); emit('update:visible', false) }
 </script>
 
 <style scoped>
-.confirm-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10002;
-}
-
-.confirm-modal {
-  background: #FFFFFF;
-  border: 2px solid #000000;
-  box-shadow: 4px 4px 0 #000000;
-  padding: 20px;
-  max-width: 360px;
-  width: 90%;
-  font-family: 'Courier New', monospace;
-}
-
-.confirm-header {
-  font-size: 12px;
-  font-weight: 800;
-  color: #000000;
-  margin-bottom: 10px;
-  letter-spacing: 1px;
-}
-
 .confirm-body {
-  font-size: 11px;
-  color: rgba(0, 0, 0, 0.7);
-  margin-bottom: 16px;
-  line-height: 1.4;
-}
-
-.confirm-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.confirm-btn {
-  padding: 6px 14px;
-  font-family: 'Courier New', monospace;
-  font-size: 10px;
-  font-weight: 700;
-  cursor: pointer;
-  border: 2px solid #000000;
-}
-
-.confirm-btn.ok {
-  background: #000000;
-  color: #FFFFFF;
-}
-
-.confirm-btn.ok:hover {
-  background: #FFFFFF;
-  color: #000000;
-}
-
-.confirm-btn.cancel {
-  background: #FFFFFF;
-  color: #000000;
-}
-
-.confirm-btn.cancel:hover {
-  background: #000000;
-  color: #FFFFFF;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  padding: 8px 0;
 }
 </style>

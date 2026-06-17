@@ -60,11 +60,11 @@ onMounted(() => {
 .dash-panel {
   width: 100%;
   height: 100%;
-  background: #000;
+  background: #0a0a0a;
   overflow-y: auto;
   padding: 16px;
   font-family: 'Courier New', monospace;
-  color: #FFFFFF;
+  color: #00ff41;
 }
 
 .panel-header {
@@ -72,7 +72,7 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding-bottom: 10px;
-  border-bottom: 2px solid #FFFFFF;
+  border-bottom: 2px solid #00ff41;
   margin-bottom: 16px;
 }
 
@@ -86,12 +86,12 @@ onMounted(() => {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: rgba(255,255,255,0.6);
+  color: rgba(0, 255, 65, 0.6);
   margin: 0 0 8px;
 }
 
 .status-card {
-  border: 2px solid #FFFFFF;
+  border: 2px solid #00ff41;
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -114,11 +114,11 @@ onMounted(() => {
   gap: 8px;
   padding: 3px 6px;
   font-size: 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(0, 255, 65, 0.1);
 }
 
 .api-method { font-weight: 700; min-width: 36px; }
-.api-path { color: rgba(255,255,255,0.7); }
+.api-path { color: rgba(0, 255, 65, 0.7); }
 
-.text-muted { color: rgba(255,255,255,0.5) !important; }
+.text-muted { color: rgba(0, 255, 65, 0.5) !important; }
 </style>

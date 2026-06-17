@@ -77,11 +77,11 @@ async function handleRole(userId: string, role: string) {
 .user-panel {
   width: 100%;
   height: 100%;
-  background: #000;
+  background: #0a0a0a;
   overflow-y: auto;
   padding: 16px;
   font-family: 'Courier New', monospace;
-  color: #FFFFFF;
+  color: #00ff41;
 }
 
 .panel-header {
@@ -89,7 +89,7 @@ async function handleRole(userId: string, role: string) {
   align-items: center;
   justify-content: space-between;
   padding-bottom: 10px;
-  border-bottom: 2px solid #FFFFFF;
+  border-bottom: 2px solid #00ff41;
   margin-bottom: 16px;
 }
 
@@ -103,14 +103,14 @@ async function handleRole(userId: string, role: string) {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: rgba(255,255,255,0.6);
+  color: rgba(0, 255, 65, 0.6);
   margin: 0 0 8px;
 }
 
 .user-list { display: flex; flex-direction: column; gap: 6px; }
 
 .user-card {
-  border: 2px solid #FFFFFF;
+  border: 2px solid #00ff41;
   padding: 8px 10px;
 }
 
@@ -121,10 +121,10 @@ async function handleRole(userId: string, role: string) {
 }
 
 .user-name { font-size: 12px; font-weight: 700; flex: 1; }
-.user-role { font-size: 9px; border: 1px solid #FFFFFF; padding: 0 4px; }
+.user-role { font-size: 9px; border: 1px solid #00ff41; padding: 0 4px; }
 .user-active { font-size: 9px; font-weight: 700; }
-.user-active.on { color: #FFFFFF; }
-.user-active:not(.on) { color: rgba(255,255,255,0.3); }
+.user-active.on { color: #00ff41; }
+.user-active:not(.on) { color: rgba(0, 255, 65, 0.3); }
 
 .user-actions {
   display: flex;
@@ -133,8 +133,8 @@ async function handleRole(userId: string, role: string) {
 
 .user-action-btn {
   background: transparent;
-  border: 2px solid #FFFFFF;
-  color: #FFFFFF;
+  border: 2px solid #00ff41;
+  color: #00ff41;
   padding: 1px 4px;
   font-family: 'Courier New', monospace;
   font-size: 8px;
@@ -143,20 +143,20 @@ async function handleRole(userId: string, role: string) {
 }
 
 .user-action-btn:hover {
-  background: #FFFFFF;
-  color: #000;
+  background: #00ff41;
+  color: #0a0a0a;
 }
 
 .create-section {
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 2px solid #FFFFFF;
+  border-top: 2px solid #00ff41;
 }
 
 .bw-input {
-  background: #000;
-  border: 2px solid #FFFFFF;
-  color: #FFFFFF;
+  background: #0a0a0a;
+  border: 2px solid #00ff41;
+  color: #00ff41;
   font-family: 'Courier New', monospace;
   font-size: 10px;
   padding: 4px 6px;
@@ -165,13 +165,13 @@ async function handleRole(userId: string, role: string) {
 }
 
 .bw-input::placeholder {
-  color: rgba(255,255,255,0.3);
+  color: rgba(0, 255, 65, 0.3);
 }
 
 .bw-btn {
   background: transparent;
-  border: 2px solid #FFFFFF;
-  color: #FFFFFF;
+  border: 2px solid #00ff41;
+  color: #00ff41;
   padding: 4px 12px;
   cursor: pointer;
   font-family: 'Courier New', monospace;
@@ -181,9 +181,9 @@ async function handleRole(userId: string, role: string) {
 }
 
 .bw-btn:hover {
-  background: #FFFFFF;
-  color: #000;
+  background: #00ff41;
+  color: #0a0a0a;
 }
 
-.text-muted { color: rgba(255,255,255,0.5) !important; }
+.text-muted { color: rgba(0, 255, 65, 0.5) !important; }
 </style>

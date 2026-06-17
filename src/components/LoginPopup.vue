@@ -124,7 +124,7 @@ const { notify } = useNotifications()
 const usernameRef = ref<HTMLInputElement | null>(null)
 const loginRef = ref<HTMLElement | null>(null)
 
-useFocusTrap(loginRef, toRef(store, 'showLoginPopup'))
+useFocusTrap(loginRef, { active: toRef(store, 'showLoginPopup') })
 
 onMounted(() => {
   nextTick(() => usernameRef.value?.focus())

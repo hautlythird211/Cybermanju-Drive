@@ -177,6 +177,38 @@ export async function upsertOAuthAccount(
   return account
 }
 
+export async function upsertMegaAccount(
+  label: string,
+  token: string
+): Promise<WasmAccount> {
+  await init()
+  const all = await listAccounts()
+  const existing = all.find(a => a.backendType === 'mega')
+  if (existing) {
+    existing.updatedAt = now()
+    existing.name = label
+    for (const a of all) if (a.id !== existing.id) a.isActive = false
+    existing.isActive = true
+    await kvSet(KEYS.accounts, all)
+    return existing
+  }
+  const account: WasmAccount = {
+    id: uuid(),
+    name: label,
+    accountType: 'cloud',
+    backendType: 'mega',
+    oauthProvider: 'mega' as any,
+    color: '#00ff41',
+    isActive: true,
+    createdAt: now(),
+    updatedAt: now(),
+  }
+  for (const a of all) a.isActive = false
+  all.push(account)
+  await kvSet(KEYS.accounts, all)
+  return account
+}
+
 // ── Collections ───────────────────────────────────────────
 export async function listCollections(): Promise<WasmCollection[]> {
   await init()

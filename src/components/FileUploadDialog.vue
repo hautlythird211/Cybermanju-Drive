@@ -50,7 +50,7 @@ import { useFocusTrap } from '@/composables/useFocusTrap'
 const props = defineProps<{ visible: boolean }>()
 const emit = defineEmits<{ close: [] }>()
 const uploadRef = ref<HTMLElement | null>(null)
-useFocusTrap(uploadRef, toRef(props, 'visible'))
+useFocusTrap(uploadRef, { active: toRef(props, 'visible') })
 
 const store = useAppStore()
 const fileInput = ref<HTMLInputElement | null>(null)

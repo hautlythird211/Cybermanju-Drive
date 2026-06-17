@@ -57,7 +57,7 @@ const dragOverCollectionId = ref<string | null>(null)
 
 async function handleCreate() {
   if (!newName.value.trim()) return
-  await store.createCollection(newName.value.trim(), newType.value, '#FFFFFF')
+  await store.createCollection(newName.value.trim(), newType.value, '#00ff41')
   newName.value = ''
 }
 
@@ -74,11 +74,11 @@ function handleDrop(collectionId: string) {
 .collections-panel {
   width: 100%;
   height: 100%;
-  background: #000;
+  background: #0a0a0a;
   overflow-y: auto;
   padding: 16px;
   font-family: 'Courier New', monospace;
-  color: #FFFFFF;
+  color: #00ff41;
 }
 
 .panel-header {
@@ -86,7 +86,7 @@ function handleDrop(collectionId: string) {
   align-items: center;
   justify-content: space-between;
   padding-bottom: 10px;
-  border-bottom: 2px solid #FFFFFF;
+  border-bottom: 2px solid #00ff41;
   margin-bottom: 16px;
 }
 
@@ -115,14 +115,14 @@ function handleDrop(collectionId: string) {
 }
 
 .collection-card {
-  border: 2px solid #FFFFFF;
+  border: 2px solid #00ff41;
   padding: 10px;
   transition: border-color 0.15s;
 }
 
 .collection-card.drop-target {
-  border-color: #FFFFFF;
-  background: rgba(255,255,255,0.1);
+  border-color: #00ff41;
+  background: rgba(0, 255, 65,0.1);
 }
 
 .col-header {
@@ -140,7 +140,7 @@ function handleDrop(collectionId: string) {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: rgba(255,255,255,0.6);
+  color: rgba(0, 255, 65,0.6);
   margin: 0 0 8px;
 }
 
@@ -151,26 +151,26 @@ function handleDrop(collectionId: string) {
 }
 
 .bw-input {
-  background: #000;
-  border: 2px solid #FFFFFF;
+  background: #0a0a0a;
+  border: 2px solid #00ff41;
   padding: 6px 8px;
-  color: #FFFFFF;
+  color: #00ff41;
   font-family: 'Courier New', monospace;
   font-size: 11px;
 }
 
 .bw-btn {
   padding: 6px 12px;
-  background: #FFFFFF;
-  color: #000;
-  border: 2px solid #FFFFFF;
+  background: #00ff41;
+  color: #0a0a0a;
+  border: 2px solid #00ff41;
   font-family: 'Courier New', monospace;
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
 }
 
-.bw-btn:hover { background: #000; color: #FFFFFF; }
+.bw-btn:hover { background: #0a0a0a; color: #00ff41; }
 
-.text-muted { color: rgba(255,255,255,0.5) !important; }
+.text-muted { color: rgba(0, 255, 65,0.5) !important; }
 </style>

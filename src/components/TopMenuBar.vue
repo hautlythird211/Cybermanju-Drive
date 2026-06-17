@@ -1,34 +1,44 @@
 <template>
-  <header class="top-menu-bar glass-liquid">
+  <header ref="menuBarRef" class="top-menu-bar">
     <div class="tmb-left">
-      <div class="app-logo" @click="store.currentPanel = 'landing'">
+      <div class="app-logo" @click="store.currentPanel = 'landing'" role="button" tabindex="0" aria-label="Home" @keydown.enter="store.currentPanel = 'landing'" @keydown.space.prevent="store.currentPanel = 'landing'">
         <span class="logo-brand">CYBERMANJU</span>
         <span class="logo-drive">DRIVE</span>
       </div>
-      <nav class="menu-items" ref="menuRef">
+      <nav ref="menuRef" class="menu-items" role="menubar" aria-label="Main Menu">
         <div
           v-for="item in menuStructure"
           :key="item.id"
           class="menu-item"
+          role="menuitem"
+          :aria-expanded="openMenu === item.id"
+          :aria-haspopup="true"
+          :tabindex="0"
           @click="toggleMenu(item.id)"
           @mouseenter="hoverMenu(item.id)"
+          @keydown="onMenuKeydown($event, item.id)"
         >
           <span class="menu-label">{{ item.label }}</span>
-          <div v-if="openMenu === item.id" class="menu-dropdown">
+          <div v-if="openMenu === item.id" :ref="(el) => { if (el) dropdownRefs[item.id] = el as HTMLElement }" class="menu-dropdown" role="menu">
             <template v-for="sub in item.children" :key="sub.id">
               <div
                 v-if="sub.divider"
                 class="menu-divider"
+                role="separator"
               />
               <div
                 v-else
                 class="menu-dropdown-item"
+                role="menuitem"
+                :tabindex="sub.divider ? -1 : 0"
                 @click.stop="executeMenuItem(sub)"
+                @keydown.enter="executeMenuItem(sub)"
+                @keydown.space.prevent="executeMenuItem(sub)"
               >
                 <Icon v-if="sub.icon" :icon="'mdi:' + sub.icon" width="14" height="14" class="mdi-icon" />
                 <span class="mdi-label">{{ sub.label }}</span>
                 <span v-if="sub.shortcut" class="mdi-shortcut">{{ sub.shortcut }}</span>
-                <span v-if="sub.checked" class="mdi-check">[x]</span>
+                <span v-if="sub.checked" class="mdi-check" aria-label="Enabled">[x]</span>
               </div>
             </template>
           </div>
@@ -44,6 +54,7 @@
           class="search-input"
           type="text"
           placeholder="TANTIVY_SEARCH..."
+          aria-label="Search files"
           @keyup.enter="handleSearch"
         />
         <span v-if="store.isSearching" class="search-cursor">_</span>
@@ -56,7 +67,8 @@
           class="tray-icon"
           :class="{ active: store.encryptionStatus.isEncrypted }"
           @click="wm.open('encryption')"
-          title="Encryption: {{ store.encryptionStatus.isEncrypted ? 'ON' : 'OFF' }}"
+          :title="'Encryption: ' + (store.encryptionStatus.isEncrypted ? 'ON' : 'OFF')"
+          :aria-label="'Encryption: ' + (store.encryptionStatus.isEncrypted ? 'ON' : 'OFF')"
         >
           <Icon icon="mdi:lock-outline" width="14" height="14" />
         </button>
@@ -65,7 +77,8 @@
           class="tray-icon"
           :class="{ active: store.compressedFiles.length > 0 }"
           @click="wm.open('compression')"
-          title="Compression: {{ store.compressedFiles.length }} files"
+          :title="'Compression: ' + store.compressedFiles.length + ' files'"
+          :aria-label="'Compression: ' + store.compressedFiles.length + ' files'"
         >
           <Icon icon="mdi:package-variant-closed" width="14" height="14" />
         </button>
@@ -75,6 +88,7 @@
           :class="{ active: store.activeAccount }"
           @click="wm.open('accounts')"
           :title="store.activeAccount?.name || 'No account'"
+          :aria-label="store.activeAccount?.name || 'No account'"
         >
           <Icon icon="mdi:account-circle-outline" width="14" height="14" />
         </button>
@@ -84,6 +98,7 @@
           :class="{ active: store.matrixRainEnabled }"
           @click="store.matrixRainEnabled = !store.matrixRainEnabled"
           title="Toggle background effects"
+          aria-label="Toggle background effects"
         >
           <Icon icon="mdi:lightning-bolt-outline" width="14" height="14" />
         </button>
@@ -93,6 +108,7 @@
           :class="{ active: openWindowCountValue > 0 }"
           @click="store.commandPaletteOpen = true"
           title="Command Palette"
+          aria-label="Open Command Palette"
         >
           <Icon icon="mdi:code-brackets" width="14" height="14" />
         </button>
@@ -101,6 +117,7 @@
           class="tray-icon"
           @click="store.showLoginPopup = true"
           :title="store.currentUser ? store.currentUser.username : 'Login'"
+          :aria-label="store.currentUser ? 'User: ' + store.currentUser.username : 'Login'"
         >
           <Icon icon="mdi:login" width="14" height="14" />
         </button>
@@ -108,7 +125,7 @@
 
       <div class="tmb-separator" />
 
-      <div class="clock" @click="openDateInfo">
+      <div class="clock" @click="openDateInfo" role="button" tabindex="0" aria-label="Open date info" @keydown.enter="openDateInfo" @keydown.space.prevent="openDateInfo">
         <span class="clock-time">{{ timeStr }}</span>
         <span class="clock-date">{{ dateStr }}</span>
       </div>
@@ -117,11 +134,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import gsap from 'gsap'
 import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 import { useWindowManager } from '@/composables/useWindowManager'
+import { useGsapAnimation } from '@/composables/useGsapAnimation'
 
+const anim = useGsapAnimation()
 const store = useAppStore()
 const wm = useWindowManager()
 const openWindowCountValue = computed(() => wm.windows.value.filter(w => !w.minimized).length)
@@ -129,6 +149,7 @@ const openWindowCountValue = computed(() => wm.windows.value.filter(w => !w.mini
 const timeStr = ref('')
 const dateStr = ref('')
 let clockTimer: ReturnType<typeof setInterval> | null = null
+const gsapCtx = ref<gsap.Context | null>(null)
 
 function updateClock() {
   const now = new Date()
@@ -147,6 +168,8 @@ onUnmounted(() => {
 
 const openMenu = ref<string | null>(null)
 const menuRef = ref<HTMLElement | null>(null)
+const menuBarRef = ref<HTMLElement | null>(null)
+const dropdownRefs = ref<Record<string, HTMLElement>>({})
 
 interface MenuItem {
   id: string
@@ -157,8 +180,6 @@ interface MenuItem {
   divider?: true
   action?: () => void
 }
-
-const iconifyIcon = (name: string) => `mdi:${name}`
 
 interface MenuGroup {
   id: string
@@ -240,17 +261,74 @@ const menuStructure = computed(() => { const m: MenuGroup[] = [
   },
 ]; return m; })
 
-function toggleMenu(id: string) {
+async function toggleMenu(id: string) {
+  const previouslyOpen = openMenu.value
+  if (previouslyOpen && previouslyOpen !== id && dropdownRefs.value[previouslyOpen]) {
+    gsapCtx.value?.add(() => {
+      anim.dropdownLeave(dropdownRefs.value[previouslyOpen])
+    })
+  }
   openMenu.value = openMenu.value === id ? null : id
+  if (openMenu.value === id) {
+    await nextTick()
+    if (dropdownRefs.value[id]) {
+      gsapCtx.value?.add(() => {
+        anim.dropdownEnter(dropdownRefs.value[id])
+      })
+    }
+  }
 }
 
 function hoverMenu(id: string) {
   if (openMenu.value !== null) {
     openMenu.value = id
+    if (dropdownRefs.value[id]) {
+      gsapCtx.value?.add(() => {
+        anim.dropdownEnter(dropdownRefs.value[id])
+      })
+    }
+  }
+}
+
+const menuIds = computed(() => menuStructure.value.map(m => m.id))
+
+function onMenuKeydown(e: KeyboardEvent, id: string) {
+  const idx = menuIds.value.indexOf(id)
+  switch (e.key) {
+    case 'ArrowRight':
+      e.preventDefault()
+      if (idx < menuIds.value.length - 1) {
+        toggleMenu(menuIds.value[idx + 1])
+      }
+      break
+    case 'ArrowLeft':
+      e.preventDefault()
+      if (idx > 0) {
+        toggleMenu(menuIds.value[idx - 1])
+      }
+      break
+    case 'ArrowDown':
+      e.preventDefault()
+      if (openMenu.value !== id) {
+        toggleMenu(id)
+      }
+      break
+    case 'Escape':
+      e.preventDefault()
+      openMenu.value = null
+      break
   }
 }
 
 function executeMenuItem(item: any) {
+  const keys = Object.keys(dropdownRefs.value)
+  keys.forEach(k => {
+    if (dropdownRefs.value[k]) {
+      gsapCtx.value?.add(() => {
+        anim.dropdownLeave(dropdownRefs.value[k])
+      })
+    }
+  })
   openMenu.value = null
   item.action?.()
 }
@@ -274,10 +352,16 @@ function handleClickOutside(e: MouseEvent) {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  gsapCtx.value = gsap.context(() => {
+    if (menuBarRef.value) {
+      anim.fadeIn(menuBarRef.value, { from: { y: -4, opacity: 0 } })
+    }
+  })
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  gsapCtx.value?.revert()
 })
 </script>
 
@@ -287,10 +371,10 @@ onUnmounted(() => {
   align-items: center;
   height: 32px;
   padding: 0 8px;
-  background: rgba(17, 17, 17, 0.55);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-glass);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-bottom: 1px solid var(--border-glass);
   z-index: 100;
   position: relative;
   gap: 8px;
@@ -311,28 +395,34 @@ onUnmounted(() => {
   gap: 3px;
   padding: 0 8px;
   cursor: pointer;
-  border-right: 1px solid #222;
+  border-right: 1px solid var(--border-subtle);
   margin-right: 4px;
+  outline: none;
+}
+
+.app-logo:focus-visible {
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
 }
 
 .app-logo:hover .logo-brand {
-  color: #00ff41;
+  color: var(--accent);
 }
 
 .logo-brand {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 1.5px;
-  color: #e0e0e0;
-  transition: color 0.15s;
+  color: var(--text-primary);
+  transition: color var(--transition-fast);
 }
 
 .logo-drive {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
-  color: #555;
+  color: var(--text-muted);
   letter-spacing: 0.5px;
 }
 
@@ -346,23 +436,28 @@ onUnmounted(() => {
   position: relative;
   padding: 4px 10px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+
+.menu-item:focus-visible {
+  box-shadow: var(--focus-ring);
 }
 
 .menu-item:hover {
-  background: #1a1a1a;
+  background: var(--bg-overlay);
 }
 
 .menu-label {
-  font-family: 'Courier New', monospace;
-  font-size: 11px;
-  color: #aaa;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
   letter-spacing: 0.2px;
   font-weight: 500;
 }
 
 .menu-item:hover .menu-label {
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 
 .menu-dropdown {
@@ -370,14 +465,15 @@ onUnmounted(() => {
   top: 100%;
   left: 0;
   min-width: 220px;
-  background: rgba(24, 24, 24, 0.7);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
+  background: var(--bg-glass-heavy);
+  backdrop-filter: blur(var(--glass-blur-heavy));
+  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
   padding: 4px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--shadow-dropdown);
   z-index: 200;
+  will-change: transform, opacity;
 }
 
 .menu-dropdown-item {
@@ -385,17 +481,22 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  font-family: 'Courier New', monospace;
-  font-size: 11px;
-  color: #ccc;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
   cursor: pointer;
-  border-radius: 4px;
-  transition: background 0.1s;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+  outline: none;
 }
 
 .menu-dropdown-item:hover {
-  background: #222;
-  color: #fff;
+  background: var(--bg-overlay);
+  color: var(--text-primary);
+}
+
+.menu-dropdown-item:focus-visible {
+  box-shadow: var(--focus-ring);
 }
 
 .mdi-icon {
@@ -404,7 +505,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .mdi-label {
@@ -412,19 +513,19 @@ onUnmounted(() => {
 }
 
 .mdi-shortcut {
-  font-size: 9px;
-  color: #555;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
   margin-left: auto;
 }
 
 .mdi-check {
-  color: #00ff41;
-  font-size: 9px;
+  color: var(--accent);
+  font-size: var(--font-size-xs);
 }
 
 .menu-divider {
   height: 1px;
-  background: #2a2a2a;
+  background: var(--border-subtle);
   margin: 4px 6px;
 }
 
@@ -441,22 +542,22 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   width: 100%;
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-  border-radius: 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
   padding: 0 8px;
   height: 22px;
-  transition: border-color 0.15s;
+  transition: border-color var(--transition-normal);
 }
 
 .search-wrap:focus-within {
-  border-color: #00ff41;
+  border-color: var(--accent);
 }
 
 .search-prompt {
-  color: #555;
-  font-family: 'Courier New', monospace;
-  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
   margin-right: 4px;
 }
 
@@ -464,21 +565,21 @@ onUnmounted(() => {
   flex: 1;
   background: transparent;
   border: none;
-  color: #e0e0e0;
-  font-family: 'Courier New', monospace;
-  font-size: 10px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
   height: 100%;
   outline: none;
 }
 
 .search-input::placeholder {
-  color: #444;
+  color: var(--text-muted);
 }
 
 .search-cursor {
-  color: #00ff41;
+  color: var(--accent);
   animation: blink 0.8s step-end infinite;
-  font-size: 10px;
+  font-size: var(--font-size-sm);
 }
 
 @keyframes blink {
@@ -504,27 +605,27 @@ onUnmounted(() => {
   justify-content: center;
   width: 26px;
   height: 22px;
-  color: #666;
+  color: var(--text-muted);
   cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.1s;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
   background: transparent;
   border: none;
 }
 
 .tray-icon:hover {
-  color: #e0e0e0;
-  background: #1a1a1a;
+  color: var(--text-primary);
+  background: var(--bg-overlay);
 }
 
 .tray-icon.active {
-  color: #00ff41;
+  color: var(--accent);
 }
 
 .tmb-separator {
   width: 1px;
   height: 16px;
-  background: #222;
+  background: var(--border-subtle);
   flex-shrink: 0;
 }
 
@@ -534,26 +635,31 @@ onUnmounted(() => {
   align-items: flex-end;
   padding: 0 6px;
   cursor: pointer;
-  border-radius: 4px;
-  transition: background 0.1s;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+  outline: none;
 }
 
 .clock:hover {
-  background: #1a1a1a;
+  background: var(--bg-overlay);
+}
+
+.clock:focus-visible {
+  box-shadow: var(--focus-ring);
 }
 
 .clock-time {
-  font-family: 'Courier New', monospace;
-  font-size: 10px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
   font-weight: 600;
-  color: #ccc;
+  color: var(--text-secondary);
   line-height: 1.2;
 }
 
 .clock-date {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 8px;
-  color: #555;
+  color: var(--text-muted);
   line-height: 1.2;
 }
 </style>

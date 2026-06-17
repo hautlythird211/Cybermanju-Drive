@@ -55,7 +55,7 @@ import { useFocusTrap } from '@/composables/useFocusTrap'
 
 const store = useAppStore()
 const cpRef = ref<HTMLElement | null>(null)
-useFocusTrap(cpRef, toRef(store, 'commandPaletteOpen'))
+useFocusTrap(cpRef, { active: toRef(store, 'commandPaletteOpen') })
 
 interface Command {
   id: string

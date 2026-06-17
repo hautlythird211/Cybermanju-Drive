@@ -267,6 +267,20 @@ async function verifyAndConnectMega() {
 
     await store.testSyncConnection(testConfig)
 
+    const { saveTokenToStorage } = await import('@/wasm/oauth')
+    await saveTokenToStorage({
+      accessToken: token,
+      refreshToken: null,
+      expiresAt: null,
+      tokenType: 'mega',
+      scope: null,
+      provider: 'mega' as any,
+    })
+
+    const data = await import('@/wasm/data')
+    await data.upsertMegaAccount(label, token)
+    await store.fetchAccounts()
+
     accounts.value.push({
       providerId: 'mega',
       label,

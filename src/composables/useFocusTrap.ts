@@ -1,13 +1,25 @@
 import { ref, watch, onUnmounted, type Ref } from 'vue'
 
-const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+const FOCUSABLE =
+  'a[href], button, input, textarea, select, [tabindex]:not([tabindex="-1"])'
 
-export function useFocusTrap(containerRef: Ref<HTMLElement | null>, isActive: Ref<boolean>) {
+export interface FocusTrapOptions {
+  active?: Ref<boolean>
+  initialFocus?: boolean
+  onEscape?: () => void
+}
+
+export function useFocusTrap(
+  containerRef: Ref<HTMLElement | null>,
+  options?: FocusTrapOptions,
+) {
   const previouslyFocused = ref<HTMLElement | null>(null)
 
   function getFocusableElements(): HTMLElement[] {
     if (!containerRef.value) return []
-    return Array.from(containerRef.value.querySelectorAll(FOCUSABLE)) as HTMLElement[]
+    return Array.from(
+      containerRef.value.querySelectorAll(FOCUSABLE),
+    ) as HTMLElement[]
   }
 
   function focusFirst() {
@@ -17,7 +29,34 @@ export function useFocusTrap(containerRef: Ref<HTMLElement | null>, isActive: Re
     }
   }
 
-  function handleKeydown(e: KeyboardEvent) {
+  function activate() {
+    previouslyFocused.value = document.activeElement as HTMLElement
+    if (options?.initialFocus !== false) {
+      setTimeout(() => focusFirst(), 50)
+    }
+    document.addEventListener('keydown', onKeydown)
+    if (options?.active) {
+      options.active.value = true
+    }
+  }
+
+  function deactivate() {
+    document.removeEventListener('keydown', onKeydown)
+    if (previouslyFocused.value) {
+      previouslyFocused.value.focus()
+      previouslyFocused.value = null
+    }
+    if (options?.active) {
+      options.active.value = false
+    }
+  }
+
+  function onKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      deactivate()
+      options?.onEscape?.()
+      return
+    }
     if (e.key !== 'Tab') return
     const elements = getFocusableElements()
     if (elements.length === 0) return
@@ -36,23 +75,20 @@ export function useFocusTrap(containerRef: Ref<HTMLElement | null>, isActive: Re
     }
   }
 
-  watch(isActive, (active) => {
-    if (active) {
-      previouslyFocused.value = document.activeElement as HTMLElement
-      setTimeout(() => focusFirst(), 50)
-      document.addEventListener('keydown', handleKeydown)
-    } else {
-      document.removeEventListener('keydown', handleKeydown)
-      if (previouslyFocused.value) {
-        previouslyFocused.value.focus()
-        previouslyFocused.value = null
-      }
-    }
-  })
+  if (options?.active) {
+    watch(
+      options.active,
+      (active) => {
+        if (active) activate()
+        else deactivate()
+      },
+      { immediate: true },
+    )
+  }
 
   onUnmounted(() => {
-    document.removeEventListener('keydown', handleKeydown)
+    document.removeEventListener('keydown', onKeydown)
   })
 
-  return { focusFirst }
+  return { activate, deactivate, onKeydown }
 }

@@ -1,13 +1,22 @@
 <template>
-  <div class="dock-container">
+  <div ref="dockContainer" class="dock-container" role="toolbar" aria-label="Application Dock">
     <div class="dock">
       <div
-        v-for="app in dockApps"
+        v-for="(app, idx) in dockApps"
         :key="app.panelType"
+        :ref="(el) => { if (el) dockItemRefs[idx] = el as HTMLElement }"
         class="dock-item"
         :class="{ active: isAppActive(app.panelType), open: wm.isOpen(app.panelType) }"
+        role="button"
+        :tabindex="0"
+        :aria-label="app.label"
+        :aria-pressed="isAppActive(app.panelType)"
         @click="handleDockClick(app.panelType)"
         @contextmenu.prevent="handleDockContext($event, app.panelType)"
+        @mouseenter="onDockItemEnter($event, idx)"
+        @mouseleave="onDockItemLeave($event, idx)"
+        @keydown.enter="handleDockClick(app.panelType)"
+        @keydown.space.prevent="handleDockClick(app.panelType)"
         :title="app.label"
       >
         <div class="dock-icon">
@@ -28,7 +37,12 @@
         v-for="win in minimizedWindows"
         :key="win.id"
         class="dock-item minimized-item"
+        role="button"
+        :tabindex="0"
+        :aria-label="win.title + ' (minimized)'"
         @click="wm.restore(win.id)"
+        @keydown.enter="wm.restore(win.id)"
+        @keydown.space.prevent="wm.restore(win.id)"
         :title="win.title + ' (minimized)'"
       >
         <div class="dock-icon minimized">
@@ -43,14 +57,22 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue'
+import gsap from 'gsap'
 import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 import { useWindowManager } from '@/composables/useWindowManager'
+import { useGsapAnimation } from '@/composables/useGsapAnimation'
 import type { PanelType } from '@/types'
 
+const anim = useGsapAnimation()
 const store = useAppStore()
 const wm = useWindowManager()
+
+const dockItemRefs = ref<Record<number, HTMLElement>>({})
+const dockContainer = ref<HTMLElement | null>(null)
+const gsapCtx = ref<gsap.Context | null>(null)
+const dockTweens = ref<Map<number, gsap.core.Tween>>(new Map())
 
 interface DockApp {
   panelType: PanelType
@@ -70,8 +92,10 @@ const dockApps = computed<DockApp[]>(() => [
   { panelType: 'transfer', label: 'Transfer', icon: 'transfer', category: 'tools' },
   { panelType: 'import', label: 'Import', icon: 'file-import-outline', category: 'tools' },
   { panelType: 'storage', label: 'Storage', icon: 'harddisk', category: 'tools' },
+  { panelType: 'encryption', label: 'Encryption', icon: 'shield-lock-outline', category: 'tools' },
+  { panelType: 'compression', label: 'Compression', icon: 'zip-box-outline', category: 'tools' },
   { panelType: 'settings', label: 'Settings', icon: 'cog-outline', category: 'system' },
-  { panelType: 'history', label: 'History', icon: 'history', category: 'system' },
+  { panelType: 'permissions', label: 'Permissions', icon: 'lock-outline', category: 'tools' },
   { panelType: 'trash', label: 'Trash', icon: 'delete-outline', category: 'system' },
   { panelType: 'users', label: 'Users', icon: 'account-group-outline', category: 'system' },
   { panelType: 'accounts', label: 'Accounts', icon: 'account-outline', category: 'system' },
@@ -92,6 +116,8 @@ function handleDockClick(panelType: PanelType) {
   if (existing) {
     if (existing.minimized) {
       wm.restore(existing.id)
+    } else if (wm.activeWindow.value?.id === existing.id) {
+      wm.minimize(existing.id)
     } else {
       wm.focus(existing.id)
     }
@@ -113,6 +139,51 @@ function handleDockContext(e: MouseEvent, panelType: PanelType) {
     }))
   }
 }
+
+// ── GSAP hover magnification with RAF throttling ──
+let magnifyRaf: number | null = null
+
+function onDockItemEnter(e: MouseEvent, idx: number) {
+  if (magnifyRaf) cancelAnimationFrame(magnifyRaf)
+  magnifyRaf = requestAnimationFrame(() => {
+    const el = dockItemRefs.value[idx]
+    if (el) {
+      dockTweens.value.get(idx)?.kill()
+      const t = gsap.to(el, { scale: 1.4, duration: 0.2, ease: 'cubic-bezier(0.22, 1, 0.36, 1)', overwrite: 'auto', force3D: true })
+      dockTweens.value.set(idx, t)
+    }
+    magnifyRaf = null
+  })
+}
+
+function onDockItemLeave(e: MouseEvent, idx: number) {
+  if (magnifyRaf) cancelAnimationFrame(magnifyRaf)
+  magnifyRaf = requestAnimationFrame(() => {
+    const el = dockItemRefs.value[idx]
+    if (el) {
+      dockTweens.value.get(idx)?.kill()
+      gsap.to(el, { scale: 1, duration: 0.2, ease: 'cubic-bezier(0.22, 1, 0.36, 1)', overwrite: 'auto', force3D: true })
+      dockTweens.value.delete(idx)
+    }
+    magnifyRaf = null
+  })
+}
+
+onMounted(async () => {
+  gsapCtx.value = gsap.context(() => {
+    const items = Object.values(dockItemRefs.value).filter(Boolean) as HTMLElement[]
+    if (items.length > 0) {
+      anim.staggerIn(items, { stagger: 0.04, from: 'start', duration: 0.3 })
+    }
+  })
+})
+
+onUnmounted(() => {
+  dockTweens.value.forEach(t => t.kill())
+  dockTweens.value.clear()
+  if (magnifyRaf) cancelAnimationFrame(magnifyRaf)
+  gsapCtx.value?.revert()
+})
 </script>
 
 <style scoped>
@@ -132,14 +203,12 @@ function handleDockContext(e: MouseEvent, panelType: PanelType) {
   align-items: center;
   gap: 4px;
   padding: 6px 10px;
-  background: rgba(15, 15, 15, 0.5);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-glass);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--border-glass);
   border-radius: 14px;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: var(--shadow-glass), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   pointer-events: auto;
 }
 
@@ -150,10 +219,16 @@ function handleDockContext(e: MouseEvent, panelType: PanelType) {
   gap: 2px;
   padding: 4px 6px;
   cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.12s;
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-fast);
   position: relative;
   min-width: 44px;
+  will-change: transform;
+  outline: none;
+}
+
+.dock-item:focus-visible {
+  box-shadow: var(--focus-ring);
 }
 
 .dock-item:hover {
@@ -166,7 +241,7 @@ function handleDockContext(e: MouseEvent, panelType: PanelType) {
 }
 
 .dock-item.active {
-  background: rgba(0, 255, 65, 0.06);
+  background: var(--accent-dim);
 }
 
 .dock-icon {
@@ -175,20 +250,20 @@ function handleDockContext(e: MouseEvent, panelType: PanelType) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #1a1a1a;
-  border-radius: 8px;
-  transition: all 0.12s;
-  border: 1px solid #2a2a2a;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-fast);
+  border: 1px solid var(--border-subtle);
   position: relative;
 }
 
 .dock-item:hover .dock-icon {
-  background: #222;
-  border-color: #3a3a3a;
+  background: var(--bg-overlay);
+  border-color: var(--border-medium);
 }
 
 .dock-item.active .dock-icon {
-  background: rgba(0, 255, 65, 0.1);
+  background: var(--accent-dim);
   border-color: rgba(0, 255, 65, 0.2);
 }
 
@@ -201,9 +276,9 @@ function handleDockContext(e: MouseEvent, panelType: PanelType) {
   position: absolute;
   top: -4px;
   right: -6px;
-  background: #ff5f57;
+  background: var(--danger);
   color: #fff;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 8px;
   font-weight: 700;
   min-width: 14px;
@@ -218,16 +293,16 @@ function handleDockContext(e: MouseEvent, panelType: PanelType) {
 }
 
 .dock-iconify {
-  color: #ccc;
-  transition: color 0.15s;
+  color: var(--text-secondary);
+  transition: color var(--transition-normal);
 }
 
 .dock-item.active .dock-iconify {
-  color: #00ff41;
+  color: var(--accent);
 }
 
 .dock-item:hover .dock-iconify {
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .dock-icon.minimized {
@@ -245,18 +320,18 @@ function handleDockContext(e: MouseEvent, panelType: PanelType) {
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: #444;
-  transition: all 0.15s;
+  background: var(--border-medium);
+  transition: all var(--transition-normal);
 }
 
 .indicator-dot.active {
-  background: #00ff41;
+  background: var(--accent);
   width: 16px;
   border-radius: 2px;
 }
 
 .indicator-dot.muted {
-  background: #333;
+  background: var(--border-subtle);
 }
 
 .minimized-item .dock-icon {
@@ -266,7 +341,7 @@ function handleDockContext(e: MouseEvent, panelType: PanelType) {
 .dock-divider {
   width: 1px;
   height: 28px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--border-glass);
   margin: 0 4px;
 }
 </style>

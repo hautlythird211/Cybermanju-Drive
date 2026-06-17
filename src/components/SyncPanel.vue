@@ -200,11 +200,11 @@ function formatSize(bytes: number): string {
 .sync-panel {
   width: 100%;
   height: 100%;
-  background: #000;
+  background: #0a0a0a;
   overflow-y: auto;
   padding: 16px;
   font-family: 'Courier New', monospace;
-  color: #FFFFFF;
+  color: #00ff41;
 }
 
 .panel-header {
@@ -212,7 +212,7 @@ function formatSize(bytes: number): string {
   align-items: center;
   justify-content: space-between;
   padding-bottom: 10px;
-  border-bottom: 2px solid #FFFFFF;
+  border-bottom: 2px solid #00ff41;
   margin-bottom: 16px;
 }
 
@@ -226,7 +226,7 @@ function formatSize(bytes: number): string {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: rgba(255,255,255,0.6);
+  color: rgba(0, 255, 65,0.6);
   margin: 0 0 8px;
 }
 
@@ -237,7 +237,7 @@ function formatSize(bytes: number): string {
 }
 
 .config-card {
-  border: 2px solid #FFFFFF;
+  border: 2px solid #00ff41;
   padding: 8px 10px;
 }
 
@@ -250,12 +250,12 @@ function formatSize(bytes: number): string {
 
 .cfg-name { font-size: 12px; font-weight: 700; flex: 1; }
 .cfg-type { font-size: 9px; }
-.cfg-status { font-size: 9px; font-weight: 700; border: 1px solid #FFFFFF; padding: 0 4px; }
-.cfg-status.on { background: #FFFFFF; color: #000; }
+.cfg-status { font-size: 9px; font-weight: 700; border: 1px solid #00ff41; padding: 0 4px; }
+.cfg-status.on { background: #00ff41; color: #0a0a0a; }
 .cfg-meta { font-size: 9px; }
 
 .progress-card {
-  border: 2px solid #FFFFFF;
+  border: 2px solid #00ff41;
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -268,19 +268,19 @@ function formatSize(bytes: number): string {
 .p-key { font-size: 10px; }
 .p-value { font-size: 10px; font-weight: 700; }
 
-.text-muted { color: rgba(255,255,255,0.5) !important; }
+.text-muted { color: rgba(0, 255, 65,0.5) !important; }
 
 .cfg-actions { display: flex; gap: 4px; margin-top: 6px; }
 .bw-btn-sm {
-  background: #000;
-  border: 1px solid #FFF;
-  color: #FFF;
+  background: #0a0a0a;
+  border: 1px solid #00ff41;
+  color: #00ff41;
   font-family: 'Courier New', monospace;
   font-size: 9px;
   padding: 2px 6px;
   cursor: pointer;
 }
-.bw-btn-sm:hover { background: #FFF; color: #000; }
+.bw-btn-sm:hover { background: #00ff41; color: #0a0a0a; }
 .bw-btn-sm:disabled { opacity: 0.4; cursor: default; }
 
 .add-cfg { width: 100%; margin-top: 6px; font-size: 10px; }
@@ -291,18 +291,18 @@ function formatSize(bytes: number): string {
   align-items: center;
 }
 .bw-input-sm {
-  background: #000;
-  border: 1px solid #FFF;
-  color: #FFF;
+  background: #0a0a0a;
+  border: 1px solid #00ff41;
+  color: #00ff41;
   font-family: 'Courier New', monospace;
   font-size: 10px;
   padding: 4px 6px;
   flex: 1;
 }
 .bw-select-sm {
-  background: #000;
-  border: 1px solid #FFF;
-  color: #FFF;
+  background: #0a0a0a;
+  border: 1px solid #00ff41;
+  color: #00ff41;
   font-family: 'Courier New', monospace;
   font-size: 9px;
   padding: 4px;
@@ -311,13 +311,13 @@ function formatSize(bytes: number): string {
 .local-sync-actions { display: flex; gap: 6px; }
 .bw-btn {
   padding: 6px 12px;
-  background: #000;
-  border: 2px solid #FFF;
-  color: #FFF;
+  background: #0a0a0a;
+  border: 2px solid #00ff41;
+  color: #00ff41;
   font-family: 'Courier New', monospace;
   font-size: 10px;
   font-weight: 700;
   cursor: pointer;
 }
-.bw-btn:hover { background: #FFF; color: #000; }
+.bw-btn:hover { background: #00ff41; color: #0a0a0a; }
 </style>

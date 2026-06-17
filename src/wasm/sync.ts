@@ -292,10 +292,50 @@ export interface RemoteFileInfo {
   url: string
 }
 
+export async function listMegaFiles(
+  email: string,
+  password: string,
+  _prefix: string
+): Promise<RemoteFileInfo[]> {
+  const { Storage } = await import('megajs')
+  const storage = new Storage({ email, password, autoload: false, autologin: true, keepalive: false })
+  await storage.ready
+
+  const files: RemoteFileInfo[] = []
+
+  function walk(file: any, dirPath: string) {
+    if (file.directory && file.children) {
+      for (const child of file.children) {
+        walk(child, dirPath + '/' + (child.name || ''))
+      }
+    } else if (!file.directory) {
+      files.push({
+        name: file.name || 'unknown',
+        path: (dirPath + '/' + (file.name || 'unknown')).replace(/^\/+/, '/'),
+        sizeBytes: file.size || 0,
+        modifiedAt: file.timestamp ? new Date(file.timestamp * 1000).toISOString() : '',
+        url: '',
+      })
+    }
+  }
+
+  walk(storage.root, '')
+  storage.close()
+  return files
+}
+
 export async function listRemoteFiles(
   _config: SyncConfig,
   prefix: string
 ): Promise<RemoteFileInfo[]> {
+  if (_config.backendType === 'mega') {
+    const token = await loadTokenFromStorage('mega' as any)
+    if (!token) return []
+    const [email, password] = token.accessToken.split('|')
+    if (!email || !password) return []
+    return listMegaFiles(email, password, prefix)
+  }
+
   const oauthToken = await loadTokenFromStorage(_config.backendType as any)
   if (!oauthToken) return []
 

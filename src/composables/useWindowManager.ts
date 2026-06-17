@@ -32,6 +32,10 @@ export interface WindowState {
   zIndex: number
   component: Component | null
   props?: Record<string, unknown>
+  screenX: number
+  screenY: number
+  tileSlot: number
+  animState: 'idle' | 'entering' | 'exiting'
 }
 
 type SizeMap = { [K in PanelType]?: { width: number; height: number } } & {
@@ -102,17 +106,37 @@ const windows = ref<WindowState[]>([])
 const nextZIndex = ref(10)
 const windowFocusHistory = ref<string[]>([])
 
-function cascadePosition(index: number): { x: number; y: number } {
-  const offset = 30 + (index % 10) * 28
-  return { x: offset, y: offset }
-}
-
 export function useWindowManager() {
   const activeWindow = computed(() => {
     if (windowFocusHistory.value.length === 0) return null
     const id = windowFocusHistory.value[windowFocusHistory.value.length - 1]
     return windows.value.find(w => w.id === id) || null
   })
+
+  const currentScreen = ref({ x: 0, y: 0 })
+
+  function allocateTile(screenX: number, screenY: number): number {
+    const taken = windows.value
+      .filter(w => w.screenX === screenX && w.screenY === screenY)
+      .map(w => w.tileSlot)
+    for (let slot = 0; slot < 4; slot++) {
+      if (!taken.includes(slot)) return slot
+    }
+    return -1
+  }
+
+  function findNextScreen(): { x: number; y: number } {
+    const cx = currentScreen.value.x
+    const cy = currentScreen.value.y
+    if (allocateTile(cx, cy) >= 0) return { x: cx, y: cy }
+    const dirs = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }]
+    for (const d of dirs) {
+      const nx = cx + d.x
+      const ny = cy + d.y
+      if (allocateTile(nx, ny) >= 0) return { x: nx, y: ny }
+    }
+    return { x: cx + 1, y: cy }
+  }
 
   function open(panelType: PanelType, props?: Record<string, unknown>) {
     const existing = windows.value.find(
@@ -125,9 +149,11 @@ export function useWindowManager() {
 
     const meta = MODULE_METADATA[panelType] || { label: panelType.toUpperCase(), icon: '[*]' }
     const size = defaultSizes[panelType] || { width: 520, height: 440 }
-    const pos = cascadePosition(windows.value.length)
     const id = `win-${++windowCounter}`
     const comp = getComponent(panelType)
+
+    const screen = findNextScreen()
+    const tileSlot = allocateTile(screen.x, screen.y)
 
     const resolvedProps = { ...(props || {}) }
     if (inlinePanels.includes(panelType)) {
@@ -139,31 +165,46 @@ export function useWindowManager() {
       panelType,
       title: meta.label,
       icon: meta.icon,
-      x: pos.x,
-      y: pos.y,
+      x: 0,
+      y: 0,
       width: size.width,
       height: size.height,
       minimized: false,
       zIndex: nextZIndex.value++,
       component: comp,
       props: Object.keys(resolvedProps).length > 0 ? resolvedProps : undefined,
+      screenX: screen.x,
+      screenY: screen.y,
+      tileSlot,
+      animState: 'entering',
     }
     windows.value.push(win)
     windowFocusHistory.value = windowFocusHistory.value.filter(w => w !== id)
     windowFocusHistory.value.push(id)
+    currentScreen.value = { x: screen.x, y: screen.y }
     return id
   }
 
   function close(id: string) {
-    windows.value = windows.value.filter(w => w.id !== id)
-    windowFocusHistory.value = windowFocusHistory.value.filter(w => w !== id)
+    const win = windows.value.find(w => w.id === id)
+    if (win) {
+      win.animState = 'exiting'
+      setTimeout(() => {
+        windows.value = windows.value.filter(w => w.id !== id)
+        windowFocusHistory.value = windowFocusHistory.value.filter(w => w !== id)
+      }, 300)
+    }
   }
 
   function minimize(id: string) {
     const win = windows.value.find(w => w.id === id)
     if (win) {
-      win.minimized = true
-      windowFocusHistory.value = windowFocusHistory.value.filter(w => w !== id)
+      win.animState = 'exiting'
+      setTimeout(() => {
+        win.minimized = true
+        win.animState = 'idle'
+        windowFocusHistory.value = windowFocusHistory.value.filter(w => w !== id)
+      }, 300)
     }
   }
 
@@ -171,16 +212,21 @@ export function useWindowManager() {
     const win = windows.value.find(w => w.id === id)
     if (win) {
       win.minimized = false
+      win.animState = 'entering'
+      setTimeout(() => {
+        win.animState = 'idle'
+      }, 350)
       focus(id)
     }
   }
 
   function focus(id: string) {
     const win = windows.value.find(w => w.id === id)
-    if (win) {
+    if (win && !win.minimized) {
       win.zIndex = nextZIndex.value++
       windowFocusHistory.value = windowFocusHistory.value.filter(w => w !== id)
       windowFocusHistory.value.push(id)
+      currentScreen.value = { x: win.screenX, y: win.screenY }
     }
   }
 
@@ -191,6 +237,8 @@ export function useWindowManager() {
     if (existing) {
       if (existing.minimized) {
         restore(existing.id)
+      } else if (activeWindow.value?.id === existing.id) {
+        minimize(existing.id)
       } else {
         close(existing.id)
       }
@@ -200,12 +248,21 @@ export function useWindowManager() {
   }
 
   function closeAll() {
-    windows.value = []
-    windowFocusHistory.value = []
+    windows.value.forEach(w => { w.animState = 'exiting' })
+    setTimeout(() => {
+      windows.value = []
+      windowFocusHistory.value = []
+    }, 300)
   }
 
   function minimizeAll() {
-    windows.value.forEach(w => { w.minimized = true })
+    windows.value.forEach(w => {
+      w.animState = 'exiting'
+      setTimeout(() => {
+        w.minimized = true
+        w.animState = 'idle'
+      }, 300)
+    })
     windowFocusHistory.value = []
   }
 
@@ -236,6 +293,7 @@ export function useWindowManager() {
     windows,
     activeWindow,
     nextZIndex,
+    currentScreen,
     open,
     close,
     minimize,

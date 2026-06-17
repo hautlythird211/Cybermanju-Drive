@@ -150,11 +150,11 @@ function highlightSyntax(code: string, lang: string): string {
 .code-panel {
   width: 100%;
   height: 100%;
-  background: #000;
+  background: #0a0a0a;
   overflow-y: auto;
   padding: 16px;
   font-family: 'Courier New', monospace;
-  color: #FFFFFF;
+  color: #00ff41;
 }
 
 .panel-header {
@@ -162,7 +162,7 @@ function highlightSyntax(code: string, lang: string): string {
   align-items: center;
   justify-content: space-between;
   padding-bottom: 10px;
-  border-bottom: 2px solid #FFFFFF;
+  border-bottom: 2px solid #00ff41;
   margin-bottom: 16px;
 }
 
@@ -177,43 +177,43 @@ function highlightSyntax(code: string, lang: string): string {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: rgba(255,255,255,0.6);
+  color: rgba(0, 255, 65, 0.6);
   margin: 0 0 8px;
   padding-bottom: 4px;
-  border-bottom: 2px solid rgba(255,255,255,0.2);
+  border-bottom: 2px solid rgba(0, 255, 65, 0.2);
 }
 
 .bw-btn {
   padding: 6px 12px;
-  background: #FFFFFF;
-  color: #000;
-  border: 2px solid #FFFFFF;
+  background: #00ff41;
+  color: #0a0a0a;
+  border: 2px solid #00ff41;
   font-family: 'Courier New', monospace;
   font-size: 10px;
   font-weight: 700;
   cursor: pointer;
 }
 
-.bw-btn:hover { background: #000; color: #FFFFFF; }
+.bw-btn:hover { background: #0a0a0a; color: #00ff41; }
 
 .bw-btn-sm {
   padding: 2px 6px;
   background: transparent;
-  border: 2px solid #FFFFFF;
-  color: #FFFFFF;
+  border: 2px solid #00ff41;
+  color: #00ff41;
   font-family: 'Courier New', monospace;
   font-size: 9px;
   font-weight: 700;
   cursor: pointer;
 }
 
-.bw-btn-sm:hover { background: #FFFFFF; color: #000; }
+.bw-btn-sm:hover { background: #00ff41; color: #0a0a0a; }
 
 .selected-file {
   font-size: 12px;
-  background: rgba(255,255,255,0.05);
+  background: rgba(0, 255, 65, 0.05);
   padding: 6px 8px;
-  border: 2px solid rgba(255,255,255,0.3);
+  border: 2px solid rgba(0, 255, 65, 0.3);
 }
 
 .go-to-line {
@@ -225,9 +225,9 @@ function highlightSyntax(code: string, lang: string): string {
 
 .goto-input {
   width: 80px;
-  background: #000;
-  border: 2px solid #FFFFFF;
-  color: #FFFFFF;
+  background: #0a0a0a;
+  border: 2px solid #00ff41;
+  color: #00ff41;
   font-family: 'Courier New', monospace;
   font-size: 10px;
   padding: 2px 6px;
@@ -250,13 +250,13 @@ function highlightSyntax(code: string, lang: string): string {
 .meta-value { font-size: 10px; font-family: 'Courier New', monospace; font-weight: 700; }
 
 .language-badge {
-  border: 1px solid #FFFFFF;
+  border: 1px solid #00ff41;
   padding: 0 4px;
   font-size: 9px;
 }
 
 .symbol-tree {
-  border: 2px solid rgba(255,255,255,0.3);
+  border: 2px solid rgba(0, 255, 65, 0.3);
   overflow: hidden;
 }
 
@@ -266,27 +266,27 @@ function highlightSyntax(code: string, lang: string): string {
   gap: 4px;
   padding: 2px 6px;
   font-size: 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(0, 255, 65, 0.1);
   cursor: pointer;
 }
 
 .symbol-row:hover {
-  background: rgba(255,255,255,0.1);
+  background: rgba(0, 255, 65, 0.1);
 }
 
 .symbol-kind {
   font-size: 8px;
-  color: rgba(255,255,255,0.6);
+  color: rgba(0, 255, 65, 0.6);
   text-transform: uppercase;
   flex-shrink: 0;
   min-width: 40px;
 }
 
-.symbol-name { color: #FFFFFF; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.symbol-name { color: #00ff41; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .symbol-lines { flex-shrink: 0; font-size: 9px; }
 
 .source-view {
-  border: 2px solid rgba(255,255,255,0.3);
+  border: 2px solid rgba(0, 255, 65, 0.3);
   font-family: 'Courier New', monospace;
   font-size: 10px;
   max-height: 400px;
@@ -300,12 +300,12 @@ function highlightSyntax(code: string, lang: string): string {
 }
 
 .source-line:hover {
-  background: rgba(255,255,255,0.05);
+  background: rgba(0, 255, 65, 0.05);
 }
 
 .source-line.goto-highlight {
-  background: rgba(255,255,255,0.15);
-  border-left: 3px solid #FFFFFF;
+  background: rgba(0, 255, 65, 0.15);
+  border-left: 3px solid #00ff41;
 }
 
 .source-ln {
@@ -313,7 +313,7 @@ function highlightSyntax(code: string, lang: string): string {
   width: 32px;
   text-align: right;
   padding-right: 8px;
-  color: rgba(255,255,255,0.3);
+  color: rgba(0, 255, 65, 0.3);
   user-select: none;
 }
 
@@ -323,7 +323,7 @@ function highlightSyntax(code: string, lang: string): string {
   overflow-x: auto;
 }
 
-.text-muted { color: rgba(255,255,255,0.5) !important; }
+.text-muted { color: rgba(0, 255, 65, 0.5) !important; }
 </style>
 
 <style>

@@ -57,11 +57,11 @@ async function handleBatchDetect() {
 .face-panel {
   width: 100%;
   height: 100%;
-  background: #000;
+  background: #0a0a0a;
   overflow-y: auto;
   padding: 16px;
   font-family: 'Courier New', monospace;
-  color: #FFFFFF;
+  color: #00ff41;
 }
 
 .panel-header {
@@ -69,7 +69,7 @@ async function handleBatchDetect() {
   align-items: center;
   justify-content: space-between;
   padding-bottom: 10px;
-  border-bottom: 2px solid #FFFFFF;
+  border-bottom: 2px solid #00ff41;
   margin-bottom: 16px;
 }
 
@@ -83,25 +83,25 @@ async function handleBatchDetect() {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: rgba(255,255,255,0.6);
+  color: rgba(0, 255, 65,0.6);
   margin: 0 0 8px;
 }
 
 .bw-btn {
   padding: 6px 12px;
-  background: #FFFFFF;
-  color: #000;
-  border: 2px solid #FFFFFF;
+  background: #00ff41;
+  color: #0a0a0a;
+  border: 2px solid #00ff41;
   font-family: 'Courier New', monospace;
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
 }
 
-.bw-btn:hover { background: #000; color: #FFFFFF; }
+.bw-btn:hover { background: #0a0a0a; color: #00ff41; }
 
 .stats-card {
-  border: 2px solid #FFFFFF;
+  border: 2px solid #00ff41;
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -124,7 +124,7 @@ async function handleBatchDetect() {
 }
 
 .group-card {
-  border: 2px solid #FFFFFF;
+  border: 2px solid #00ff41;
   padding: 10px;
 }
 
@@ -137,7 +137,7 @@ async function handleBatchDetect() {
 .avatar {
   width: 28px;
   height: 28px;
-  border: 2px solid #FFFFFF;
+  border: 2px solid #00ff41;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -149,5 +149,5 @@ async function handleBatchDetect() {
 .group-name { font-size: 12px; font-weight: 700; }
 .group-meta { font-size: 10px; }
 
-.text-muted { color: rgba(255,255,255,0.5) !important; }
+.text-muted { color: rgba(0, 255, 65,0.5) !important; }
 </style>

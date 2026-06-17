@@ -296,7 +296,7 @@ onUnmounted(() => {
   border-bottom: 1px solid #1a1a1a;
 }
 
-.header-icon { color: #45B7D1; flex-shrink: 0; }
+.header-icon { color: #00ff41; flex-shrink: 0; }
 
 .panel-title {
   font-size: 13px;
@@ -366,10 +366,10 @@ onUnmounted(() => {
   transition: background 0.1s;
 }
 
-.file-row:hover { background: rgba(255,255,255,0.02); }
-.file-row.selected { background: rgba(69,183,209,0.05); }
+.file-row:hover { background: rgba(0, 255, 65, 0.02); }
+.file-row.selected { background: rgba(0, 255, 65, 0.05); }
 
-.file-row input { accent-color: #45B7D1; flex-shrink: 0; }
+.file-row input { accent-color: #00ff41; flex-shrink: 0; }
 
 .file-row-icon { color: #666; flex-shrink: 0; }
 
@@ -472,7 +472,7 @@ onUnmounted(() => {
 
 .progress-bar-fill {
   height: 100%;
-  background: #45B7D1;
+  background: #00ff41;
   border-radius: 2px;
   transition: width 0.3s;
 }
@@ -517,14 +517,14 @@ onUnmounted(() => {
 .bw-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
 .bw-btn-inverse {
-  border-color: #45B7D1;
-  color: #45B7D1;
-  text-shadow: 0 0 4px rgba(69,183,209,0.15);
+  border-color: #00ff41;
+  color: #00ff41;
+  text-shadow: 0 0 4px rgba(0, 255, 65, 0.15);
 }
 
 .bw-btn-inverse:hover {
-  background: rgba(69,183,209,0.08);
-  box-shadow: 0 0 12px rgba(69,183,209,0.1);
+  background: rgba(0, 255, 65, 0.08);
+  box-shadow: 0 0 12px rgba(0, 255, 65, 0.1);
 }
 
 .bw-btn-danger {

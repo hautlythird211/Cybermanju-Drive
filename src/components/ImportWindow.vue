@@ -92,7 +92,7 @@
 
         <div v-if="sources.length === 0" class="empty-state">
           <Icon icon="mdi:cloud-outline" width="24" height="24" />
-          <span>No OAuth accounts configured. Connect accounts in Settings or Setup Wizard.</span>
+          <span>No storage accounts configured. Connect accounts in Settings or Setup Wizard.</span>
         </div>
       </div>
     </div>
@@ -175,6 +175,7 @@ const PROVIDER_ICONS: Record<string, string> = {
   github: 'mdi:github',
   gitlab: 'mdi:gitlab',
   telegram: 'mdi:send',
+  mega: 'logos:mega',
 }
 
 function providerIcon(type: string): string {
@@ -188,9 +189,9 @@ function formatBytes(bytes: number): string {
 }
 
 async function loadSources() {
-  const oauthAccounts = store.accounts.filter(a => a.oauthProvider)
+  const importAccounts = store.accounts.filter(a => a.oauthProvider || a.backendType === 'mega')
   const existingIds = new Set(sources.value.map(s => s.id))
-  for (const acc of oauthAccounts) {
+  for (const acc of importAccounts) {
     if (!existingIds.has(acc.id)) {
       sources.value.push({
         id: acc.id,
@@ -413,7 +414,7 @@ onUnmounted(() => {
 }
 
 .sc-header:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(0, 255, 65, 0.02);
 }
 
 .sc-icon {

@@ -5,7 +5,6 @@
         <span class="icon-shield">[##]</span>
         <h2 class="panel-title">QUANTUM SHIELD</h2>
       </div>
-      <button class="close-btn" @click="$emit('close')">X</button>
     </div>
 
     <div class="status-card" :class="{ protected: encryptionStatus?.isEncrypted }">
@@ -122,27 +121,27 @@ async function handleEncrypt() {
 .encryption-panel {
   width: 400px;
   height: 100%;
-  background: #000;
-  border-left: 2px solid #FFFFFF;
+  background: #0a0a0a;
+  border-left: 2px solid #00ff41;
   overflow-y: auto;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   font-family: 'Courier New', monospace;
-  color: #FFFFFF;
+  color: #00ff41;
 }
 
 .encryption-panel::-webkit-scrollbar { width: 4px; }
-.encryption-panel::-webkit-scrollbar-track { background: #000; }
-.encryption-panel::-webkit-scrollbar-thumb { background: #FFFFFF; }
+.encryption-panel::-webkit-scrollbar-track { background: #0a0a0a; }
+.encryption-panel::-webkit-scrollbar-thumb { background: #00ff41; }
 
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding-bottom: 10px;
-  border-bottom: 2px solid #FFFFFF;
+  border-bottom: 2px solid #00ff41;
 }
 
 .header-left {
@@ -154,41 +153,21 @@ async function handleEncrypt() {
 .icon-shield {
   font-family: 'Courier New', monospace;
   font-size: 16px;
-  color: #FFFFFF;
+  color: #00ff41;
 }
 
 .panel-title {
   font-size: 14px;
   font-weight: 800;
   letter-spacing: 1px;
-  color: #FFFFFF;
+  color: #00ff41;
   margin: 0;
 }
 
-.close-btn {
-  background: none;
-  border: 2px solid #FFFFFF;
-  color: #FFFFFF;
-  cursor: pointer;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-family: 'Courier New', monospace;
-  font-weight: 700;
-}
-
-.close-btn:hover {
-  background: #FFFFFF;
-  color: #000;
-}
-
 .status-card {
-  border: 2px solid #FFFFFF;
+  border: 2px solid #00ff41;
   padding: 12px;
-  background: #000;
+  background: #0a0a0a;
 }
 
 .status-card.protected {
@@ -207,18 +186,18 @@ async function handleEncrypt() {
   font-weight: 800;
   letter-spacing: 1px;
   padding: 3px 8px;
-  border: 2px solid #FFFFFF;
-  color: #FFFFFF;
+  border: 2px solid #00ff41;
+  color: #00ff41;
 }
 
 .badge-protected {
-  background: #FFFFFF;
-  color: #000;
+  background: #00ff41;
+  color: #0a0a0a;
 }
 
 .badge-unprotected {
-  background: #000;
-  color: #FFFFFF;
+  background: #0a0a0a;
+  color: #00ff41;
 }
 
 .status-details {
@@ -239,31 +218,31 @@ async function handleEncrypt() {
   font-size: 11px;
 }
 
-.star.filled { color: #FFFFFF; }
-.star.empty { color: rgba(255,255,255,0.3); }
+.star.filled { color: #00ff41; }
+.star.empty { color: rgba(0, 255, 65, 0.3); }
 
 .status-meta {
   font-size: 10px;
   display: flex;
   gap: 4px;
-  color: rgba(255,255,255,0.7);
+  color: rgba(0, 255, 65, 0.7);
 }
 
 .meta-label {
-  color: rgba(255,255,255,0.5);
+  color: rgba(0, 255, 65, 0.5);
   min-width: 50px;
 }
 
 .unprotected-msg {
   font-size: 11px;
-  color: rgba(255,255,255,0.7);
+  color: rgba(0, 255, 65, 0.7);
   margin: 0;
 }
 
 .nist-viz {
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 2px solid rgba(255,255,255,0.3);
+  border-top: 2px solid rgba(0, 255, 65, 0.3);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -272,7 +251,7 @@ async function handleEncrypt() {
 .nist-label {
   font-size: 9px;
   letter-spacing: 1px;
-  color: rgba(255,255,255,0.5);
+  color: rgba(0, 255, 65, 0.5);
   white-space: nowrap;
 }
 
@@ -284,26 +263,26 @@ async function handleEncrypt() {
 .nist-circle {
   width: 24px;
   height: 24px;
-  border: 2px solid rgba(255,255,255,0.3);
-  background: #000;
+  border: 2px solid rgba(0, 255, 65, 0.3);
+  background: #0a0a0a;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .nist-circle.filled {
-  border-color: #FFFFFF;
-  background: #FFFFFF;
+  border-color: #00ff41;
+  background: #00ff41;
 }
 
 .nist-circle.filled .circle-num {
-  color: #000;
+  color: #0a0a0a;
 }
 
 .circle-num {
   font-size: 10px;
   font-weight: 700;
-  color: rgba(255,255,255,0.5);
+  color: rgba(0, 255, 65, 0.5);
 }
 
 .section {
@@ -316,13 +295,13 @@ async function handleEncrypt() {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: rgba(255,255,255,0.6);
+  color: rgba(0, 255, 65, 0.6);
   margin: 0;
   display: flex;
   align-items: center;
   gap: 6px;
   padding-bottom: 4px;
-  border-bottom: 2px solid rgba(255,255,255,0.2);
+  border-bottom: 2px solid rgba(0, 255, 65, 0.2);
 }
 
 .algo-buttons {
@@ -332,24 +311,24 @@ async function handleEncrypt() {
 }
 
 .algo-btn {
-  background: #000;
-  border: 2px solid #FFFFFF;
+  background: #0a0a0a;
+  border: 2px solid #00ff41;
   padding: 8px 10px;
   cursor: pointer;
   text-align: left;
   display: flex;
   flex-direction: column;
   gap: 3px;
-  color: #FFFFFF;
+  color: #00ff41;
   font-family: 'Courier New', monospace;
 }
 
 .algo-btn:hover {
-  background: #FFFFFF;
-  color: #000;
+  background: #00ff41;
+  color: #0a0a0a;
 }
 
-.algo-btn:hover .algo-desc { color: #000 !important; }
+.algo-btn:hover .algo-desc { color: #0a0a0a !important; }
 
 .algo-top {
   display: flex;
@@ -361,8 +340,8 @@ async function handleEncrypt() {
   font-size: 9px;
   font-weight: 800;
   padding: 1px 4px;
-  border: 1px solid #FFFFFF;
-  color: #FFFFFF;
+  border: 1px solid #00ff41;
+  color: #00ff41;
 }
 
 .nist-badge.small { font-size: 8px; }
@@ -384,12 +363,12 @@ async function handleEncrypt() {
 }
 
 .key-card {
-  border: 2px solid #FFFFFF;
+  border: 2px solid #00ff41;
   padding: 8px 10px;
   display: flex;
   flex-direction: column;
   gap: 3px;
-  background: #000;
+  background: #0a0a0a;
 }
 
 .key-header {
@@ -405,8 +384,8 @@ async function handleEncrypt() {
 
 .key-pub-preview {
   font-size: 10px;
-  color: rgba(255,255,255,0.5);
-  background: rgba(255,255,255,0.05);
+  color: rgba(0, 255, 65, 0.5);
+  background: rgba(0, 255, 65, 0.05);
   padding: 3px 6px;
   word-break: break-all;
 }
@@ -417,10 +396,10 @@ async function handleEncrypt() {
 
 .selected-file-name {
   font-size: 11px;
-  color: #FFFFFF;
-  background: rgba(255,255,255,0.05);
+  color: #00ff41;
+  background: rgba(0, 255, 65, 0.05);
   padding: 4px 8px;
-  border: 2px solid rgba(255,255,255,0.3);
+  border: 2px solid rgba(0, 255, 65, 0.3);
   word-break: break-all;
   margin: 0;
 }
@@ -432,9 +411,9 @@ async function handleEncrypt() {
 
 .encrypt-select {
   flex: 1;
-  background: #000;
-  color: #FFFFFF;
-  border: 2px solid #FFFFFF;
+  background: #0a0a0a;
+  color: #00ff41;
+  border: 2px solid #00ff41;
   padding: 6px 8px;
   font-size: 10px;
   font-family: 'Courier New', monospace;
@@ -442,9 +421,9 @@ async function handleEncrypt() {
 }
 
 .encrypt-btn {
-  background: #FFFFFF;
-  color: #000;
-  border: 2px solid #FFFFFF;
+  background: #00ff41;
+  color: #0a0a0a;
+  border: 2px solid #00ff41;
   padding: 6px 12px;
   font-size: 10px;
   font-weight: 800;
@@ -453,10 +432,10 @@ async function handleEncrypt() {
 }
 
 .encrypt-btn:hover {
-  background: #000;
-  color: #FFFFFF;
+  background: #0a0a0a;
+  color: #00ff41;
 }
 
 .mono { font-family: 'Courier New', monospace; }
-.text-muted { color: rgba(255,255,255,0.5) !important; }
+.text-muted { color: rgba(0, 255, 65, 0.5) !important; }
 </style>

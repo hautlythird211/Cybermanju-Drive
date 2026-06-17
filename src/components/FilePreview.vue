@@ -213,8 +213,8 @@ async function handleDecryptPreview() {
   min-width: 280px;
   display: flex;
   flex-direction: column;
-  background: #000;
-  border-left: 2px solid #FFFFFF;
+  background: #0a0a0a;
+  border-left: 2px solid #00ff41;
   overflow: hidden;
   z-index: 5;
   height: 100%;
@@ -238,14 +238,14 @@ async function handleDecryptPreview() {
   align-items: flex-start;
   gap: 8px;
   padding: 10px;
-  border-bottom: 2px solid #FFFFFF;
+  border-bottom: 2px solid #00ff41;
   flex-shrink: 0;
 }
 
 .preview-icon {
   font-family: 'Courier New', monospace;
   font-size: 18px;
-  color: #FFFFFF;
+  color: #00ff41;
   flex-shrink: 0;
 }
 
@@ -260,12 +260,12 @@ async function handleDecryptPreview() {
 .preview-filename {
   font-size: 12px;
   font-weight: 700;
-  color: #FFFFFF;
+  color: #00ff41;
 }
 
 .preview-path {
   font-size: 9px;
-  color: rgba(255,255,255,0.5);
+  color: rgba(0, 255, 65,0.5);
 }
 
 .preview-scroll {
@@ -284,7 +284,7 @@ async function handleDecryptPreview() {
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.8px;
-  color: rgba(255,255,255,0.5);
+  color: rgba(0, 255, 65,0.5);
   margin-bottom: 6px;
 }
 
@@ -304,19 +304,19 @@ async function handleDecryptPreview() {
 .meta-key {
   font-size: 10px;
   flex-shrink: 0;
-  color: rgba(255,255,255,0.5) !important;
+  color: rgba(0, 255, 65,0.5) !important;
 }
 
 .meta-value {
   font-size: 10px;
-  color: #FFFFFF;
+  color: #00ff41;
   text-align: right;
 }
 
 .info-card {
   padding: 6px 8px;
-  border: 2px solid #FFFFFF;
-  background: #000;
+  border: 2px solid #00ff41;
+  background: #0a0a0a;
 }
 
 .info-row {
@@ -330,16 +330,16 @@ async function handleDecryptPreview() {
 .info-key {
   font-size: 10px;
   flex-shrink: 0;
-  color: rgba(255,255,255,0.5) !important;
+  color: rgba(0, 255, 65,0.5) !important;
 }
 
 .info-badge {
   font-family: 'Courier New', monospace;
   font-size: 9px;
   font-weight: 700;
-  border: 1px solid #FFFFFF;
+  border: 1px solid #00ff41;
   padding: 0 4px;
-  color: #FFFFFF;
+  color: #00ff41;
 }
 
 .tag-list {
@@ -352,9 +352,9 @@ async function handleDecryptPreview() {
   font-size: 9px;
   font-family: 'Courier New', monospace;
   font-weight: 700;
-  border: 2px solid #FFFFFF;
+  border: 2px solid #00ff41;
   padding: 1px 6px;
-  color: #FFFFFF;
+  color: #00ff41;
 }
 
 .face-list {
@@ -373,22 +373,22 @@ async function handleDecryptPreview() {
 .avatar-sm {
   width: 20px;
   height: 20px;
-  border: 2px solid #FFFFFF;
+  border: 2px solid #00ff41;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   font-size: 8px;
-  color: #FFFFFF;
+  color: #00ff41;
 }
 
 .face-name {
   font-size: 11px;
-  color: #FFFFFF;
+  color: #00ff41;
 }
 
 .symbol-tree {
-  border: 2px solid rgba(255,255,255,0.3);
+  border: 2px solid rgba(0, 255, 65,0.3);
   overflow: hidden;
 }
 
@@ -398,20 +398,20 @@ async function handleDecryptPreview() {
   gap: 4px;
   padding: 2px 6px;
   font-size: 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(0, 255, 65,0.1);
 }
 
 .symbol-kind {
   font-family: 'Courier New', monospace;
   font-size: 8px;
-  color: rgba(255,255,255,0.6);
+  color: rgba(0, 255, 65,0.6);
   text-transform: uppercase;
   flex-shrink: 0;
   min-width: 40px;
 }
 
 .symbol-name {
-  color: #FFFFFF;
+  color: #00ff41;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -421,7 +421,7 @@ async function handleDecryptPreview() {
   display: flex;
   gap: 2px;
   padding: 6px;
-  border-top: 2px solid #FFFFFF;
+  border-top: 2px solid #00ff41;
   flex-shrink: 0;
 }
 
@@ -431,9 +431,9 @@ async function handleDecryptPreview() {
   align-items: center;
   justify-content: center;
   height: 28px;
-  border: 2px solid #FFFFFF;
-  background: #000;
-  color: #FFFFFF;
+  border: 2px solid #00ff41;
+  background: #0a0a0a;
+  color: #00ff41;
   cursor: pointer;
   font-family: 'Courier New', monospace;
   font-size: 9px;
@@ -441,13 +441,13 @@ async function handleDecryptPreview() {
 }
 
 .pa-btn:hover {
-  background: #FFFFFF;
-  color: #000;
+  background: #00ff41;
+  color: #0a0a0a;
 }
 
 .pa-btn.danger:hover {
-  background: #FFFFFF;
-  color: #000;
+  background: #00ff41;
+  color: #0a0a0a;
 }
 
 .pa-btn.decrypt-btn {
@@ -457,7 +457,7 @@ async function handleDecryptPreview() {
 
 .pa-btn.decrypt-btn:hover {
   background: #51cf66;
-  color: #000;
+  color: #0a0a0a;
 }
 
 .preview-error {
@@ -470,6 +470,6 @@ async function handleDecryptPreview() {
 }
 
 .mono { font-family: 'Courier New', monospace; }
-.text-muted { color: rgba(255,255,255,0.5) !important; }
+.text-muted { color: rgba(0, 255, 65,0.5) !important; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>

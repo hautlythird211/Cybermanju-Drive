@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 
 const emit = defineEmits<{ (e: 'complete'): void }>()
 
@@ -10,6 +10,9 @@ const crtFlicker = ref(false)
 const ready = ref(false)
 const dismissing = ref(false)
 const bootError = ref(false)
+const usernameInput = ref('')
+const usernameSubmitted = ref(false)
+const inputRef = ref<HTMLInputElement | null>(null)
 
 let timer: ReturnType<typeof setInterval> | null = null
 let glitchTimer: ReturnType<typeof setInterval> | null = null
@@ -131,7 +134,28 @@ function handleLogin() {
   forceComplete()
 }
 
+function submitUsername() {
+  if (!ready.value || dismissing.value || usernameSubmitted.value) return
+  usernameSubmitted.value = true
+  const name = usernameInput.value.trim()
+  localStorage.setItem('cybermanju_username', name)
+  dismissBoot()
+}
+
+function handleUsernameKeydown(e: KeyboardEvent) {
+  if (e.key === 'Enter') submitUsername()
+}
+
+function dismissBoot() {
+  if (dismissing.value) return
+  dismissing.value = true
+  triggerGlitch()
+  setTimeout(() => emit('complete'), 400)
+}
+
 onMounted(() => {
+  usernameInput.value = localStorage.getItem('cybermanju_username') || ''
+
   glitchTimer = setInterval(() => {
     if (Math.random() < 0.05) triggerGlitch()
     crtFlicker.value = Math.random() < 0.003
@@ -150,6 +174,12 @@ onMounted(() => {
   })
 })
 
+watch(ready, (val) => {
+  if (val) {
+    setTimeout(() => inputRef.value?.focus(), 100)
+  }
+})
+
 onUnmounted(() => {
   if (timer) clearInterval(timer)
   if (glitchTimer) clearInterval(glitchTimer)
@@ -158,7 +188,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="boot-screen" :class="{ 'glitch-active': showGlitch, 'crt-flicker': crtFlicker, ready, dismissing }" @click="handleLogin">
+  <div class="boot-screen" :class="{ 'glitch-active': showGlitch, 'crt-flicker': crtFlicker, ready, dismissing }" @click="ready && !usernameSubmitted ? submitUsername() : handleLogin()">
     <div class="crt-scanlines"></div>
     <div class="crt-vignette"></div>
     <div class="glitch-slice" v-for="n in 5" :key="n" :style="{ top: `${10 + Math.random() * 80}%`, height: `${2 + Math.random() * 6}px`, animationDelay: `${Math.random() * 2}s` }"></div>
@@ -195,7 +225,7 @@ onUnmounted(() => {
         <button class="emergency-btn" @click.stop="forceComplete">[ FORCE BOOT ]</button>
       </div>
     </div>
-    <div v-if="ready" class="login-overlay">
+    <div v-if="ready && !usernameSubmitted" class="login-overlay" @click.self="submitUsername">
       <div class="login-prompt">
         <div class="login-lock-icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#00ff41" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -207,10 +237,20 @@ onUnmounted(() => {
         <div class="login-subtitle">ENCRYPTED FILE SYSTEM v4.2.0</div>
         <div class="login-field">
           <span class="login-label">username:</span>
-          <span class="login-value-blank">_</span>
+          <input
+            ref="inputRef"
+            v-model="usernameInput"
+            class="username-input"
+            placeholder="(enter a name or skip)"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="64"
+            @keydown="handleUsernameKeydown"
+            @click.stop
+          />
         </div>
-        <div class="login-cursor-blink">&#9612;</div>
-        <div class="login-btn" @click.stop="handleLogin">
+        <div class="login-hint-text">empty = skip, press Enter or click [LOGIN]</div>
+        <div class="login-btn" @click.stop="submitUsername">
           <span class="login-btn-text">[ LOGIN ]</span>
         </div>
       </div>
@@ -590,17 +630,32 @@ onUnmounted(() => {
   opacity: 0.7;
 }
 
-.login-value-blank {
+.username-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #00ff41;
   color: #00ff41;
-  animation: cursor-blink 0.8s step-end infinite;
+  font-family: 'Courier New', 'Fira Code', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  outline: none;
+  padding: 2px 4px;
+  width: 200px;
+  caret-color: #00ff41;
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.2);
 }
 
-.login-cursor-blink {
-  font-size: 18px;
-  color: #00ff41;
-  font-weight: 700;
-  animation: cursor-blink 0.6s step-end infinite;
-  margin-top: -4px;
+.username-input::placeholder {
+  color: #444;
+  font-weight: 400;
+  font-size: 10px;
+}
+
+.login-hint-text {
+  font-size: 8px;
+  color: #444;
+  letter-spacing: 1px;
+  margin-top: 2px;
 }
 
 .login-btn {

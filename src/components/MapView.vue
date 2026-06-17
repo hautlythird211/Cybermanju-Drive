@@ -221,27 +221,27 @@ async function handleRefresh() { await store.fetchGeoFiles() }
 .map-view {
   width: 100%;
   height: 100%;
-  background: #000;
-  border: 2px solid #FFFFFF;
+  background: #0a0a0a;
+  border: 2px solid #00ff41;
   overflow-y: auto;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   font-family: 'Courier New', monospace;
-  color: #FFFFFF;
+  color: #00ff41;
 }
 
 .map-view::-webkit-scrollbar { width: 4px; }
-.map-view::-webkit-scrollbar-track { background: #000; }
-.map-view::-webkit-scrollbar-thumb { background: #FFFFFF; }
+.map-view::-webkit-scrollbar-track { background: #0a0a0a; }
+.map-view::-webkit-scrollbar-thumb { background: #00ff41; }
 
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding-bottom: 10px;
-  border-bottom: 2px solid #FFFFFF;
+  border-bottom: 2px solid #00ff41;
 }
 
 .header-left {
@@ -250,13 +250,13 @@ async function handleRefresh() { await store.fetchGeoFiles() }
   gap: 8px;
 }
 
-.icon-map { font-size: 16px; color: #FFFFFF; }
+.icon-map { font-size: 16px; color: #00ff41; }
 
 .panel-title {
   font-size: 14px;
   font-weight: 800;
   letter-spacing: 1px;
-  color: #FFFFFF;
+  color: #00ff41;
   margin: 0;
 }
 
@@ -270,22 +270,22 @@ async function handleRefresh() { await store.fetchGeoFiles() }
 
 .loc-search-input {
   flex: 1;
-  background: #000;
-  border: 2px solid #FFFFFF;
-  color: #FFFFFF;
+  background: #0a0a0a;
+  border: 2px solid #00ff41;
+  color: #00ff41;
   font-family: 'Courier New', monospace;
   font-size: 10px;
   padding: 4px 8px;
 }
 
 .loc-search-input::placeholder {
-  color: rgba(255,255,255,0.3);
+  color: rgba(0, 255, 65,0.3);
 }
 
 .refresh-btn {
-  background: #000;
-  border: 2px solid #FFFFFF;
-  color: #FFFFFF;
+  background: #0a0a0a;
+  border: 2px solid #00ff41;
+  color: #00ff41;
   cursor: pointer;
   padding: 2px 6px;
   font-family: 'Courier New', monospace;
@@ -293,14 +293,14 @@ async function handleRefresh() { await store.fetchGeoFiles() }
   font-weight: 700;
 }
 
-.refresh-btn:hover { background: #FFFFFF; color: #000; }
-.refresh-btn.active { background: #FFFFFF; color: #000; }
+.refresh-btn:hover { background: #00ff41; color: #0a0a0a; }
+.refresh-btn.active { background: #00ff41; color: #0a0a0a; }
 
 .map-container {
   width: 100%;
   position: relative;
   min-height: 300px;
-  border: 2px solid #FFFFFF;
+  border: 2px solid #00ff41;
   overflow: hidden;
 }
 
@@ -310,11 +310,11 @@ async function handleRefresh() { await store.fetchGeoFiles() }
   position: absolute;
   bottom: 6px;
   right: 6px;
-  background: #000;
-  border: 2px solid #FFFFFF;
+  background: #0a0a0a;
+  border: 2px solid #00ff41;
   padding: 2px 6px;
   font-size: 9px;
-  color: #FFFFFF;
+  color: #00ff41;
   font-family: 'Courier New', monospace;
   z-index: 5;
 }
@@ -325,10 +325,10 @@ async function handleRefresh() { await store.fetchGeoFiles() }
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: rgba(255,255,255,0.6);
+  color: rgba(0, 255, 65,0.6);
   margin: 0;
   padding-bottom: 4px;
-  border-bottom: 2px solid rgba(255,255,255,0.2);
+  border-bottom: 2px solid rgba(0, 255, 65,0.2);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -337,7 +337,7 @@ async function handleRefresh() { await store.fetchGeoFiles() }
 .geo-list { display: flex; flex-direction: column; gap: 4px; }
 
 .geo-list-item {
-  border: 2px solid #FFFFFF;
+  border: 2px solid #00ff41;
   padding: 6px 10px;
   display: flex;
   align-items: center;
@@ -345,7 +345,7 @@ async function handleRefresh() { await store.fetchGeoFiles() }
   cursor: pointer;
 }
 
-.geo-list-item:hover { background: rgba(255,255,255,0.1); }
+.geo-list-item:hover { background: rgba(0, 255, 65,0.1); }
 
 .geo-list-pin { flex-shrink: 0; font-size: 11px; }
 
@@ -359,7 +359,7 @@ async function handleRefresh() { await store.fetchGeoFiles() }
 
 .geo-list-name { font-size: 11px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .geo-list-address { font-size: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.geo-list-coords { font-size: 9px; color: rgba(255,255,255,0.5); flex-shrink: 0; }
+.geo-list-coords { font-size: 9px; color: rgba(0, 255, 65,0.5); flex-shrink: 0; }
 
 .empty-state {
   display: flex;
@@ -370,7 +370,7 @@ async function handleRefresh() { await store.fetchGeoFiles() }
   text-align: center;
 }
 
-.empty-state p { font-size: 11px; color: rgba(255,255,255,0.5); margin: 0; }
+.empty-state p { font-size: 11px; color: rgba(0, 255, 65,0.5); margin: 0; }
 
 .mv-spinner {
   opacity: 0.8;
@@ -383,25 +383,25 @@ async function handleRefresh() { await store.fetchGeoFiles() }
 .status-footer {
   margin-top: auto;
   padding-top: 10px;
-  border-top: 2px solid rgba(255,255,255,0.2);
+  border-top: 2px solid rgba(0, 255, 65,0.2);
   font-size: 9px;
-  color: rgba(255,255,255,0.3);
+  color: rgba(0, 255, 65,0.3);
   text-align: center;
 }
 
 .mono { font-family: 'Courier New', monospace; }
-.text-muted { color: rgba(255,255,255,0.5) !important; }
+.text-muted { color: rgba(0, 255, 65,0.5) !important; }
 </style>
 
 <style>
 .maplibregl-popup-content {
-  background: #000 !important;
-  border: 2px solid #FFFFFF !important;
-  box-shadow: 3px 3px 0 #000 !important;
+  background: #0a0a0a !important;
+  border: 2px solid #00ff41 !important;
+  box-shadow: 3px 3px 0 #0a0a0a !important;
   padding: 6px 10px !important;
-  color: #FFFFFF !important;
+  color: #00ff41 !important;
   font-family: 'Courier New', monospace !important;
   font-size: 11px !important;
 }
-.maplibregl-popup-tip { border-top-color: #000 !important; }
+.maplibregl-popup-tip { border-top-color: #0a0a0a !important; }
 </style>

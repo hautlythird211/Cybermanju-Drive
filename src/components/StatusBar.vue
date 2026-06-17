@@ -1,5 +1,5 @@
 <template>
-  <footer class="statusbar">
+  <footer ref="statusRef" class="statusbar" role="status" aria-live="polite">
     <div class="sb-left">
       <span class="sb-path">{{ store.currentPath }}</span>
       <Icon v-if="store.isLoading" icon="svg-spinners:3-dots-bounce" width="14" height="14" class="sb-spinner" />
@@ -34,6 +34,10 @@
         :class="{ 'sb-active': isSyncActive }"
         title="SYNC STATUS"
         aria-label="SYNC STATUS"
+        role="button"
+        tabindex="0"
+        @keydown.enter="store.commandPaletteOpen = true"
+        @keydown.space.prevent="store.commandPaletteOpen = true"
       >{{ isSyncActive ? 'SYNC:' + store.syncProgress?.status.toUpperCase() : 'SYNC:IDLE' }}</span>
       <span class="sb-div">|</span>
       <span
@@ -42,9 +46,13 @@
         @click="store.matrixRainEnabled = !store.matrixRainEnabled"
         title="TOGGLE MATRIX RAIN"
         aria-label="TOGGLE MATRIX RAIN BACKGROUND"
+        role="button"
+        tabindex="0"
+        @keydown.enter="store.matrixRainEnabled = !store.matrixRainEnabled"
+        @keydown.space.prevent="store.matrixRainEnabled = !store.matrixRainEnabled"
       >{{ store.matrixRainEnabled ? 'GFX:ON' : 'GFX:OFF' }}</span>
       <span class="sb-div">|</span>
-      <span class="sb-clickable" @click="store.commandPaletteOpen = true" title="COMMAND PALETTE (CTRL+K)" aria-label="OPEN COMMAND PALETTE">CMD+K</span>
+      <span class="sb-clickable" @click="store.commandPaletteOpen = true" title="COMMAND PALETTE (CTRL+K)" aria-label="OPEN COMMAND PALETTE" role="button" tabindex="0" @keydown.enter="store.commandPaletteOpen = true" @keydown.space.prevent="store.commandPaletteOpen = true">CMD+K</span>
       <span class="sb-div">|</span>
       <span class="sb-tech">{{ isWebMode() ? 'WEB MODE' : 'TAURI MODE' }}</span>
     </div>
@@ -70,12 +78,13 @@ const isSyncActive = computed(() =>
   height: 24px;
   padding: 0 8px;
   gap: 6px;
-  background: #000;
-  border-top: 2px solid #FFFFFF;
-  font-size: 10px;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--font-size-xs);
   overflow: hidden;
   z-index: 10;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
 }
 
 .sb-left {
@@ -85,13 +94,13 @@ const isSyncActive = computed(() =>
 }
 
 .sb-path {
-  font-size: 10px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   max-width: 240px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: rgba(255,255,255,0.7);
+  color: var(--text-secondary);
 }
 
 .sb-spinner {
@@ -109,24 +118,25 @@ const isSyncActive = computed(() =>
 
 .sb-item {
   white-space: nowrap;
-  color: rgba(255,255,255,0.6);
+  color: var(--text-muted);
 }
 
 .sb-div {
-  color: rgba(255,255,255,0.3);
+  color: var(--text-muted);
+  opacity: 0.5;
 }
 
 .sb-badge {
   font-weight: 700;
-  font-size: 9px;
-  color: #FFFFFF;
-  border: 1px solid #FFFFFF;
+  font-size: var(--font-size-xs);
+  color: var(--accent);
+  border: 1px solid var(--accent);
   padding: 0 4px;
 }
 
 .sb-hash {
-  font-size: 9px;
-  color: rgba(255,255,255,0.5);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
 }
 
 .sb-right {
@@ -136,24 +146,32 @@ const isSyncActive = computed(() =>
 }
 
 .sb-tech {
-  font-size: 9px;
-  color: rgba(255,255,255,0.3);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
   letter-spacing: 0.5px;
 }
 
 .sb-clickable {
   cursor: pointer;
-  color: rgba(255,255,255,0.5);
-  font-size: 9px;
+  color: var(--text-muted);
+  font-size: var(--font-size-xs);
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  outline: none;
 }
 
 .sb-clickable:hover {
-  color: #FFFFFF;
-  text-decoration: underline;
+  color: var(--text-primary);
+  background: var(--bg-overlay);
+}
+
+.sb-clickable:focus-visible {
+  box-shadow: var(--focus-ring);
 }
 
 .sb-active {
-  color: #FFFFFF;
+  color: var(--accent);
   font-weight: 700;
 }
 

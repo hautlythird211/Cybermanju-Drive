@@ -5,7 +5,6 @@
         <span class="icon-compress">[$]</span>
         <h2 class="panel-title">COMPRESSION ENGINE</h2>
       </div>
-      <button class="close-btn" @click="$emit('close')">X</button>
     </div>
 
     <div class="section">
@@ -89,27 +88,27 @@ async function handleCompress() {
 .compression-panel {
   width: 400px;
   height: 100%;
-  background: #000;
-  border-left: 2px solid #FFFFFF;
+  background: #0a0a0a;
+  border-left: 2px solid #00ff41;
   overflow-y: auto;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   font-family: 'Courier New', monospace;
-  color: #FFFFFF;
+  color: #00ff41;
 }
 
 .compression-panel::-webkit-scrollbar { width: 4px; }
-.compression-panel::-webkit-scrollbar-track { background: #000; }
-.compression-panel::-webkit-scrollbar-thumb { background: #FFFFFF; }
+.compression-panel::-webkit-scrollbar-track { background: #0a0a0a; }
+.compression-panel::-webkit-scrollbar-thumb { background: #00ff41; }
 
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding-bottom: 10px;
-  border-bottom: 2px solid #FFFFFF;
+  border-bottom: 2px solid #00ff41;
 }
 
 .header-left {
@@ -121,35 +120,15 @@ async function handleCompress() {
 .icon-compress {
   font-family: 'Courier New', monospace;
   font-size: 16px;
-  color: #FFFFFF;
+  color: #00ff41;
 }
 
 .panel-title {
   font-size: 14px;
   font-weight: 800;
   letter-spacing: 1px;
-  color: #FFFFFF;
+  color: #00ff41;
   margin: 0;
-}
-
-.close-btn {
-  background: none;
-  border: 2px solid #FFFFFF;
-  color: #FFFFFF;
-  cursor: pointer;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-family: 'Courier New', monospace;
-  font-weight: 700;
-}
-
-.close-btn:hover {
-  background: #FFFFFF;
-  color: #000;
 }
 
 .section {
@@ -162,10 +141,10 @@ async function handleCompress() {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: rgba(255,255,255,0.6);
+  color: rgba(0, 255, 65, 0.6);
   margin: 0;
   padding-bottom: 4px;
-  border-bottom: 2px solid rgba(255,255,255,0.2);
+  border-bottom: 2px solid rgba(0, 255, 65, 0.2);
 }
 
 .algo-list {
@@ -175,27 +154,27 @@ async function handleCompress() {
 }
 
 .algo-btn {
-  background: #000;
-  border: 2px solid #FFFFFF;
+  background: #0a0a0a;
+  border: 2px solid #00ff41;
   padding: 8px 10px;
   cursor: pointer;
   text-align: left;
   display: flex;
   flex-direction: column;
   gap: 3px;
-  color: #FFFFFF;
+  color: #00ff41;
   font-family: 'Courier New', monospace;
 }
 
 .algo-btn:hover,
 .algo-btn.selected {
-  background: #FFFFFF;
-  color: #000;
+  background: #00ff41;
+  color: #0a0a0a;
 }
 
 .algo-btn:hover .algo-desc,
 .algo-btn.selected .algo-desc {
-  color: #000 !important;
+  color: #0a0a0a !important;
 }
 
 .algo-header {
@@ -223,18 +202,18 @@ async function handleCompress() {
 
 .selected-file-name {
   font-size: 11px;
-  color: #FFFFFF;
-  background: rgba(255,255,255,0.05);
+  color: #00ff41;
+  background: rgba(0, 255, 65, 0.05);
   padding: 4px 8px;
-  border: 2px solid rgba(255,255,255,0.3);
+  border: 2px solid rgba(0, 255, 65, 0.3);
   word-break: break-all;
   margin: 0;
 }
 
 .compress-btn {
-  background: #FFFFFF;
-  color: #000;
-  border: 2px solid #FFFFFF;
+  background: #00ff41;
+  color: #0a0a0a;
+  border: 2px solid #00ff41;
   padding: 8px 16px;
   font-size: 11px;
   font-weight: 800;
@@ -244,12 +223,12 @@ async function handleCompress() {
 }
 
 .compress-btn:hover {
-  background: #000;
-  color: #FFFFFF;
+  background: #0a0a0a;
+  color: #00ff41;
 }
 
 .stats-card {
-  border: 2px solid #FFFFFF;
+  border: 2px solid #00ff41;
   padding: 10px;
   display: flex;
   flex-direction: column;
@@ -272,5 +251,5 @@ async function handleCompress() {
   font-family: 'Courier New', monospace;
 }
 
-.text-muted { color: rgba(255,255,255,0.5) !important; }
+.text-muted { color: rgba(0, 255, 65, 0.5) !important; }
 </style>
