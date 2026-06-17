@@ -98,7 +98,7 @@ const dockApps = computed<DockApp[]>(() => [
   { panelType: 'permissions', label: 'Permissions', icon: 'lock-outline', category: 'tools' },
   { panelType: 'trash', label: 'Trash', icon: 'delete-outline', category: 'system' },
   { panelType: 'users', label: 'Users', icon: 'account-group-outline', category: 'system' },
-  { panelType: 'accounts', label: 'Accounts', icon: 'account-outline', category: 'system' },
+  { panelType: 'accounts', label: 'Accounts', icon: 'account-multiple-outline', category: 'system' },
   { panelType: 'terminal', label: 'Terminal', icon: 'console', category: 'system' },
   { panelType: 'system-monitor', label: 'System Monitor', icon: 'chart-line-variant', category: 'system' },
   { panelType: 'task-manager', label: 'Task Manager', icon: 'memory', category: 'system' },

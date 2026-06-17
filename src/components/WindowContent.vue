@@ -107,29 +107,6 @@
       </div>
     </div>
 
-    <!-- Accounts Panel -->
-    <div v-if="panelType === 'accounts'" class="panel-page">
-      <div class="panel-card">
-        <div class="panel-title">MULTI-ACCOUNT MANAGER</div>
-        <div class="accounts-list">
-          <div
-            v-for="account in store.accounts"
-            :key="account.id"
-            class="account-item panel-card-row"
-            :class="{ active: account.isActive }"
-            @click="store.switchAccount(account.id)"
-          >
-            <div class="bw-dot" :class="{ 'bw-dot-on': account.isActive }" />
-            <div class="account-info">
-              <div class="account-name">{{ account.name }}</div>
-              <div class="account-meta">{{ account.accountType }} {{ account.path }}</div>
-            </div>
-            <div v-if="account.isActive" class="active-badge">ACTIVE</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Loose Groups Panel -->
     <div v-if="panelType === 'loose-groups'" class="panel-page">
       <div class="panel-card">

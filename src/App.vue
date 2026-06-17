@@ -17,7 +17,7 @@ import LandingPage from '@/components/LandingPage.vue'
 import BootScreen from '@/components/BootScreen.vue'
 import PostScreen from '@/components/PostScreen.vue'
 import BootLoader from '@/components/BootLoader.vue'
-import LoginScreen from '@/components/LoginScreen.vue'
+
 import SetupWizard from '@/components/SetupWizard.vue'
 import CanvasEngine from '@/components/CanvasEngine.vue'
 import NotificationStack from '@/components/NotificationStack.vue'
@@ -502,7 +502,7 @@ function handleUpload() {
 }
 
 const needsSetup = ref<boolean | null>(null)
-const bootPhase = ref<'post' | 'bootloader' | 'kernel' | 'login' | 'desktop'>('post')
+const bootPhase = ref<'post' | 'bootloader' | 'kernel' | 'desktop'>('post')
 
 onMounted(async () => {
   store.currentPanel = 'landing'
@@ -524,11 +524,7 @@ function onBootloaderSelect(mode: string) {
   bootPhase.value = 'kernel'
 }
 
-function onKernelBootComplete() {
-  bootPhase.value = 'login'
-}
-
-function onLoginComplete(user: string) {
+function onKernelBootComplete(user: string) {
   localStorage.setItem('cybermanju_username', user)
   bootPhase.value = 'desktop'
 }
@@ -551,7 +547,6 @@ function handleLandingLaunch() {
     <PostScreen v-if="bootPhase === 'post'" @complete="onPostComplete" />
     <BootLoader v-else-if="bootPhase === 'bootloader'" @select="onBootloaderSelect" />
     <BootScreen v-else-if="bootPhase === 'kernel'" @complete="onKernelBootComplete" />
-    <LoginScreen v-else-if="bootPhase === 'login'" @login="onLoginComplete" />
     <template v-if="bootPhase === 'desktop'">
       <LandingPage
         v-if="store.currentPanel === 'landing' && needsSetup !== true"

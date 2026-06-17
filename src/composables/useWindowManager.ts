@@ -13,6 +13,7 @@ import SettingsPage from '@/components/SettingsPage.vue'
 import StorageDashboard from '@/components/StorageDashboard.vue'
 import EncryptionPanel from '@/components/EncryptionPanel.vue'
 import CompressionPanel from '@/components/CompressionPanel.vue'
+import AccountsPanel from '@/components/AccountsPanel.vue'
 import FilePermissionsPanel from '@/components/FilePermissionsPanel.vue'
 import FilePreview from '@/components/FilePreview.vue'
 import ImportWindow from '@/components/ImportWindow.vue'
@@ -77,7 +78,7 @@ const defaultSizes: SizeMap = {
 
 const inlinePanels: PanelType[] = [
   'search', 'trash', 'activity', 'favorites', 'recent',
-  'accounts', 'loose-groups', 'style'
+  'loose-groups', 'style'
 ]
 
 const panelComponentMap: Record<string, Component> = {
@@ -101,6 +102,7 @@ const panelComponentMap: Record<string, Component> = {
   'system-monitor': SystemMonitor,
   'task-manager': TaskManager,
   terminal: Terminal,
+  accounts: AccountsPanel,
 }
 
 function getComponent(panelType: PanelType): Component | null {
