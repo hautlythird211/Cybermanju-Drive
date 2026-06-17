@@ -599,11 +599,30 @@ async function tryWasmInvoke<T>(cmd: string, args?: Record<string, unknown>): Pr
   return null
 }
 
+function isMegaTestConnection(cmd: string, args?: Record<string, unknown>): boolean {
+  return cmd === 'test_sync_connection' && (args?.config as any)?.backendType === 'mega'
+}
+
 /** The core invoke — works in Tauri, Web REST, and WASM bridge modes. */
 export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   if (isTauri()) {
     const core = await import('@tauri-apps/api/core')
-    return core.invoke<T>(cmd, args)
+    try {
+      return await core.invoke<T>(cmd, args)
+    } catch (rustError) {
+      // For mega login, fall back to WASM bridge if the Rust backend fails
+      // (e.g. 2FA not supported by megalib, or API incompatibility)
+      if (isMegaTestConnection(cmd, args)) {
+        console.warn(`[Tauri] Rust backend failed for mega login: ${rustError}. Falling back to WASM bridge.`)
+        try {
+          const wasmResult = await tryWasmInvoke<T>(cmd, args)
+          if (wasmResult !== null) return wasmResult
+        } catch {
+          // WASM also failed — throw the original Rust error
+        }
+      }
+      throw rustError
+    }
   }
 
   // ── Try WASM bridge first (fast, local, no network needed) ──
