@@ -378,7 +378,7 @@ async function tryWasmInvoke<T>(cmd: string, args?: Record<string, unknown>): Pr
         const allFiles = await drive.getAllDriveFiles()
         const fileNodes = await drive.toFileNodes(
           parentPath
-            ? allFiles.filter(f => f.parentId === parentPath || (parentPath === '/' && !f.parentId))
+            ? allFiles.filter((f: any) => f.parentId === parentPath || (parentPath === '/' && !f.parentId))
             : allFiles
         )
         return fileNodes as unknown as T
@@ -536,7 +536,7 @@ async function tryWasmInvoke<T>(cmd: string, args?: Record<string, unknown>): Pr
         const configId = args?.configId as string
         const fileIds = args?.fileIds as string[]
         const configs = await sync.getSyncConfigs()
-        const config = configs.find(c => c.id === configId)
+        const config = configs.find((c: any) => c.id === configId)
         if (!config) throw new Error('Sync config not found')
         sync.startSync(config, fileIds).catch(console.error)
         return undefined as T
