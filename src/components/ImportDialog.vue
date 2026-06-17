@@ -176,9 +176,9 @@ async function fetchFiles() {
       updatedAt: '',
     }
     const remoteFiles = await sync.listRemoteFiles(config as any, '')
-    files.value = remoteFiles
-      .filter(f => f.name && !f.name.startsWith('.'))
-      .map(f => ({ ...f, selected: false, type: classifyFile(f.name) }))
+    files.value = (remoteFiles || [])
+      .filter(f => f && f.name && !f.name.startsWith('.'))
+      .map(f => ({ ...f, selected: false, type: classifyFile(f.name || 'unknown') }))
   } catch (e) {
     error.value = `FAILED TO LIST FILES: ${e instanceof Error ? e.message : String(e)}`
   } finally {

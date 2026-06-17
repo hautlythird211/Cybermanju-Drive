@@ -297,58 +297,80 @@ export async function listMegaFiles(
   password: string,
   _prefix: string
 ): Promise<RemoteFileInfo[]> {
-  const { Storage } = await import('megajs')
-  const storage = new Storage({ email, password, autoload: false, autologin: true, keepalive: false })
-  await storage.ready
+  try {
+    const { Storage } = await import('megajs')
+    const storage = new Storage({ email, password, autoload: false, autologin: true, keepalive: false })
+    await storage.ready
 
-  const files: RemoteFileInfo[] = []
-
-  function walk(file: any, dirPath: string) {
-    if (file.directory && file.children) {
-      for (const child of file.children) {
-        walk(child, dirPath + '/' + (child.name || ''))
-      }
-    } else if (!file.directory) {
-      files.push({
-        name: file.name || 'unknown',
-        path: (dirPath + '/' + (file.name || 'unknown')).replace(/^\/+/, '/'),
-        sizeBytes: file.size || 0,
-        modifiedAt: file.timestamp ? new Date(file.timestamp * 1000).toISOString() : '',
-        url: '',
-      })
+    if (!storage.root) {
+      try { storage.close() } catch {}
+      return []
     }
-  }
 
-  walk(storage.root, '')
-  storage.close()
-  return files
+    const files: RemoteFileInfo[] = []
+
+    function walk(file: any, dirPath: string) {
+      if (!file) return
+      if (file.directory && Array.isArray(file.children)) {
+        for (const child of file.children) {
+          if (!child || typeof child !== 'object') continue
+          walk(child, dirPath + '/' + (child.name || ''))
+        }
+      } else if (!file.directory) {
+        files.push({
+          name: file.name || 'unknown',
+          path: (dirPath + '/' + (file.name || 'unknown')).replace(/^\/+/, '/'),
+          sizeBytes: typeof file.size === 'number' ? file.size : 0,
+          modifiedAt: file.timestamp ? new Date(file.timestamp * 1000).toISOString() : '',
+          url: '',
+        })
+      }
+    }
+
+    walk(storage.root, '')
+    try { storage.close() } catch {}
+    return files
+  } catch (e) {
+    throw new Error(`Failed to list Mega files: ${e instanceof Error ? e.message : String(e)}`)
+  }
 }
 
 export async function listRemoteFiles(
   _config: SyncConfig,
   prefix: string
 ): Promise<RemoteFileInfo[]> {
-  if (_config.backendType === 'mega') {
-    const token = await loadTokenFromStorage('mega' as any)
-    if (!token) return []
-    const [email, password] = token.accessToken.split('|')
-    if (!email || !password) return []
-    return listMegaFiles(email, password, prefix)
+  if (!_config || !_config.backendType) {
+    throw new Error('Invalid sync config: missing backendType')
   }
 
-  const oauthToken = await loadTokenFromStorage(_config.backendType as any)
-  if (!oauthToken) return []
+  try {
+    if (_config.backendType === 'mega') {
+      const token = await loadTokenFromStorage('mega' as any)
+      if (!token || !token.accessToken) return []
+      const sep = token.accessToken.indexOf('|')
+      if (sep === -1) return []
+      const email = token.accessToken.slice(0, sep)
+      const password = token.accessToken.slice(sep + 1)
+      if (!email || !password) return []
+      return listMegaFiles(email, password, prefix)
+    }
 
-  const token = await getValidToken(oauthToken)
-  await saveTokenToStorage(token)
+    const oauthToken = await loadTokenFromStorage(_config.backendType as any)
+    if (!oauthToken) return []
 
-  if (_config.backendType === 'googleDrive') {
-    return listGoogleDriveFiles(token, prefix)
-  } else if (_config.backendType === 'github') {
-    return listGitHubFiles(token, prefix)
+    const token = await getValidToken(oauthToken)
+    await saveTokenToStorage(token)
+
+    if (_config.backendType === 'googleDrive') {
+      return listGoogleDriveFiles(token, prefix)
+    } else if (_config.backendType === 'github') {
+      return listGitHubFiles(token, prefix)
+    }
+
+    return []
+  } catch (e) {
+    throw new Error(`Failed to list remote files for ${_config?.backendType || 'unknown'}: ${e instanceof Error ? e.message : String(e)}`)
   }
-
-  return []
 }
 
 async function listGoogleDriveFiles(
@@ -425,9 +447,14 @@ export async function markFileSynced(fileId: string): Promise<void> {
 }
 
 export async function testMegaConnection(email: string, password: string, secondFactorCode?: string): Promise<boolean> {
-  const { Storage } = await import('megajs')
-  const storage = new Storage({ email, password, secondFactorCode, autoload: false, autologin: true, keepalive: false })
-  await storage.ready
-  storage.close()
-  return true
+  if (!email || !password) throw new Error('Email and password are required')
+  try {
+    const { Storage } = await import('megajs')
+    const storage = new Storage({ email, password, secondFactorCode, autoload: false, autologin: true, keepalive: false })
+    await storage.ready
+    try { storage.close() } catch {}
+    return true
+  } catch (e) {
+    throw new Error(`Mega connection failed: ${e instanceof Error ? e.message : String(e)}`)
+  }
 }

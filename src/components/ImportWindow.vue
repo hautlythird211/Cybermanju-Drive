@@ -262,6 +262,7 @@ async function scanSource(src: ImportSource) {
     src.status = 'done'
   } catch (e) {
     src.status = 'error'
+    store.notifyError(`Scan failed: ${e instanceof Error ? e.message : String(e)}`, '')
   } finally {
     src.scanning = false
   }
@@ -306,6 +307,7 @@ async function importSource(src: ImportSource) {
     src.status = 'done'
   } catch (e) {
     src.status = 'error'
+    store.notifyError(`Import failed: ${e instanceof Error ? e.message : String(e)}`, '')
   } finally {
     src.importing = false
     syncActive.value = false

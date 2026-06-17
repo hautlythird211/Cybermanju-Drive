@@ -648,6 +648,15 @@ jobs:
           pattern: dist-wasm
           merge-multiple: false
 
+      - name: Delete old 0.0.1 release (if exists)
+        if: steps.tag-check.outputs.skip != 'true'
+        continue-on-error: true
+        run: |
+          gh release delete v0.0.1 --yes --cleanup-tag 2>/dev/null || true
+          git push --delete origin v0.0.1 2>/dev/null || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Package artifacts
         if: steps.tag-check.outputs.skip != 'true'
         run: |
