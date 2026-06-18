@@ -133,7 +133,13 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Build WASM
-        run: npm run wasm:build
+        run: |
+          for attempt in 1 2 3; do
+            echo "=== WASM build attempt $attempt/3 ==="
+            CARGO_NET_GIT_FETCH_WITH_CLI=true npm run wasm:build && break
+            echo "Attempt $attempt failed, retrying in 5s..."
+            sleep 5
+          done
 
       - name: Upload WASM web artifacts
         uses: actions/upload-artifact@v5
