@@ -364,6 +364,14 @@ const STORE_NAME = 'oauth_tokens'
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION)
+
+    request.onupgradeneeded = (event) => {
+      const database = (event.target as IDBOpenDBRequest).result
+      if (!database.objectStoreNames.contains(STORE_NAME)) {
+        database.createObjectStore(STORE_NAME, { keyPath: 'provider' })
+      }
+    }
+
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => reject(request.error)
   })

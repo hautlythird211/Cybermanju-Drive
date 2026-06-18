@@ -162,20 +162,31 @@ async function fetchFiles() {
   loading.value = true
   error.value = ''
   try {
-    const { sync } = await import('@/wasm')
-    const config = {
-      id: '',
-      name: props.label,
-      backendType: props.backendType === 'google' ? 'googleDrive' : props.backendType,
-      enabled: true,
-      basePath: '/',
-      autoSync: false,
-      compressBeforeSync: false,
-      maxConcurrentOps: 1,
-      createdAt: '',
-      updatedAt: '',
+    let remoteFiles
+    if (props.backendType === 'mega') {
+      const { sync } = await import('@/wasm')
+      const sep = props.token.indexOf('|')
+      if (sep === -1) throw new Error('Invalid mega token format')
+      const email = props.token.slice(0, sep)
+      const password = props.token.slice(sep + 1)
+      if (!email || !password) throw new Error('Missing mega credentials')
+      remoteFiles = await sync.listMegaFiles(email, password, '')
+    } else {
+      const { sync } = await import('@/wasm')
+      const config = {
+        id: '',
+        name: props.label,
+        backendType: props.backendType === 'google' ? 'googleDrive' : props.backendType,
+        enabled: true,
+        basePath: '/',
+        autoSync: false,
+        compressBeforeSync: false,
+        maxConcurrentOps: 1,
+        createdAt: '',
+        updatedAt: '',
+      }
+      remoteFiles = await sync.listRemoteFiles(config as any, '')
     }
-    const remoteFiles = await sync.listRemoteFiles(config as any, '')
     files.value = (remoteFiles || [])
       .filter(f => f && f.name && !f.name.startsWith('.'))
       .map(f => ({ ...f, selected: false, type: classifyFile(f.name || 'unknown') }))

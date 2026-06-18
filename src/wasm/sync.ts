@@ -299,7 +299,7 @@ export async function listMegaFiles(
 ): Promise<RemoteFileInfo[]> {
   try {
     const { Storage } = await import('megajs')
-    const storage = new Storage({ email, password, autoload: false, autologin: true, keepalive: false })
+    const storage = new Storage({ email, password, autoload: true, autologin: true, keepalive: false })
     await storage.ready
 
     if (!storage.root) {
