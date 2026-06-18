@@ -22,7 +22,6 @@ use commands::{
     portable_db, search as search_cmd, share, trash, users, versions,
 };
 use db::Database;
-use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
 pub struct AppState {
