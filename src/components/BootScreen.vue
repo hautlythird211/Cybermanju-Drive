@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useLogin } from '@/composables/useLogin'
 import { useAppStore } from '@/stores/app'
+import type { OAuthProvider } from '@/wasm/oauth'
 
 const emit = defineEmits<{ (e: 'complete', user: string): void }>()
 
@@ -162,20 +163,21 @@ async function connectProvider(pid: string) {
     const { oauth } = await import('@/wasm')
     const data = await import('@/wasm/data')
     oauth.loadClientIdsFromEnv()
-    const clientId = oauth.getProviderClientId(pid)
+    const provider = pid as OAuthProvider
+    const clientId = oauth.getProviderClientId(provider)
     if (!clientId) {
       showClientIdForm.value = pid
       return
     }
-    const existingToken = await oauth.loadTokenFromStorage(pid)
+    const existingToken = await oauth.loadTokenFromStorage(provider)
     let token = existingToken ? await oauth.getValidToken(existingToken) : null
     if (token) {
       oauth.saveTokenToStorage(token)
     } else {
-      token = await oauth.authenticateWithPopup(pid)
+      token = await oauth.authenticateWithPopup(provider)
       oauth.saveTokenToStorage(token)
     }
-    await data.upsertOAuthAccount(pid, token)
+    await data.upsertOAuthAccount(provider, token)
     await store.fetchAccounts()
     if (!connectedProviders.value.includes(pid)) {
       connectedProviders.value.push(pid)
@@ -197,7 +199,7 @@ function providerIcon(pid: string): string {
 async function saveClientId() {
   if (!showClientIdForm.value || !clientIdInput.value.trim()) return
   const { oauth } = await import('@/wasm')
-  oauth.setProviderClientId(showClientIdForm.value, clientIdInput.value.trim())
+  oauth.setProviderClientId(showClientIdForm.value as OAuthProvider, clientIdInput.value.trim())
   const pid = showClientIdForm.value
   showClientIdForm.value = null
   clientIdInput.value = ''
