@@ -1,0 +1,31 @@
+[package]
+name = "cybermanju-cli"
+version = "0.1.0"
+edition = "2021"
+description = "Cybermanju Drive — Command-Line Interface"
+
+[[bin]]
+name = "cybermanju"
+path = "src/main.rs"
+
+[dependencies]
+# Workspace crates
+cybermanju-types = { path = "../types" }
+cybermanju-crypto = { path = "../crypto" }
+cybermanju-compression = { path = "../compression" }
+cybermanju-db = { path = "../db" }
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+anstyle = "1"
+
+# General
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+base64 = "0.22"
+blake3 = "1"
+log = "0.4"
+dirs = "6"

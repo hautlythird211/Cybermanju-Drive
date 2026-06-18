@@ -1,6 +1,8 @@
 // Cybermanju Drive — Core Library
 // Orchestrates redb, ML-KEM PQC (pqcrypto-mlkem), Tantivy, Tree-sitter, triple compression, face clustering
 
+use std::path::PathBuf;
+
 pub mod commands;
 pub mod compression;
 pub mod crypto;
@@ -41,19 +43,56 @@ fn app_data_dir() -> PathBuf {
     dir
 }
 
+/// Write a message to the crash log file in the app data directory.
+fn write_crash_log(data_dir: &PathBuf, msg: &str) {
+    let path = data_dir.join("crash.log");
+    let _ = std::fs::write(&path, msg);
+}
+
+/// Fatal startup error — log it, write crash file, then exit.
+fn fatal(data_dir: &PathBuf, msg: &str) -> ! {
+    tracing::error!("{}", msg);
+    write_crash_log(data_dir, &format!("FATAL: {}\n", msg));
+    std::process::exit(1);
+}
+
 // WebDashboard now handles its own shutdown (Drop impl with signal channel + thread join).
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Resolve cross-platform app data directory first (needed for crash log path)
+    let data_dir = app_data_dir();
+    let data_dir_str = data_dir.to_string_lossy().to_string();
+
+    // ── Crash log & panic hook (writes to file, useful when no console) ──
+    write_crash_log(&data_dir, "Cybermanju Drive — startup in progress...\n");
+    let crash_path = data_dir.join("crash.log");
+    let cp = crash_path.clone();
+    std::panic::set_hook(Box::new(move |info| {
+        let msg = format!(
+            "Cybermanju Drive v{} crashed!\n\
+             ============================\n\
+             Time: {}\n\
+             Panic: {}\n\
+             Location: {}\n\
+             \n\
+             Please report this issue at:\n\
+             https://github.com/cybermanju/cybermanju-drive/issues\n\
+             \n\
+             Attach this file for debugging.\n",
+            env!("CARGO_PKG_VERSION"),
+            chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+            info.to_string(),
+            info.location().map(|l| l.to_string()).unwrap_or_default(),
+        );
+        let _ = std::fs::write(&cp, &msg);
+    }));
+
     // Initialize tracing subscriber (replaces env_logger)
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
     tracing::info!("Cybermanju Drive starting...");
-
-    // Resolve cross-platform app data directory
-    let data_dir = app_data_dir();
-    let data_dir_str = data_dir.to_string_lossy().to_string();
     tracing::info!("App data directory: {}", data_dir_str);
 
     // Build paths under the data directory
@@ -64,10 +103,7 @@ pub fn run() {
     // Initialize redb database
     let db = match Database::new(&db_path_str) {
         Ok(d) => d,
-        Err(e) => {
-            tracing::error!("Failed to initialize redb database: {}", e);
-            std::process::exit(1);
-        }
+        Err(e) => fatal(&data_dir, &format!("Failed to initialize redb database: {}", e)),
     };
     tracing::info!("redb database initialized");
 
@@ -98,10 +134,7 @@ pub fn run() {
     // Initialize Tantivy full-text search index
     let tantivy_index = match search::SearchIndex::new(&search_index_path_str) {
         Ok(i) => i,
-        Err(e) => {
-            tracing::error!("Failed to initialize Tantivy: {}", e);
-            std::process::exit(1);
-        }
+        Err(e) => fatal(&data_dir, &format!("Failed to initialize Tantivy: {}", e)),
     };
     tracing::info!("Tantivy search index ready");
 
@@ -286,6 +319,10 @@ pub fn run() {
             transfer::transfer_files,
             transfer::get_transfer_progress,
             transfer::cancel_transfer,
+            // Diagnostics / crash log
+            commands::diagnostics::get_crash_log,
+            commands::diagnostics::clear_crash_log,
+            commands::diagnostics::get_app_log,
             // Duplicate detection
             commands::duplicates::find_duplicates,
             // Portable Database (`.cybermanju`)

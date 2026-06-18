@@ -32,6 +32,7 @@ import MoveDialog from '@/components/MoveDialog.vue'
 import UnboxDialog from '@/components/UnboxDialog.vue'
 import MobileNav from '@/components/MobileNav.vue'
 import ContextMenu from '@/components/ContextMenu.vue'
+import CrashReporter from '@/components/CrashReporter.vue'
 import type { PanelType, FileNode } from '@/types'
 
 const store = useAppStore()
@@ -625,6 +626,7 @@ function handleLandingLaunch() {
         />
         <MobileNav />
         <ContextMenu />
+        <CrashReporter />
       </template>
     </template>
   </div>
