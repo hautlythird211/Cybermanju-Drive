@@ -563,19 +563,21 @@ jobs:
             echo "version=v${VERSION}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Check tag does not already exist
+      - name: Delete existing release/tag (if any)
+        continue-on-error: true
         run: |
           TAG="${{ steps.version.outputs.version }}"
           if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "Tag $TAG already exists — skipping release."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Tag $TAG exists — deleting old release and tag."
+            gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+            git push --delete origin "$TAG" 2>/dev/null || true
           else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "Tag $TAG does not exist yet — proceeding fresh."
           fi
-        id: tag-check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate release notes
-        if: steps.tag-check.outputs.skip != 'true'
         run: |
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           if [ -n "$LAST_TAG" ]; then
@@ -631,7 +633,6 @@ jobs:
           fi
 
       - name: Download all release artifacts
-        if: steps.tag-check.outputs.skip != 'true'
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
@@ -640,7 +641,6 @@ jobs:
           merge-multiple: false
 
       - name: Download WASM artifacts
-        if: steps.tag-check.outputs.skip != 'true'
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
@@ -648,17 +648,7 @@ jobs:
           pattern: dist-wasm
           merge-multiple: false
 
-      - name: Delete old 0.0.1 release (if exists)
-        if: steps.tag-check.outputs.skip != 'true'
-        continue-on-error: true
-        run: |
-          gh release delete v0.0.1 --yes --cleanup-tag 2>/dev/null || true
-          git push --delete origin v0.0.1 2>/dev/null || true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Package artifacts
-        if: steps.tag-check.outputs.skip != 'true'
         run: |
           mkdir -p packages
 
@@ -674,7 +664,6 @@ jobs:
           ls -la packages/
 
       - name: Create GitHub Release
-        if: steps.tag-check.outputs.skip != 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.version }}
