@@ -44,7 +44,7 @@
         "installMode": "perMachine",
         "installerIcon": "icons/icon.ico",
         "startMenuFolder": "Cybermanju Drive",
-        "languages": ["en_US"],
+        "languages": ["English"],
         "displayLanguageSelector": false
       }
     },
