@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { Icon } from '@iconify/vue'
+import { useAppStore } from '@/stores/app'
 
+const store = useAppStore()
 const time = ref('')
 const date = ref('')
 const showCalendar = ref(false)
@@ -36,18 +39,18 @@ onUnmounted(() => {
   <div class="system-tray">
     <!-- Notifications -->
     <div class="tray-item" title="Notifications" @click="showCalendar = !showCalendar">
-      <span class="tray-icon">🔔</span>
+      <Icon icon="mdi:bell-outline" width="14" height="14" class="tray-icon" />
       <span v-if="notifications > 0" class="tray-badge">{{ notifications }}</span>
     </div>
 
     <!-- Network -->
     <div class="tray-item" title="Network" @click="showNetwork = !showNetwork">
-      <span class="tray-icon">{{ wifiConnected ? '📶' : '📡' }}</span>
+      <Icon :icon="wifiConnected ? 'mdi:wifi' : 'mdi:wifi-off'" width="14" height="14" class="tray-icon" />
     </div>
 
     <!-- Volume -->
     <div class="tray-item" title="Volume" @click="showVolume = !showVolume">
-      <span class="tray-icon">{{ volume > 50 ? '🔊' : volume > 0 ? '🔉' : '🔇' }}</span>
+      <Icon :icon="volume > 50 ? 'mdi:volume-high' : volume > 0 ? 'mdi:volume-medium' : 'mdi:volume-off'" width="14" height="14" class="tray-icon" />
     </div>
     <div v-if="showVolume" class="tray-popup" @click.self="showVolume = false">
       <div class="popup-panel">
@@ -59,7 +62,7 @@ onUnmounted(() => {
 
     <!-- Battery -->
     <div class="tray-item" title="Battery" @click="showBattery = !showBattery">
-      <span class="tray-icon">{{ batteryCharging ? '⚡' : batteryPercent > 20 ? '🔋' : '🪫' }}</span>
+      <Icon :icon="batteryCharging ? 'mdi:lightning-bolt' : batteryPercent > 20 ? 'mdi:battery' : 'mdi:battery-outline'" width="14" height="14" class="tray-icon" />
       <span class="tray-percent">{{ batteryPercent }}%</span>
     </div>
 
@@ -115,8 +118,9 @@ onUnmounted(() => {
 }
 
 .tray-icon {
-  font-size: 12px;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tray-badge {

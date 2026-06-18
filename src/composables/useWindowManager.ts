@@ -74,11 +74,12 @@ const defaultSizes: SizeMap = {
   'system-monitor': { width: 520, height: 400 },
   'task-manager': { width: 540, height: 420 },
   terminal: { width: 480, height: 360 },
+  history: { width: 440, height: 380 },
 }
 
 const inlinePanels: PanelType[] = [
   'search', 'trash', 'activity', 'favorites', 'recent',
-  'loose-groups', 'style'
+  'loose-groups', 'style', 'history'
 ]
 
 const panelComponentMap: Record<string, Component> = {

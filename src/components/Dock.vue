@@ -101,6 +101,9 @@ const dockApps = computed<DockApp[]>(() => [
   { panelType: 'accounts', label: 'Accounts', icon: 'account-multiple-outline', category: 'system' },
   { panelType: 'terminal', label: 'Terminal', icon: 'console', category: 'system' },
   { panelType: 'system-monitor', label: 'System Monitor', icon: 'chart-line-variant', category: 'system' },
+  { panelType: 'webdash', label: 'Web Dashboard', icon: 'web', category: 'tools' },
+  { panelType: 'loose-groups', label: 'Loose Groups', icon: 'shape-outline', category: 'organize' },
+  { panelType: 'history', label: 'History', icon: 'history', category: 'system' },
   { panelType: 'task-manager', label: 'Task Manager', icon: 'memory', category: 'system' },
 ])
 

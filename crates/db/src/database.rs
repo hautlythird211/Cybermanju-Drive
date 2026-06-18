@@ -42,6 +42,8 @@ const DELETION_LOG_TABLE: TableDefinition<'static, &'static str, &'static str> =
     TableDefinition::new("deletion_log");
 const RECOVERY_STORE_TABLE: TableDefinition<'static, &'static str, &'static str> =
     TableDefinition::new("recovery_store");
+const KV_STORE_TABLE: TableDefinition<'static, &'static str, &'static str> =
+    TableDefinition::new("kv_store");
 const PORTABLE_META_TABLE: TableDefinition<'static, &'static str, &'static str> =
     TableDefinition::new("portable_meta");
 
@@ -73,6 +75,7 @@ impl Database {
             write_txn.open_table(FILE_RELATIONS_TABLE)?;
             write_txn.open_table(DELETION_LOG_TABLE)?;
             write_txn.open_table(RECOVERY_STORE_TABLE)?;
+            write_txn.open_table(KV_STORE_TABLE)?;
             write_txn.open_table(PORTABLE_META_TABLE)?;
         }
         write_txn.commit()?;
@@ -146,6 +149,9 @@ impl Database {
     }
     pub fn get_portable_meta_table() -> TableDefinition<'static, &'static str, &'static str> {
         PORTABLE_META_TABLE
+    }
+    pub fn get_kv_store_table() -> TableDefinition<'static, &'static str, &'static str> {
+        KV_STORE_TABLE
     }
 
     pub fn log_audit(

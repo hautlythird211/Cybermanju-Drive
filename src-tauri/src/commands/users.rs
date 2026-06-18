@@ -48,6 +48,16 @@ fn argon2_hash_password(password: &str) -> Result<String, String> {
         .map_err(|e| format!("Argon2 hash error: {}", e))
 }
 
+/// Verify a password against its hash (argon2id or legacy blake3).
+fn verify_password(password: &str, hash: &str) -> Result<bool, String> {
+    if hash.starts_with("$argon2") {
+        argon2_verify_password(password, hash)
+    } else {
+        let blake3_hash = blake3::hash(password.as_bytes()).to_hex().to_string();
+        Ok(hash == blake3_hash)
+    }
+}
+
 /// Argon2 password verification.
 fn argon2_verify_password(password: &str, hash: &str) -> Result<bool, String> {
     use argon2::{
@@ -196,16 +206,15 @@ pub fn verify_session_token(token: &str, hmac_secret: &[u8]) -> Result<(String, 
 // Tauri commands
 // ---------------------------------------------------------------------------
 
-/// Register a new user with argon2id password hashing.
+/// Register a new user with optional argon2id password hashing.
 #[tauri::command]
 pub fn register_user(
     username: String,
-    password: String,
+    password: Option<String>,
     display_name: Option<String>,
     role: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<User, String> {
-    // Validate role BEFORE constructing user
     let role = role.unwrap_or_else(|| "user".to_string());
     if !["admin", "user", "viewer"].contains(&role.as_str()) {
         return Err(format!(
@@ -214,8 +223,8 @@ pub fn register_user(
         ));
     }
 
-    if username.is_empty() || password.is_empty() {
-        return Err("Username and password are required".to_string());
+    if username.is_empty() {
+        return Err("Username is required".to_string());
     }
 
     // Validate username uniqueness
@@ -233,8 +242,12 @@ pub fn register_user(
     }
     drop(tx_check);
 
-    // Hash the password with argon2id
-    let password_hash = argon2_hash_password(&password)?;
+    // Hash the password with argon2id (if provided)
+    let password_hash = if let Some(ref pwd) = password {
+        if pwd.is_empty() { String::new() } else { argon2_hash_password(pwd)? }
+    } else {
+        String::new()
+    };
 
     let user_id = uuid::Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
@@ -265,15 +278,11 @@ pub fn register_user(
     Ok(user)
 }
 
-/// Authenticate a user — returns AuthResult with a cryptographically secure token.
-///
-/// The session token uses HMAC-SHA256 with the server's random secret, includes
-/// a 16-byte nonce and timestamp, and expires after 24 hours.
-/// Unlike the previous blake3 hash, this token cannot be forged without the secret.
+/// Authenticate a user — username-only (password optional for legacy support).
 #[tauri::command]
 pub fn authenticate_user(
     username: String,
-    password: String,
+    password: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<AuthResult, String> {
     let db = state.db.read().map_err(|e| e.to_string())?;
@@ -290,40 +299,13 @@ pub fn authenticate_user(
                 return Err("User account is disabled".to_string());
             }
 
-            // Verify password using argon2
-            // Support both old BLAKE3 hashes and new argon2 hashes during migration
-            let blake3_hash = blake3::hash(password.as_bytes()).to_hex().to_string();
-            let valid = if user.password_hash.starts_with("$argon2") {
-                argon2_verify_password(&password, &user.password_hash)?
+            // Username-only auth: if no password_hash set, skip password check
+            let valid = if user.password_hash.is_empty() {
+                true
+            } else if let Some(ref pwd) = password {
+                verify_password(&pwd, &user.password_hash)?
             } else {
-                // Legacy BLAKE3 hash — verify but immediately upgrade
-                if user.password_hash == blake3_hash {
-                    // Upgrade the stored hash to argon2id right now
-                    let new_hash = argon2_hash_password(&password)?;
-                    // Write the upgraded hash back to the database
-                    let mut upgraded_user = user.clone();
-                    upgraded_user.password_hash = new_hash;
-                    let serialized =
-                        serde_json::to_string(&upgraded_user).map_err(|e| e.to_string())?;
-                    let db_write = state.db.write().map_err(|e| e.to_string())?;
-                    let tx_write = db_write.begin_write().map_err(|e| e.to_string())?;
-                    {
-                        let mut table = tx_write
-                            .open_table(crate::db::Database::get_users_table())
-                            .map_err(|e| e.to_string())?;
-                        table
-                            .insert(user.id.as_str(), serialized.as_str())
-                            .map_err(|e| e.to_string())?;
-                    }
-                    tx_write.commit().map_err(|e| e.to_string())?;
-                    log::info!(
-                        "Upgraded legacy BLAKE3 password hash to argon2id for user '{}'",
-                        username
-                    );
-                    true
-                } else {
-                    false
-                }
+                false
             };
 
             if valid {
@@ -531,17 +513,6 @@ pub fn verify_file_access(
     }
 
     Ok(false)
-}
-
-/// Alias for register_user — called by the frontend as create_user.
-#[tauri::command]
-pub fn create_user(
-    username: String,
-    password: String,
-    role: String,
-    state: State<'_, AppState>,
-) -> Result<User, String> {
-    register_user(username, password, None, Some(role), state)
 }
 
 /// Delete a user by ID.

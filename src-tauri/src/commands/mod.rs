@@ -10,6 +10,7 @@ pub mod encryption;
 pub mod faces;
 pub mod files;
 pub mod import;
+pub mod kv;
 pub mod map;
 pub mod portable_db;
 pub mod search;

@@ -261,7 +261,6 @@ pub fn run() {
             files::list_loose_groups,
             // User management & permissions
             users::register_user,
-            users::create_user,
             users::delete_user,
             users::update_user_role,
             users::authenticate_user,
@@ -346,6 +345,9 @@ pub fn run() {
             portable_db::mark_deletion_propagated,
             portable_db::get_portable_db_meta,
             portable_db::delete_recovery_entry,
+            // KV Store (general-purpose key-value persistence)
+            commands::kv::kv_set,
+            commands::kv::kv_get,
         ])
         .run(tauri::generate_context!())
         .expect("Fatal error while running Cybermanju Drive — see logs above");

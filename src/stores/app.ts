@@ -13,7 +13,7 @@ import type {
   DashboardStatus,
 } from '@/types'
 import { MODULE_METADATA } from '@/types'
-import { setAuthToken } from '@/composables/useTauri'
+import { setAuthToken, kvGet, kvSet } from '@/composables/useTauri'
 import { useHistoryStore } from '@/stores/history'
 
 export const useAppStore = defineStore('cybermanju', () => {
@@ -163,6 +163,7 @@ export const useAppStore = defineStore('cybermanju', () => {
       await Promise.allSettled([
         fetchFiles(),
         fetchAccounts(),
+        fetchUsers(),
         fetchCollections(),
         fetchFaceGroups(),
         fetchLooseGroups(),
@@ -170,6 +171,7 @@ export const useAppStore = defineStore('cybermanju', () => {
         listKeys(),
         fetchSyncConfigs(),
         history.load(),
+        loadConfig(),
       ])
       startAutoRefresh()
     } finally {
@@ -184,6 +186,7 @@ export const useAppStore = defineStore('cybermanju', () => {
         await Promise.allSettled([
           fetchFiles(),
           fetchAccounts(),
+          fetchUsers(),
           fetchCollections(),
           fetchFaceGroups(),
           fetchEncryptionStatus(),
@@ -195,6 +198,39 @@ export const useAppStore = defineStore('cybermanju', () => {
   }
 
   watch(autoRefreshInterval, () => startAutoRefresh())
+
+  // ── Config Persistence ──────────────────────────────────
+  const CONFIG_KEY = 'cybermanju_ui_config'
+
+  async function loadConfig() {
+    try {
+      const raw = await kvGet(CONFIG_KEY)
+      if (raw) {
+        const cfg = JSON.parse(raw)
+        if (cfg.viewMode) viewMode.value = cfg.viewMode
+        if (typeof cfg.sidebarCollapsed === 'boolean') sidebarCollapsed.value = cfg.sidebarCollapsed
+        if (typeof cfg.autoRefreshInterval === 'number') autoRefreshInterval.value = cfg.autoRefreshInterval
+        if (typeof cfg.matrixRainEnabled === 'boolean') matrixRainEnabled.value = cfg.matrixRainEnabled
+        if (cfg.sortBy) sortBy.value = cfg.sortBy
+      }
+    } catch { /* skip on first load */ }
+  }
+
+  async function saveConfig() {
+    try {
+      await kvSet(CONFIG_KEY, JSON.stringify({
+        viewMode: viewMode.value,
+        sidebarCollapsed: sidebarCollapsed.value,
+        autoRefreshInterval: autoRefreshInterval.value,
+        matrixRainEnabled: matrixRainEnabled.value,
+        sortBy: sortBy.value,
+      }))
+    } catch { /* best-effort */ }
+  }
+
+  ;[viewMode, sidebarCollapsed, autoRefreshInterval, matrixRainEnabled, sortBy].forEach(ref => {
+    watch(ref, saveConfig, { deep: false })
+  })
 
   // ── Actions: Selection ────────────────────────────────────
   function selectFile(fileId: string | null) {
@@ -862,9 +898,9 @@ export const useAppStore = defineStore('cybermanju', () => {
     }
   }
 
-  async function createUser(username: string, password: string, role: string) {
+  async function createUser(username: string, password?: string, role?: string) {
     try {
-      await invoke('create_user', { username, password, role })
+      await invoke('register_user', { username, password: password || '', displayName: username, role: role || 'user' })
       await fetchUsers()
       notifySuccess(`User '${username}' created`)
     } catch (e) {
@@ -1024,7 +1060,7 @@ export const useAppStore = defineStore('cybermanju', () => {
     // URL Import
     importFromUrl,
     // Utility
-    rebuildParentIndex,
+    rebuildParentIndex, loadConfig, saveConfig,
     notifySuccess,
     notifyError,
     notify,

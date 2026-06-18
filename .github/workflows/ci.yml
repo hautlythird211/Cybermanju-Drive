@@ -24,6 +24,19 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 1
   RUST_BACKTRACE: 1
+  SCCACHE_GHA_ENABLED: true
+  SCCACHE_GHA_CACHE_TAG: rust-sccache
+  # Shared apt packages across Linux jobs
+  SYS_DEPS: >-
+    libwebkit2gtk-4.1-dev
+    libgtk-3-dev
+    libayatana-appindicator3-dev
+    librsvg2-dev
+    libsoup-3.0-dev
+    libjavascriptcoregtk-4.1-dev
+    pkg-config
+    build-essential
+    libssl-dev
 
 jobs:
   # ─── Rust: Lint & Test (gate) ─────────────────────────────────────
@@ -33,23 +46,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt/archives
+          key: ${{ runner.os }}-apt-${{ hashFiles('.github/workflows/ci.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            libsoup-3.0-dev \
-            libjavascriptcoregtk-4.1-dev \
-            pkg-config \
-            build-essential \
-            libssl-dev
+          sudo apt-get install -y ${{ env.SYS_DEPS }}
+
+      - name: Setup sccache
+        uses: mozilla/sccache-action@v0
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
         with:
+          sharedKey: ubuntu-rust
           cache-on-failure: true
 
       - name: Check formatting
@@ -63,6 +79,10 @@ jobs:
       - name: Run tests
         working-directory: src-tauri
         run: cargo test --no-fail-fast
+
+      - name: Pre-build release artifacts
+        working-directory: src-tauri
+        run: cargo build --release
 
   # ─── Docker: Build Image (gate only) ──────────────────────────────
   docker-build:
@@ -137,6 +157,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup sccache
+        uses: mozilla/sccache-action@v0
+
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
         with:
@@ -179,22 +202,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt/archives
+          key: ${{ runner.os }}-apt-${{ hashFiles('.github/workflows/ci.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-apt-
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev \
-            libsoup-3.0-dev \
-            libjavascriptcoregtk-4.1-dev \
-            pkg-config \
-            build-essential \
-            libssl-dev \
-            libfuse2 \
-            rpm \
-            xdg-utils
+          sudo apt-get install -y ${{ env.SYS_DEPS }} libfuse2 rpm xdg-utils
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -211,9 +230,13 @@ jobs:
           name: wasm-node-module
           path: node_modules/cybermanju-drive-wasm
 
+      - name: Setup sccache
+        uses: mozilla/sccache-action@v0
+
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
         with:
+          sharedKey: ubuntu-rust
           cache-on-failure: true
 
       - name: Build Tauri app
@@ -349,6 +372,15 @@ jobs:
       - name: Fix WASM ownership
         run: chown -R builder:builder $GITHUB_WORKSPACE/node_modules/cybermanju-drive-wasm
 
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          sharedKey: ubuntu-rust
+          cache-on-failure: true
+
+      - name: Fix cache ownership
+        run: chown -R builder:builder $GITHUB_WORKSPACE/target
+
       - name: Build Arch package
         run: |
           sudo -u builder bash -c "
@@ -396,6 +428,9 @@ jobs:
         with:
           name: wasm-node-module
           path: node_modules/cybermanju-drive-wasm
+
+      - name: Setup sccache
+        uses: mozilla/sccache-action@v0
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
@@ -455,6 +490,9 @@ jobs:
 
       - name: Install Rust target (arm64 only)
         run: rustup target add aarch64-linux-android
+
+      - name: Setup sccache
+        uses: mozilla/sccache-action@v0
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
@@ -586,25 +624,40 @@ jobs:
             COMMITS=$(git log --oneline --no-decorate -50 2>/dev/null || true)
           fi
 
-          cat > release_body.md << 'EOF'
+          VERSION="${{ steps.version.outputs.version }}"
+
+          cat > release_body.md << EOF
           # Cybermanju Drive
 
           **Quantum-resistant encrypted file manager** — desktop, mobile, web, Docker, and headless server.
 
-          ## Platform Support
+          ## ⬇️ Quick Downloads
 
-          | Platform | Bundle Type | Status |
-          |----------|-------------|--------|
-          | Windows | .msi (MSI), .exe (NSIS) | ✅ |
-          | Linux (Debian/Ubuntu) | .deb | ✅ |
-          | Linux (Fedora/RHEL) | .rpm | ✅ |
-          | Linux (Universal) | .AppImage | ✅ |
-          | Linux (Flatpak) | .flatpak | ✅ |
-          | Linux (Arch/CachyOS) | deb + AppImage | ✅ |
-          | macOS | .dmg, .app | ✅ |
-          | Android | .apk | ✅ |
-          | Web (WASM) | Static files | ✅ |
-          | Docker | Container image | ✅ |
+          ### 🖥️ Desktop
+
+          | Platform | File | Description |
+          |----------|------|-------------|
+          | **Windows** | [cybermanju-drive_${VERSION}_x64-setup.exe](./cybermanju-drive_${VERSION}_x64-setup.exe) | NSIS installer (recommended) |
+          | **Windows** | [cybermanju-drive_${VERSION}_x64.msi](./cybermanju-drive_${VERSION}_x64.msi) | MSI installer (enterprise/GPO) |
+          | **macOS** | [cybermanju-drive_${VERSION}_aarch64.dmg](./cybermanju-drive_${VERSION}_aarch64.dmg) | DMG for Apple Silicon (M1/M2/M3/M4) |
+          | **Linux (Debian/Ubuntu)** | [cybermanju-drive_${VERSION}_amd64.deb](./cybermanju-drive_${VERSION}_amd64.deb) | Debian/Ubuntu package |
+          | **Linux (Fedora/RHEL)** | [cybermanju-drive-${VERSION}-1.x86_64.rpm](./cybermanju-drive-${VERSION}-1.x86_64.rpm) | RPM package |
+          | **Linux (Universal)** | [cybermanju-drive_${VERSION}_amd64.AppImage](./cybermanju-drive_${VERSION}_amd64.AppImage) | Run anywhere — no install needed |
+          | **Linux (Flatpak)** | [cybermanju-drive.flatpak](./cybermanju-drive.flatpak) | Sandboxed — Flathub-compatible |
+
+          ### 📱 Mobile
+
+          | Platform | File | Description |
+          |----------|------|-------------|
+          | **Android** | [cybermanju-drive.apk](./cybermanju-drive.apk) | APK for Android 10+ (arm64) |
+
+          ### 🌐 Web & Containers
+
+          | Platform | File | Description |
+          |----------|------|-------------|
+          | **Web (WASM)** | [dist-wasm.zip](./dist-wasm.zip) | Static site — deploy anywhere |
+          | **Docker** | \`docker pull cybermanju-drive:latest\` | Pre-built container image |
+
           EOF
 
           # Append features from RELEASE_NOTES.md
@@ -652,12 +705,26 @@ jobs:
         run: |
           mkdir -p packages
 
-          for dir in artifacts/release-*/; do
-            [ -d "$dir" ] || continue
-            name=$(basename "$dir")
-            (cd "$dir" && zip -r "../../packages/${name}.zip" .) || true
-          done
+          # Windows: .exe and .msi
+          find artifacts/release-windows -maxdepth 1 -name '*.exe' -exec cp {} packages/ \; 2>/dev/null || true
+          find artifacts/release-windows -maxdepth 1 -name '*.msi' -exec cp {} packages/ \; 2>/dev/null || true
 
+          # Linux: .deb, .rpm, .AppImage
+          find artifacts/release-linux -maxdepth 1 -name '*.deb' -exec cp {} packages/ \; 2>/dev/null || true
+          find artifacts/release-linux -maxdepth 1 -name '*.rpm' -exec cp {} packages/ \; 2>/dev/null || true
+          find artifacts/release-linux -maxdepth 1 -name '*.AppImage' -exec cp {} packages/ \; 2>/dev/null || true
+
+          # Flatpak
+          find artifacts/release-flatpak -maxdepth 1 -name '*.flatpak' -exec cp {} packages/ \; 2>/dev/null || true
+
+          # macOS: .dmg and .app
+          find artifacts/release-macos -maxdepth 1 -name '*.dmg' -exec cp {} packages/ \; 2>/dev/null || true
+          find artifacts/release-macos -maxdepth 1 -name '*.app' -exec cp {} packages/ \; 2>/dev/null || true
+
+          # Android: .apk
+          find artifacts/release-android -maxdepth 3 -name '*.apk' -exec cp {} packages/ \; 2>/dev/null || true
+
+          # WASM web files (zip the folder since it contains many small files)
           [ -d "artifacts/dist-wasm" ] && \
             (cd "artifacts/dist-wasm" && zip -r "../../packages/dist-wasm.zip" .) || true
 

@@ -16,7 +16,6 @@ import DesktopShell from '@/components/DesktopShell.vue'
 import LandingPage from '@/components/LandingPage.vue'
 import BootScreen from '@/components/BootScreen.vue'
 import PostScreen from '@/components/PostScreen.vue'
-import BootLoader from '@/components/BootLoader.vue'
 
 import SetupWizard from '@/components/SetupWizard.vue'
 import CanvasEngine from '@/components/CanvasEngine.vue'
@@ -54,16 +53,24 @@ const drag = useDrag()
 
 const touchConfig = useTouchConfig({ autoDetect: true })
 touchConfig.onAction((action: TouchAction) => {
+  const panelList: PanelType[] = ['files', 'search', 'collections', 'faces', 'map', 'code', 'sync', 'settings', 'storage', 'encryption', 'compression', 'trash']
+
   const actionMap: Record<string, () => void> = {
-    toggle_sidebar: () => {},
+    toggle_sidebar: () => { store.sidebarCollapsed = !store.sidebarCollapsed },
     toggle_palette: () => { store.commandPaletteOpen = !store.commandPaletteOpen },
     toggle_help: () => { store.showShortcutsHelp = !store.showShortcutsHelp },
     focus_search: () => { store.currentPanel = 'search' },
     go_back: () => navigateInHistory(-1),
     go_forward: () => navigateInHistory(1),
     go_home: () => { store.currentPanel = 'landing' },
-    prev_panel: () => {},
-    next_panel: () => {},
+    prev_panel: () => {
+      const idx = panelList.indexOf(store.currentPanel as PanelType)
+      if (idx > 0) store.currentPanel = panelList[idx - 1]
+    },
+    next_panel: () => {
+      const idx = panelList.indexOf(store.currentPanel as PanelType)
+      if (idx < panelList.length - 1) store.currentPanel = panelList[idx + 1]
+    },
     open_trash: () => { wm.open('trash'); store.fetchTrashItems() },
     open_activity: () => { wm.open('activity'); store.fetchAuditLog() },
     open_collections: () => { wm.open('collections') },
@@ -82,10 +89,14 @@ touchConfig.onAction((action: TouchAction) => {
       if (!document.fullscreenElement) document.documentElement.requestFullscreen()
       else document.exitFullscreen()
     },
-    context_menu: () => {},
-    select_item: () => {},
-    zoom_in: () => {},
-    zoom_out: () => {},
+    context_menu: () => { window.dispatchEvent(new CustomEvent('cybermanju:context-menu')) },
+    select_item: () => {
+      if (store.files.length && store.selectedFileId === null) {
+        store.selectedFileId = store.files[0].id
+      }
+    },
+    zoom_in: () => { window.scrollBy(0, -50) },
+    zoom_out: () => { window.scrollBy(0, 50) },
     none: () => {},
     scroll_up: () => window.scrollBy(0, -100),
     scroll_down: () => window.scrollBy(0, 100),
@@ -502,31 +513,24 @@ function handleUpload() {
   showUploadDialog.value = true
 }
 
-const needsSetup = ref<boolean | null>(null)
-const bootPhase = ref<'post' | 'bootloader' | 'kernel' | 'desktop'>('post')
+import { useLogin } from '@/composables/useLogin'
+
+const { needsSetup, restoreSession } = useLogin()
+
+const bootPhase = ref<'post' | 'kernel' | 'desktop'>('post')
 
 onMounted(async () => {
   store.currentPanel = 'landing'
   store.initialize()
   window.addEventListener('cybermanju:upload', handleUpload)
-  try {
-    const complete = await kvGet<boolean>('setup_complete')
-    needsSetup.value = !complete
-  } catch {
-    needsSetup.value = true
-  }
+  restoreSession()
 })
 
 function onPostComplete() {
-  bootPhase.value = 'bootloader'
-}
-
-function onBootloaderSelect(mode: string) {
   bootPhase.value = 'kernel'
 }
 
-function onKernelBootComplete(user: string) {
-  localStorage.setItem('cybermanju_username', user)
+function onKernelBootComplete() {
   bootPhase.value = 'desktop'
 }
 
@@ -546,17 +550,16 @@ function handleLandingLaunch() {
 <template>
   <div class="cybermanju-shell">
     <PostScreen v-if="bootPhase === 'post'" @complete="onPostComplete" />
-    <BootLoader v-else-if="bootPhase === 'bootloader'" @select="onBootloaderSelect" />
     <BootScreen v-else-if="bootPhase === 'kernel'" @complete="onKernelBootComplete" />
     <template v-if="bootPhase === 'desktop'">
-      <LandingPage
-        v-if="store.currentPanel === 'landing' && needsSetup !== true"
-        :key="'landing'"
-        @open-app="handleLandingLaunch"
-      />
       <SetupWizard
         v-if="needsSetup === true"
         @complete="onSetupComplete"
+      />
+      <LandingPage
+        v-else-if="store.currentPanel === 'landing'"
+        :key="'landing'"
+        @open-app="handleLandingLaunch"
       />
       <template v-else>
         <DesktopShell>

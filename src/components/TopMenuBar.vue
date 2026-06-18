@@ -195,7 +195,7 @@ const menuStructure = computed(() => { const m: MenuGroup[] = [
       { id: 'new-folder', label: 'New Folder', icon: 'folder-plus-outline', shortcut: 'Ctrl+N', action: () => { store.createFolderPromptOpen = true } },
       { id: 'upload', label: 'Upload Files', icon: 'upload-outline', action: () => { window.dispatchEvent(new CustomEvent('cybermanju:upload')) } },
       { id: 'div1', divider: true },
-      { id: 'open-terminal', label: 'Open Terminal', icon: 'console', action: () => { store.currentPanel = 'landing' } },
+      { id: 'open-terminal', label: 'Open Terminal', icon: 'console', action: () => { wm.open('terminal') } },
       { id: 'div2', divider: true },
       { id: 'settings', label: 'Settings', icon: 'cog-outline', shortcut: 'Ctrl+,', action: () => { wm.open('settings') } },
       { id: 'quit', label: 'Quit', icon: 'exit-to-app', action: () => {} },

@@ -581,6 +581,18 @@ async function tryWasmInvoke<T>(cmd: string, args?: Record<string, unknown>): Pr
         return (await crypto.decryptData(key, nonce, ciphertext)) as unknown as T
       }
 
+      // ── KV Store (persisted in IndexedDB) ─────────────────
+      case 'kv_set': {
+        const storage = await import('@/wasm/storage')
+        await storage.kvSet(args?.key as string, args?.value as string)
+        return undefined as T
+      }
+      case 'kv_get': {
+        const storage = await import('@/wasm/storage')
+        const val = await storage.kvGet<string>(args?.key as string)
+        return val as unknown as T
+      }
+
       // ── Auth (requires REST, stubs for WASM) ──────────────
       case 'authenticate_user': {
         return null // fall through to REST
@@ -667,6 +679,19 @@ export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Pr
   throw new Error(
     `[Web Mode] Command "${cmd}" is not supported. The WASM bridge and Web Dashboard REST API do not provide this endpoint.`
   )
+}
+
+// ── KV Store convenience ────────────────────────────────────
+
+/** Persist a key-value pair (routes to Rust redb or WASM IndexedDB). */
+export async function kvSet(key: string, value: string): Promise<void> {
+  await invoke('kv_set', { key, value })
+}
+
+/** Retrieve a value by key (routes to Rust redb or WASM IndexedDB). */
+export async function kvGet(key: string): Promise<string | undefined> {
+  const val = await invoke<string | null>('kv_get', { key })
+  return val ?? undefined
 }
 
 // ── Composable ──────────────────────────────────────────────

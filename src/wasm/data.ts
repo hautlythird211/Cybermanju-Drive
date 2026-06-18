@@ -407,7 +407,7 @@ export async function listUsers(): Promise<Array<{
 
 export async function createUser(data: {
   username: string
-  password: string
+  password?: string
   displayName?: string
   role?: string
 }): Promise<{ id: string; username: string; displayName?: string; role: string }> {
@@ -426,26 +426,10 @@ export async function createUser(data: {
   return { ...user, isActive: undefined, createdAt: undefined } as any
 }
 
-export async function authenticateUser(username: string, _password: string): Promise<{
+export async function authenticateUser(username: string, _password?: string): Promise<{
   userId: string; username: string; role: string; displayName?: string; token: string
 } | null> {
   await init()
-  // Check OAuth2 accounts first
-  const accounts = await listAccounts()
-  const oauthAccount = accounts.find(a => a.isActive && a.oauthProvider)
-  if (oauthAccount) {
-    const token = await loadTokenFromStorage(oauthAccount.oauthProvider!)
-    if (token) {
-      return {
-        userId: oauthAccount.id,
-        username: oauthAccount.name,
-        role: 'user',
-        displayName: oauthAccount.name,
-        token: token.accessToken,
-      }
-    }
-  }
-  // Fall back to local user auth
   const users = await listUsers()
   const user = users.find(u => u.username === username)
   if (!user) return null

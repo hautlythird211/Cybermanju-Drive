@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
-import { kvGet, kvSet } from '@/wasm/storage'
 import { useAppStore } from '@/stores/app'
+import { useLogin } from '@/composables/useLogin'
+import { kvGet, kvSet } from '@/composables/useTauri'
 import ImportDialog from '@/components/ImportDialog.vue'
 import type { OAuthProvider, OAuthToken } from '@/wasm'
 import type { SyncConfig } from '@/types'
@@ -394,8 +395,8 @@ async function finish() {
       })),
       completedAt: new Date().toISOString(),
     }
-    await kvSet('setup_config', config)
-    await kvSet('setup_complete', true)
+    await kvSet('setup_config', JSON.stringify(config))
+    await kvSet('setup_complete', 'true')
 
     // Create sync configs for each account
     const errors: string[] = []
@@ -434,21 +435,26 @@ async function finish() {
 }
 
 onMounted(async () => {
-  const existing = await kvGet<any>('setup_config')
-  if (existing?.accounts?.length) {
-    accounts.value = existing.accounts
-  }
-  if (existing?.collections?.length) {
-    for (const c of existing.collections) {
-      const preset = collections.value.find(p => p.name === c.name)
-      if (preset) preset.selected = true
-    }
-  }
-  if (existing?.groups?.length) {
-    for (const g of existing.groups) {
-      const preset = groups.value.find(p => p.name === g.name)
-      if (preset) preset.selected = true
-    }
+  const raw = await kvGet('setup_config')
+  if (raw) {
+    try {
+      const existing = JSON.parse(raw)
+      if (existing?.accounts?.length) {
+        accounts.value = existing.accounts
+      }
+      if (existing?.collections?.length) {
+        for (const c of existing.collections) {
+          const preset = collections.value.find(p => p.name === c.name)
+          if (preset) preset.selected = true
+        }
+      }
+      if (existing?.groups?.length) {
+        for (const g of existing.groups) {
+          const preset = groups.value.find(p => p.name === g.name)
+          if (preset) preset.selected = true
+        }
+      }
+    } catch {}
   }
 })
 </script>
@@ -781,14 +787,13 @@ onMounted(async () => {
 
 <style scoped>
 .setup-wizard {
-  position: fixed;
-  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #000;
+  width: 100vw;
+  height: 100vh;
+  background: #0a0a0a;
   font-family: 'Courier New', 'Fira Code', monospace;
-  z-index: 1000;
   overflow: auto;
 }
 

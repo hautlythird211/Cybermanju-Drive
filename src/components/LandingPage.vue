@@ -1,32 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { Icon } from '@iconify/vue'
 import TopMenuBar from './TopMenuBar.vue'
 import Dock from './Dock.vue'
 
 const emit = defineEmits<{ (e: 'open-app'): void }>()
-
-// ── Boot State ──
-const phase = ref<'post' | 'loading' | 'boot' | 'ready'>('post')
-const bootProgress = ref(0)
-const bootLog = ref<string[]>([])
-const showCursor = ref(true)
-let cursorTimer: ReturnType<typeof setInterval> | null = null
-const postDone = ref(false)
-const loadProgress = ref(0)
-
-const bootMessages = [
-  'POST: CPU Quantum Co-Processor... ML-KEM-1024 [OK]',
-  'POST: Memory Encryption Zones... ChaCha20-Poly1305 [OK]',
-  'POST: Storage Decryption Module... Argon2id [OK]',
-  'Mounting redb KV store... cybermanju.db [OK]',
-  'Loading Tantivy BM25 search index... [OK]',
-  'Initializing Triple-Layer Compressor... LZ4+ZSTD+BROTLI [OK]',
-  'Warming ONNX Runtime... face detect model [OK]',
-  'Calibrating ML-DSA-87 signing oracle... [OK]',
-  'Establishing sync backends... [OK]',
-  'Spawning web dashboard @ :3456... [OK]',
-]
 
 const quotes = [
   '"The cloud is just someone else\'s computer.\n This one has ML-KEM-1024. Good luck, NSA."',
@@ -35,7 +13,7 @@ const quotes = [
   '"Your data should be yours.\n Not a product. Not a training set. Just yours."',
 ]
 
-const currentQuote = ref(quotes[0])
+const currentQuote = ref(quotes[Math.floor(Math.random() * quotes.length)])
 
 // ── Rotating Buddha ASCII ──
 const buddhaFrames = [
@@ -94,13 +72,16 @@ const buddhaFrames = [
 ]
 
 const currentFrame = ref(0)
-const frameLines = ref<string[]>([])
+const frameLines = ref<string[]>(buddhaFrames[0])
 const buddhaGlow = ref(0)
 let buddhaTimer: ReturnType<typeof setInterval> | null = null
 let glowTimer: ReturnType<typeof setInterval> | null = null
 
 const terminalInput = ref('')
-const terminalHistory = ref<string[]>([])
+const terminalHistory = ref<string[]>([
+  'System ready. Type HELP for commands.',
+  '',
+])
 const commandHist = ref<string[]>([])
 const histIdx = ref(-1)
 
@@ -170,12 +151,11 @@ function processCmd() {
 }
 
 function handleKey(e: KeyboardEvent) {
-  if (phase.value !== 'ready') return
   if (e.key === 'Enter') processCmd()
   if (e.key === 'ArrowUp') {
     e.preventDefault()
     if (commandHist.value.length) {
-      histIdx.value = histIdx.value < commandHist.value.length - 1 ? histIdx.value + 1 : histIdx.value
+      histIdx.value = Math.min(histIdx.value + 1, commandHist.value.length - 1)
       terminalInput.value = commandHist.value[commandHist.value.length - 1 - histIdx.value]
     }
   }
@@ -191,104 +171,11 @@ function handleKey(e: KeyboardEvent) {
   }
 }
 
-// ── Boot Sequence ──
-function runPost() {
-  phase.value = 'post'
-  bootLog.value = []
-  postDone.value = false
-  let i = 0
-  const postLines = [
-    'Cybermanju Systems POST v0.0.1',
-    'CPU: Quantum Co-Processor @ 2.4 GHz [PASS]',
-    'CRYPTO: ML-KEM-1024 Accelerator [PASS]',
-    'MEM: 16 GUARD ChaCha20 Zones [PASS]',
-    'RTC: System Clock [SYNCED]',
-    '────────────────────────────────────────────',
-  ]
-  function tick() {
-    if (i < postLines.length) {
-      bootLog.value.push(postLines[i])
-      i++
-      setTimeout(tick, 120 + Math.random() * 60)
-    } else {
-      postDone.value = true
-      setTimeout(runLoading, 300)
-    }
-  }
-  tick()
-}
-
-function runLoading() {
-  phase.value = 'loading'
-  loadProgress.value = 0
-  bootLog.value = []
-  let step = 0
-  function tick() {
-    if (step < bootMessages.length) {
-      bootLog.value.push(bootMessages[step])
-      loadProgress.value = ((step + 1) / bootMessages.length) * 100
-      step++
-      setTimeout(tick, 80 + Math.random() * 40)
-    } else {
-      setTimeout(runBoot, 200)
-    }
-  }
-  tick()
-}
-
-function runBoot() {
-  phase.value = 'boot'
-  bootLog.value = []
-  currentQuote.value = quotes[Math.floor(Math.random() * quotes.length)]
-  const bootLines = [
-    '',
-    `  ${currentQuote.value}`,
-    '',
-    '  ╔══════════════════════════════════════╗',
-    '  ║    CYBERMANJU DRIVE v0.0.1          ║',
-    '  ║    Post-Quantum Encrypted Storage    ║',
-    '  ║    System Ready.                     ║',
-    '  ╚══════════════════════════════════════╝',
-    '',
-  ]
-  let i = 0
-  function tick() {
-    if (i < bootLines.length) {
-      bootLog.value.push(bootLines[i])
-      i++
-      setTimeout(tick, 100 + Math.random() * 50)
-    } else {
-      setTimeout(() => {
-        phase.value = 'ready'
-        sessionStorage.setItem('hasBooted', 'true')
-        terminalHistory.value = [
-          'System ready. Type HELP for commands.',
-          '',
-        ]
-      }, 400)
-    }
-  }
-  tick()
-}
-
-function restartBoot() {
-  stopAnimations()
-  bootLog.value = []
-  terminalHistory.value = []
-  terminalInput.value = ''
-  currentFrame.value = 0
-  buddhaGlow.value = 0
-  runPost()
-}
-
-// ── Animations ──
 function startBuddhaAnimation() {
-  frameLines.value = buddhaFrames[0]
   buddhaTimer = setInterval(() => {
     currentFrame.value = (currentFrame.value + 1) % buddhaFrames.length
     frameLines.value = buddhaFrames[currentFrame.value]
   }, 280)
-
   glowTimer = setInterval(() => {
     buddhaGlow.value = Math.sin(Date.now() / 800) * 0.3 + 0.6
   }, 50)
@@ -297,21 +184,12 @@ function startBuddhaAnimation() {
 function stopAnimations() {
   if (buddhaTimer) clearInterval(buddhaTimer)
   if (glowTimer) clearInterval(glowTimer)
-  if (cursorTimer) clearInterval(cursorTimer)
   buddhaTimer = null
   glowTimer = null
-  cursorTimer = null
 }
 
 onMounted(() => {
-  if (sessionStorage.getItem('hasBooted')) {
-    phase.value = 'ready'
-    return
-  }
-  cursorTimer = setInterval(() => { showCursor.value = !showCursor.value }, 500)
-  currentQuote.value = quotes[Math.floor(Math.random() * quotes.length)]
   startBuddhaAnimation()
-  runPost()
 })
 
 onUnmounted(() => {
@@ -324,25 +202,7 @@ onUnmounted(() => {
     <TopMenuBar />
 
     <div class="landing-content">
-      <div class="boot-overlay" v-if="phase !== 'ready'">
-        <div class="boot-terminal">
-          <div class="boot-log">
-            <div v-for="(line, i) in bootLog" :key="i" class="boot-line">{{ line }}</div>
-            <div v-if="phase === 'loading'" class="boot-progress">
-              <div class="boot-spinner-row">
-                <Icon icon="svg-spinners:blocks-wave" width="32" height="32" class="boot-spinner-icon" />
-                <span class="boot-percent">{{ Math.round(loadProgress) }}%</span>
-              </div>
-              <div class="progress-track">
-                <div class="progress-fill" :style="{ width: loadProgress + '%' }" />
-              </div>
-            </div>
-            <div v-if="phase === 'post' && !postDone" class="cursor-block">&#9608;</div>
-          </div>
-        </div>
-      </div>
-
-      <div v-else class="desktop-landing">
+      <div class="desktop-landing">
         <div class="ascii-background">
           <div class="ascii-buddha" :style="{ opacity: buddhaGlow }">
             <div v-for="(line, i) in frameLines" :key="i" class="buddha-line">{{ line }}</div>
@@ -358,7 +218,7 @@ onUnmounted(() => {
         </div>
 
         <div class="terminal-window">
-          <div class="terminal-log" ref="logRef">
+          <div class="terminal-log">
             <div v-for="(line, i) in terminalHistory" :key="i" class="term-line"
               :class="{ 'term-prompt': line.startsWith('>'), 'term-system': !line.startsWith('>') }">
               {{ line }}
@@ -366,7 +226,7 @@ onUnmounted(() => {
             <div class="term-input-line">
               <span class="term-prompt-sign">&gt;</span>
               <span class="term-input-text">{{ terminalInput }}</span>
-              <span class="term-cursor" :class="{ hide: showCursor }">&#9608;</span>
+              <span class="term-cursor">&#9608;</span>
             </div>
           </div>
         </div>
@@ -374,9 +234,6 @@ onUnmounted(() => {
         <div class="launch-hint">
           <button class="launch-button" @click="emit('open-app')">
             [ ENTER CYBERMANJU ]
-          </button>
-          <button class="reboot-button" @click="restartBoot">
-            [ REBOOT ]
           </button>
         </div>
       </div>
@@ -406,98 +263,6 @@ onUnmounted(() => {
   justify-content: center;
   position: relative;
   overflow: hidden;
-}
-
-/* ── Boot Overlay ── */
-.boot-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #000;
-  z-index: 10;
-}
-
-.boot-terminal {
-  width: 92vw;
-  max-width: 780px;
-  max-height: 70vh;
-  background: #050505;
-  border: 1px solid rgba(0, 255, 65, 0.15);
-  border-radius: 8px;
-  padding: 24px 28px;
-  box-shadow:
-    0 0 40px rgba(0, 255, 65, 0.03),
-    inset 0 0 60px rgba(0, 0, 0, 0.8);
-  overflow: hidden;
-}
-
-.boot-log {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.boot-line {
-  color: #00ff41;
-  font-size: 13px;
-  line-height: 1.5;
-  text-shadow: 0 0 4px rgba(0, 255, 65, 0.2);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.boot-progress {
-  margin-top: 16px;
-  padding: 0 4px;
-}
-
-.boot-spinner-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-  justify-content: center;
-}
-
-.boot-spinner-icon {
-  opacity: 0.9;
-  filter: drop-shadow(0 0 6px rgba(0, 255, 65, 0.4));
-}
-
-.boot-percent {
-  font-family: 'Courier New', monospace;
-  font-size: 14px;
-  font-weight: 700;
-  color: #00ff41;
-  letter-spacing: 1px;
-}
-
-.progress-track {
-  width: 100%;
-  height: 3px;
-  background: rgba(0, 255, 65, 0.1);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: #00ff41;
-  transition: width 0.1s linear;
-  box-shadow: 0 0 8px rgba(0, 255, 65, 0.4);
-}
-
-.cursor-block {
-  display: inline-block;
-  color: #00ff41;
-  animation: blink 500ms step-end infinite;
-  margin-top: 4px;
-}
-
-@keyframes blink {
-  50% { opacity: 0; }
 }
 
 /* ── Desktop Landing ── */
@@ -650,20 +415,7 @@ onUnmounted(() => {
   box-shadow: 0 0 16px rgba(0, 255, 65, 0.2);
 }
 
-.reboot-button:hover {
-  background: rgba(255, 95, 87, 0.1);
-  border-color: #ff5f57;
-  color: #ff5f57;
-}
-
 @media (max-width: 768px) {
-  .boot-terminal {
-    padding: 16px;
-    width: 96vw;
-  }
-  .boot-line {
-    font-size: 11px;
-  }
   .terminal-window {
     padding: 12px 14px;
     width: 96vw;
@@ -674,7 +426,7 @@ onUnmounted(() => {
   .ascii-buddha {
     font-size: 8px;
   }
-  .launch-button, .reboot-button {
+  .launch-button {
     font-size: 10px;
     padding: 8px 16px;
   }
