@@ -1,7 +1,7 @@
 // Cybermanju Drive — Core Library
 // Orchestrates redb, ML-KEM PQC (pqcrypto-mlkem), Tantivy, Tree-sitter, triple compression, face clustering
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub mod commands;
 pub mod compression;
@@ -43,13 +43,13 @@ fn app_data_dir() -> PathBuf {
 }
 
 /// Write a message to the crash log file in the app data directory.
-fn write_crash_log(data_dir: &PathBuf, msg: &str) {
+fn write_crash_log(data_dir: &Path, msg: &str) {
     let path = data_dir.join("crash.log");
     let _ = std::fs::write(&path, msg);
 }
 
 /// Fatal startup error — log it, write crash file, then exit.
-fn fatal(data_dir: &PathBuf, msg: &str) -> ! {
+fn fatal(data_dir: &Path, msg: &str) -> ! {
     tracing::error!("{}", msg);
     write_crash_log(data_dir, &format!("FATAL: {}\n", msg));
     std::process::exit(1);
@@ -81,7 +81,7 @@ pub fn run() {
              Attach this file for debugging.\n",
             env!("CARGO_PKG_VERSION"),
             chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-            info.to_string(),
+            info,
             info.location().map(|l| l.to_string()).unwrap_or_default(),
         );
         let _ = std::fs::write(&cp, &msg);
