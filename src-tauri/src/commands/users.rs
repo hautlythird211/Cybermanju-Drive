@@ -307,7 +307,7 @@ pub fn authenticate_user(
             let valid = if user.password_hash.is_empty() {
                 true
             } else if let Some(ref pwd) = password {
-                verify_password(&pwd, &user.password_hash)?
+                verify_password(pwd, &user.password_hash)?
             } else {
                 false
             };
