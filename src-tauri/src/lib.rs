@@ -103,7 +103,10 @@ pub fn run() {
     // Initialize redb database
     let db = match Database::new(&db_path_str) {
         Ok(d) => d,
-        Err(e) => fatal(&data_dir, &format!("Failed to initialize redb database: {}", e)),
+        Err(e) => fatal(
+            &data_dir,
+            &format!("Failed to initialize redb database: {}", e),
+        ),
     };
     tracing::info!("redb database initialized");
 
