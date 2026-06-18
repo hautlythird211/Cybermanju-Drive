@@ -244,7 +244,11 @@ pub fn register_user(
 
     // Hash the password with argon2id (if provided)
     let password_hash = if let Some(ref pwd) = password {
-        if pwd.is_empty() { String::new() } else { argon2_hash_password(pwd)? }
+        if pwd.is_empty() {
+            String::new()
+        } else {
+            argon2_hash_password(pwd)?
+        }
     } else {
         String::new()
     };
