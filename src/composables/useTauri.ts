@@ -593,13 +593,6 @@ async function tryWasmInvoke<T>(cmd: string, args?: Record<string, unknown>): Pr
         return val as unknown as T
       }
 
-      // ── Auth (requires REST, stubs for WASM) ──────────────
-      case 'authenticate_user': {
-        return null // fall through to REST
-      }
-      case 'register_user': {
-        return null // fall through to REST
-      }
     }
   } catch (err) {
     if (cmd in REST_ROUTES) {

@@ -1,7 +1,7 @@
 import { ref, computed, markRaw, type Component } from 'vue'
 import type { PanelType } from '@/types'
 import { MODULE_METADATA } from '@/types'
-import FileGrid from '@/components/FileGrid.vue'
+import FileExplorer from '@/components/FileExplorer.vue'
 import CollectionsPanel from '@/components/CollectionsPanel.vue'
 import FaceGroupingPanel from '@/components/FaceGroupingPanel.vue'
 import MapView from '@/components/MapView.vue'
@@ -92,7 +92,7 @@ const inlinePanels: PanelType[] = [
 ]
 
 const panelComponentMap: Record<string, Component> = {
-  files: FileGrid,
+  files: FileExplorer,
   collections: CollectionsPanel,
   faces: FaceGroupingPanel,
   map: MapView,

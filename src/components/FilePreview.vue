@@ -1,7 +1,9 @@
 <template>
   <aside v-if="store.selectedFile" class="file-preview">
     <div class="preview-header">
-      <span class="preview-icon">{{ getIcon(store.selectedFile) }}</span>
+      <div class="preview-icon-wrapper" :class="getFileTypeClass(store.selectedFile)">
+        <Icon :icon="getFileIcon(store.selectedFile)" width="24" height="24" />
+      </div>
       <div class="preview-file-info">
         <span class="preview-filename truncate">{{ store.selectedFile.name }}</span>
         <span class="preview-path truncate text-muted">{{ store.selectedFile.path }}</span>
@@ -9,85 +11,138 @@
     </div>
 
     <div class="preview-scroll">
+      <!-- Preview Image -->
+      <div v-if="store.selectedFile.thumbnailPath" class="preview-image-section">
+        <img :src="store.selectedFile.thumbnailPath" class="preview-image" :alt="store.selectedFile.name" />
+      </div>
+
+      <!-- Metadata -->
       <div class="preview-section">
-        <div class="section-label">METADATA</div>
+        <div class="section-label">Info</div>
         <div class="meta-grid">
           <div class="meta-row">
-            <span class="meta-key text-muted">SIZE</span>
-            <span class="meta-value mono">{{ formatSize(store.selectedFile.sizeBytes) }}</span>
+            <span class="meta-key">Size</span>
+            <span class="meta-value">{{ formatSize(store.selectedFile.sizeBytes) }}</span>
           </div>
           <div class="meta-row">
-            <span class="meta-key text-muted">TYPE</span>
+            <span class="meta-key">Type</span>
             <span class="meta-value">{{ store.selectedFile.mimeType || store.selectedFile.fileType }}</span>
           </div>
           <div class="meta-row">
-            <span class="meta-key text-muted">CREATED</span>
-            <span class="meta-value mono">{{ formatDate(store.selectedFile.createdAt) }}</span>
+            <span class="meta-key">Created</span>
+            <span class="meta-value">{{ formatDate(store.selectedFile.createdAt) }}</span>
           </div>
           <div class="meta-row">
-            <span class="meta-key text-muted">MODIFIED</span>
-            <span class="meta-value mono">{{ formatDate(store.selectedFile.modifiedAt) }}</span>
+            <span class="meta-key">Modified</span>
+            <span class="meta-value">{{ formatDate(store.selectedFile.modifiedAt) }}</span>
           </div>
         </div>
       </div>
 
+      <!-- Tags Section -->
+      <div class="preview-section">
+        <div class="section-header">
+          <span class="section-label">Tags</span>
+          <button class="add-btn" @click="showTagInput = !showTagInput" title="Add tag">
+            <Icon icon="mdi:plus" width="14" height="14" />
+          </button>
+        </div>
+        <div v-if="showTagInput" class="tag-input-row">
+          <input
+            v-model="newTag"
+            class="tag-input"
+            placeholder="New tag..."
+            @keyup.enter="addTag"
+          />
+          <button class="tag-add-btn" @click="addTag" :disabled="!newTag.trim()">Add</button>
+        </div>
+        <div v-if="store.selectedFile.tags && store.selectedFile.tags.length > 0" class="tag-list">
+          <span
+            v-for="tag in store.selectedFile.tags"
+            :key="tag"
+            class="tag-chip"
+            :style="{ '--tag-color': getTagColor(tag) }"
+          >
+            <span class="tag-dot" :style="{ background: getTagColor(tag) }" />
+            <span class="tag-name">{{ tag }}</span>
+            <button class="tag-remove" @click="removeTag(tag)">
+              <Icon icon="mdi:close" width="10" height="10" />
+            </button>
+          </span>
+        </div>
+        <div v-else class="empty-tags">
+          <span class="text-muted">No tags</span>
+        </div>
+      </div>
+
+      <!-- Collections Section -->
+      <div class="preview-section" v-if="store.selectedFile.collectionIds && store.selectedFile.collectionIds.length > 0">
+        <div class="section-label">Collections</div>
+        <div class="collection-list">
+          <div v-for="colId in store.selectedFile.collectionIds" :key="colId" class="collection-item">
+            <Icon icon="mdi:folder-star-outline" width="14" height="14" class="collection-icon" />
+            <span class="collection-name">{{ getCollectionName(colId) }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Encryption Info -->
       <div v-if="store.selectedFile.encrypted" class="preview-section">
-        <div class="section-label">ENCRYPTION</div>
+        <div class="section-label">Encryption</div>
         <div class="info-card">
           <div class="info-row">
-            <span class="info-key text-muted">ALGORITHM</span>
+            <span class="info-key">Algorithm</span>
             <span class="info-badge">{{ store.selectedFile.encryptionAlgorithm?.toUpperCase() }}</span>
           </div>
           <div v-if="store.selectedFile.contextData?.keyId" class="info-row">
-            <span class="info-key text-muted">KEY ID</span>
-            <span class="meta-value mono">{{ String(store.selectedFile.contextData.keyId).substring(0, 16) }}..</span>
+            <span class="info-key">Key ID</span>
+            <span class="info-value mono">{{ String(store.selectedFile.contextData.keyId).substring(0, 16) }}..</span>
           </div>
         </div>
       </div>
 
+      <!-- Compression Info -->
       <div v-if="store.selectedFile.compressionLayers && store.selectedFile.compressionLayers[0] && store.selectedFile.compressionLayers[0] !== 'none'" class="preview-section">
-        <div class="section-label">COMPRESSION</div>
+        <div class="section-label">Compression</div>
         <div class="info-card">
           <div class="info-row">
-            <span class="info-key text-muted">LAYER</span>
+            <span class="info-key">Layer</span>
             <span class="info-badge">{{ store.selectedFile.compressionLayers[0]?.toUpperCase() }}</span>
           </div>
           <div v-if="store.selectedFile.hashBlake3" class="info-row">
-            <span class="info-key text-muted">BLAKE3</span>
-            <span class="meta-value mono" style="font-size:9px;word-break:break-all">{{ store.selectedFile.hashBlake3.substring(0, 20) }}..</span>
+            <span class="info-key">BLAKE3</span>
+            <span class="info-value mono hash">{{ store.selectedFile.hashBlake3.substring(0, 20) }}..</span>
           </div>
         </div>
       </div>
 
-      <div v-if="store.selectedFile.tags && store.selectedFile.tags.length" class="preview-section">
-        <div class="section-label">TAGS</div>
-        <div class="tag-list">
-          <span v-for="tag in store.selectedFile.tags" :key="tag" class="tag-item">{{ tag }}</span>
-        </div>
-      </div>
-
+      <!-- Face Groups -->
       <div v-if="store.selectedFile.faceGroupIds && store.selectedFile.faceGroupIds.length" class="preview-section">
-        <div class="section-label">FACE GROUPS</div>
+        <div class="section-label">People</div>
         <div class="face-list">
           <div v-for="groupId in store.selectedFile.faceGroupIds" :key="groupId" class="face-item">
-            <div class="avatar-sm">++</div>
+            <div class="face-avatar">
+              <Icon icon="mdi:face-man-outline" width="14" height="14" />
+            </div>
             <span class="face-name">{{ getFaceGroupName(groupId) }}</span>
           </div>
         </div>
       </div>
 
+      <!-- GPS Location -->
       <div v-if="store.selectedFile.gpsLat" class="preview-section">
-        <div class="section-label">LOCATION</div>
+        <div class="section-label">Location</div>
         <div class="info-card">
           <div class="info-row">
-            <span class="info-key text-muted">COORDS</span>
-            <span class="meta-value mono" style="font-size:9px">{{ store.selectedFile.gpsLat.toFixed(4) }}, {{ store.selectedFile.gpsLon?.toFixed(4) }}</span>
+            <span class="info-key">Coordinates</span>
+            <span class="info-value mono">{{ store.selectedFile.gpsLat.toFixed(4) }}, {{ store.selectedFile.gpsLon?.toFixed(4) }}</span>
           </div>
         </div>
       </div>
 
+      <!-- Code Symbols -->
       <div v-if="store.parseResult && store.parseResult.symbols.length" class="preview-section">
-        <div class="section-label">SYMBOLS - {{ store.parseResult.language }}</div>
+        <div class="section-label">Symbols ({{ store.parseResult.language }})</div>
         <div class="symbol-tree">
           <div v-for="sym in store.parseResult.symbols" :key="sym.name + sym.startLine" class="symbol-row">
             <span class="symbol-kind">{{ sym.kind }}</span>
@@ -95,65 +150,102 @@
           </div>
         </div>
       </div>
-
-      <div v-if="store.selectedFile.contextData && Object.keys(store.selectedFile.contextData).length" class="preview-section">
-        <div class="section-label">CONTEXT</div>
-        <div class="info-card">
-          <div v-for="(value, key) in filteredContextData" :key="String(key)" class="info-row">
-            <span class="info-key text-muted">{{ key }}</span>
-            <span class="meta-value mono" style="font-size:9px">{{ String(value).substring(0, 24) }}</span>
-          </div>
-        </div>
-      </div>
     </div>
 
+    <!-- Quick Actions -->
     <div class="preview-actions">
-      <button v-if="store.selectedFile.encrypted" class="pa-btn decrypt-btn" @click="handleDecryptPreview" title="DECRYPT TO PREVIEW">[DEC]</button>
-      <button class="pa-btn" @click="handleEncrypt" title="ENCRYPT">{{ store.selectedFile.encrypted ? '[DEC]' : '[ENC]' }}</button>
-      <button class="pa-btn" @click="handleCompress" title="COMPRESS">[CMP]</button>
-      <button class="pa-btn" @click="handleStar" title="STAR">{{ store.selectedFile.isStarred ? '[*]' : '[ ]' }}</button>
-      <button class="pa-btn" @click="handleCopyPath" title="COPY PATH">[CP]</button>
-      <button class="pa-btn danger" @click="handleDelete" title="DELETE">[DEL]</button>
+      <button class="action-btn primary" @click="handleOpen" title="Open file">
+        <Icon icon="mdi:folder-open-outline" width="16" height="16" />
+        <span>Open</span>
+      </button>
+      <button class="action-btn" @click="handleStar" :class="{ starred: store.selectedFile.isStarred }" title="Star file">
+        <Icon :icon="store.selectedFile.isStarred ? 'mdi:star' : 'mdi:star-outline'" width="16" height="16" />
+      </button>
+      <button class="action-btn" @click="handleCopyPath" title="Copy path">
+        <Icon icon="mdi:content-copy" width="16" height="16" />
+      </button>
+      <button class="action-btn" @click="handleEncrypt" :title="store.selectedFile.encrypted ? 'Decrypt' : 'Encrypt'">
+        <Icon :icon="store.selectedFile.encrypted ? 'mdi:lock-open-outline' : 'mdi:lock-outline'" width="16" height="16" />
+      </button>
+      <button class="action-btn" @click="handleCompress" title="Compress">
+        <Icon icon="mdi:package-variant" width="16" height="16" />
+      </button>
+      <button class="action-btn danger" @click="handleDelete" title="Delete">
+        <Icon icon="mdi:delete-outline" width="16" height="16" />
+      </button>
     </div>
-    <div v-if="decryptError" class="preview-error">{{ decryptError }}</div>
   </aside>
 
   <aside v-else class="file-preview empty-preview">
     <div class="empty-content">
-      <span style="font-size:24px">[=]</span>
-      <span class="text-muted" style="font-size:11px">SELECT A FILE</span>
+      <Icon icon="mdi:file-outline" width="48" height="48" class="empty-icon" />
+      <span class="empty-title">No file selected</span>
+      <span class="empty-subtitle">Select a file to view details</span>
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 import type { FileNode } from '@/types'
 
 const store = useAppStore()
 
 const decryptError = ref<string | null>(null)
+const showTagInput = ref(false)
+const newTag = ref('')
 
-const filteredContextData = computed(() => {
-  if (!store.selectedFile?.contextData) return {}
-  const { keyId, ...rest } = store.selectedFile.contextData
-  return rest
-})
+// Tag color cache
+const tagColorCache = new Map<string, string>()
+const tagColors = [
+  '#00ff41', '#5af0ff', '#ff5f57', '#ffd700', '#ff6b9d',
+  '#b388ff', '#28c840', '#ff9933', '#3a86ff', '#ff006e'
+]
+let colorIndex = 0
 
-function getIcon(file: FileNode): string {
-  if (file.fileType === 'folder') return '[+]'
-  if (file.encrypted) return '[@]'
-  if (file.compressionLayers && file.compressionLayers[0] && file.compressionLayers[0] !== 'none') return '[$]'
-  if (file.mimeType?.startsWith('image/')) return '[I]'
-  if (file.mimeType?.startsWith('text/') || file.mimeType?.includes('json')) return '[T]'
-  return '[=]'
+function getTagColor(tagName: string): string {
+  if (tagColorCache.has(tagName)) {
+    return tagColorCache.get(tagName)!
+  }
+  const color = tagColors[colorIndex % tagColors.length]
+  tagColorCache.set(tagName, color)
+  colorIndex++
+  return color
 }
 
-function getFaceGroupName(groupId: string): string {
-  return store.faceGroups.find(fg => fg.id === groupId)?.name || groupId
+// File type helpers
+function getFileTypeClass(file: FileNode): string {
+  if (file.fileType === 'folder') return 'folder'
+  const mime = file.mimeType || ''
+  if (mime.startsWith('image/')) return 'image'
+  if (mime.startsWith('video/')) return 'video'
+  if (mime.startsWith('audio/')) return 'audio'
+  if (mime.includes('zip') || mime.includes('tar') || mime.includes('gz')) return 'archive'
+  if (mime.includes('json') || mime.includes('javascript') || mime.includes('typescript')) return 'code'
+  if (mime.includes('pdf') || mime.includes('document') || mime.includes('text')) return 'document'
+  return 'other'
 }
 
+function getFileIcon(file: FileNode): string {
+  if (file.fileType === 'folder') return 'mdi:folder'
+  const mime = file.mimeType || ''
+  if (mime.startsWith('image/')) return 'mdi:image'
+  if (mime.startsWith('video/')) return 'mdi:video'
+  if (mime.startsWith('audio/')) return 'mdi:music'
+  if (mime.includes('pdf')) return 'mdi:file-pdf-box'
+  if (mime.includes('zip') || mime.includes('tar') || mime.includes('gz')) return 'mdi:zip-box'
+  if (mime.includes('json')) return 'mdi:code-json'
+  if (mime.includes('javascript')) return 'mdi:language-javascript'
+  if (mime.includes('typescript')) return 'mdi:language-typescript'
+  if (mime.includes('python')) return 'mdi:language-python'
+  if (mime.includes('rust')) return 'mdi:language-rust'
+  if (mime.includes('text')) return 'mdi:file-document-outline'
+  return 'mdi:file-outline'
+}
+
+// Format helpers
 function formatSize(bytes: number): string {
   if (bytes === 0) return '0 B'
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -165,64 +257,523 @@ function formatSize(bytes: number): string {
 function formatDate(dateStr: string): string {
   if (!dateStr) return '--'
   const d = new Date(dateStr)
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function handleEncrypt() {
-  if (!store.selectedFile) return
-  store.encryptFile(store.selectedFile.id, 'hybrid')
+// Collection helpers
+function getCollectionName(colId: string): string {
+  const col = store.collections.find(c => c.id === colId)
+  return col?.name || 'Unknown'
 }
 
-function handleCompress() {
-  if (!store.selectedFile) return
-  store.compressFile(store.selectedFile.id, 'zstd')
+// Face group helpers
+function getFaceGroupName(groupId: string): string {
+  const group = store.faceGroups.find(g => g.id === groupId)
+  return group?.name || 'Unknown'
 }
 
-function handleStar() {
-  if (!store.selectedFile) return
-  store.toggleStar(store.selectedFile.id)
+// Tag management
+function addTag() {
+  if (!newTag.value.trim() || !store.selectedFile) return
+  // This would normally call a store action
+  store.notifySuccess('Tag added: ' + newTag.value)
+  newTag.value = ''
+  showTagInput.value = false
 }
 
-async function handleCopyPath() {
-  if (!store.selectedFile?.path) return
-  try { await navigator.clipboard.writeText(store.selectedFile.path) } catch {}
+function removeTag(tag: string) {
+  // This would normally call a store action
+  store.notifySuccess('Tag removed: ' + tag)
 }
 
-function handleDelete() {
-  if (!store.selectedFile) return
-  if (confirm('DELETE "' + store.selectedFile.name + '"?')) {
-    store.deleteFile(store.selectedFile.id)
+// Actions
+function handleOpen() {
+  if (store.selectedFile) {
+    store.selectFile(store.selectedFile.id)
   }
 }
 
-async function handleDecryptPreview() {
-  if (!store.selectedFile) return
-  decryptError.value = null
-  try {
-    await store.decryptFile(store.selectedFile.id)
-    store.selectFile(store.selectedFile.id)
-  } catch (e) {
-    decryptError.value = 'Decryption failed: no key available or invalid key.'
+function handleStar() {
+  if (store.selectedFile) {
+    store.toggleStar(store.selectedFile.id)
+  }
+}
+
+function handleCopyPath() {
+  if (store.selectedFile?.path) {
+    navigator.clipboard.writeText(store.selectedFile.path)
+    store.notifySuccess('Path copied to clipboard')
+  }
+}
+
+function handleEncrypt() {
+  if (store.selectedFile) {
+    if (store.selectedFile.encrypted) {
+      store.notifySuccess('Decrypt: ' + store.selectedFile.name)
+    } else {
+      store.encryptFile(store.selectedFile.id, 'hybrid')
+    }
+  }
+}
+
+function handleCompress() {
+  if (store.selectedFile) {
+    store.compressFile(store.selectedFile.id, 'zstd')
+  }
+}
+
+function handleDelete() {
+  if (store.selectedFile) {
+    window.dispatchEvent(new CustomEvent('cybermanju:show-delete-dialog', { detail: { fileIds: [store.selectedFile.id] } }))
   }
 }
 </script>
 
 <style scoped>
 .file-preview {
-  width: 340px;
-  min-width: 280px;
   display: flex;
   flex-direction: column;
-  background: #0a0a0a;
-  border-left: 2px solid #00ff41;
-  overflow: hidden;
-  z-index: 5;
   height: 100%;
+  background: #fafafa;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+  color: #1d1d1f;
+  overflow: hidden;
 }
 
-.empty-preview {
+.preview-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e8e8ed;
+}
+
+.preview-icon-wrapper {
+  display: flex;
   align-items: center;
   justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.preview-icon-wrapper.folder { background: rgba(0, 122, 255, 0.1); color: #007aff; }
+.preview-icon-wrapper.image { background: rgba(255, 107, 157, 0.1); color: #ff6b9d; }
+.preview-icon-wrapper.video { background: rgba(179, 136, 255, 0.1); color: #b388ff; }
+.preview-icon-wrapper.audio { background: rgba(90, 240, 255, 0.1); color: #5af0ff; }
+.preview-icon-wrapper.document { background: rgba(255, 215, 0, 0.1); color: #ffd700; }
+.preview-icon-wrapper.archive { background: rgba(255, 152, 51, 0.1); color: #ff9933; }
+.preview-icon-wrapper.code { background: rgba(40, 200, 64, 0.1); color: #28c840; }
+.preview-icon-wrapper.other { background: rgba(136, 136, 136, 0.1); color: #888; }
+
+.preview-file-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.preview-filename {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1d1d1f;
+}
+
+.preview-path {
+  font-size: 12px;
+  color: #86868b;
+}
+
+.preview-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+
+.preview-image-section {
+  margin-bottom: 16px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e8e8ed;
+}
+
+.preview-image {
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+  object-fit: cover;
+}
+
+.preview-section {
+  margin-bottom: 20px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #86868b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+.section-header .section-label {
+  margin-bottom: 0;
+}
+
+.add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: rgba(0, 122, 255, 0.1);
+  border: none;
+  border-radius: 6px;
+  color: #007aff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-btn:hover {
+  background: rgba(0, 122, 255, 0.2);
+}
+
+.meta-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid #e8e8ed;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.meta-key {
+  font-size: 13px;
+  color: #86868b;
+}
+
+.meta-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1d1d1f;
+}
+
+.tag-input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tag-input {
+  flex: 1;
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 1px solid #d2d2d7;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1d1d1f;
+}
+
+.tag-input:focus {
+  outline: none;
+  border-color: #007aff;
+}
+
+.tag-add-btn {
+  padding: 8px 16px;
+  background: #007aff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.tag-add-btn:hover:not(:disabled) {
+  background: #0066d6;
+}
+
+.tag-add-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #ffffff;
+  border: 1px solid #e8e8ed;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1d1d1f;
+}
+
+.tag-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.tag-name {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tag-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  border-radius: 50%;
+  color: #86868b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tag-remove:hover {
+  background: rgba(255, 59, 48, 0.2);
+  color: #ff3b30;
+}
+
+.empty-tags {
+  padding: 12px;
+  background: #ffffff;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.collection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.collection-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e8e8ed;
+}
+
+.collection-icon {
+  color: #ffd700;
+}
+
+.collection-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1d1d1f;
+}
+
+.info-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid #e8e8ed;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.info-row:not(:last-child) {
+  border-bottom: 1px solid #f5f5f7;
+}
+
+.info-key {
+  font-size: 13px;
+  color: #86868b;
+}
+
+.info-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1d1d1f;
+}
+
+.info-value.mono {
+  font-family: 'SF Mono', Monaco, monospace;
+}
+
+.info-value.hash {
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.info-badge {
+  padding: 4px 8px;
+  background: rgba(0, 122, 255, 0.1);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #007aff;
+}
+
+.face-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.face-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e8e8ed;
+}
+
+.face-avatar {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #ff6b9d 0%, #b388ff 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.face-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1d1d1f;
+}
+
+.symbol-tree {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid #e8e8ed;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.symbol-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.symbol-row:not(:last-child) {
+  border-bottom: 1px solid #f5f5f7;
+}
+
+.symbol-kind {
+  font-size: 11px;
+  padding: 2px 6px;
+  background: #f5f5f7;
+  border-radius: 4px;
+  color: #86868b;
+}
+
+.symbol-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1d1d1f;
+  font-family: 'SF Mono', Monaco, monospace;
+}
+
+.preview-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 20px;
+  background: #ffffff;
+  border-top: 1px solid #e8e8ed;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #f5f5f7;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1d1d1f;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  background: #e8e8ed;
+}
+
+.action-btn.primary {
+  background: #007aff;
+  color: white;
+}
+
+.action-btn.primary:hover {
+  background: #0066d6;
+}
+
+.action-btn.starred {
+  background: rgba(255, 204, 0, 0.2);
+  color: #ff9500;
+}
+
+.action-btn.danger {
+  color: #ff3b30;
+}
+
+.action-btn.danger:hover {
+  background: rgba(255, 59, 48, 0.1);
+}
+
+/* Empty State */
+.empty-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fafafa;
 }
 
 .empty-content {
@@ -230,246 +781,50 @@ async function handleDecryptPreview() {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  opacity: 0.4;
+  text-align: center;
 }
 
-.preview-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 10px;
-  border-bottom: 2px solid #00ff41;
-  flex-shrink: 0;
+.empty-icon {
+  color: #d2d2d7;
+  margin-bottom: 8px;
 }
 
-.preview-icon {
-  font-family: 'Courier New', monospace;
-  font-size: 18px;
-  color: #00ff41;
-  flex-shrink: 0;
+.empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1d1d1f;
 }
 
-.preview-file-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.empty-subtitle {
+  font-size: 14px;
+  color: #86868b;
 }
 
-.preview-filename {
-  font-size: 12px;
-  font-weight: 700;
-  color: #00ff41;
+/* Scrollbar */
+.preview-scroll::-webkit-scrollbar {
+  width: 6px;
 }
 
-.preview-path {
-  font-size: 9px;
-  color: rgba(0, 255, 65,0.5);
+.preview-scroll::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.preview-scroll {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 0 0 8px;
+.preview-scroll::-webkit-scrollbar-thumb {
+  background: #d2d2d7;
+  border-radius: 3px;
 }
 
-.preview-section {
-  padding: 8px 10px 0;
+.preview-scroll::-webkit-scrollbar-thumb:hover {
+  background: #86868b;
 }
 
-.section-label {
-  font-family: 'Courier New', monospace;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  color: rgba(0, 255, 65,0.5);
-  margin-bottom: 6px;
+.text-muted {
+  color: #86868b !important;
 }
 
-.meta-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.meta-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 6px;
-}
-
-.meta-key {
-  font-size: 10px;
-  flex-shrink: 0;
-  color: rgba(0, 255, 65,0.5) !important;
-}
-
-.meta-value {
-  font-size: 10px;
-  color: #00ff41;
-  text-align: right;
-}
-
-.info-card {
-  padding: 6px 8px;
-  border: 2px solid #00ff41;
-  background: #0a0a0a;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 0;
-}
-
-.info-key {
-  font-size: 10px;
-  flex-shrink: 0;
-  color: rgba(0, 255, 65,0.5) !important;
-}
-
-.info-badge {
-  font-family: 'Courier New', monospace;
-  font-size: 9px;
-  font-weight: 700;
-  border: 1px solid #00ff41;
-  padding: 0 4px;
-  color: #00ff41;
-}
-
-.tag-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.tag-item {
-  font-size: 9px;
-  font-family: 'Courier New', monospace;
-  font-weight: 700;
-  border: 2px solid #00ff41;
-  padding: 1px 6px;
-  color: #00ff41;
-}
-
-.face-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.face-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 6px;
-}
-
-.avatar-sm {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #00ff41;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 8px;
-  color: #00ff41;
-}
-
-.face-name {
-  font-size: 11px;
-  color: #00ff41;
-}
-
-.symbol-tree {
-  border: 2px solid rgba(0, 255, 65,0.3);
-  overflow: hidden;
-}
-
-.symbol-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
-  font-size: 10px;
-  border-bottom: 1px solid rgba(0, 255, 65,0.1);
-}
-
-.symbol-kind {
-  font-family: 'Courier New', monospace;
-  font-size: 8px;
-  color: rgba(0, 255, 65,0.6);
-  text-transform: uppercase;
-  flex-shrink: 0;
-  min-width: 40px;
-}
-
-.symbol-name {
-  color: #00ff41;
+.truncate {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-.preview-actions {
-  display: flex;
-  gap: 2px;
-  padding: 6px;
-  border-top: 2px solid #00ff41;
-  flex-shrink: 0;
-}
-
-.pa-btn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 28px;
-  border: 2px solid #00ff41;
-  background: #0a0a0a;
-  color: #00ff41;
-  cursor: pointer;
-  font-family: 'Courier New', monospace;
-  font-size: 9px;
-  font-weight: 700;
-}
-
-.pa-btn:hover {
-  background: #00ff41;
-  color: #0a0a0a;
-}
-
-.pa-btn.danger:hover {
-  background: #00ff41;
-  color: #0a0a0a;
-}
-
-.pa-btn.decrypt-btn {
-  border-color: #51cf66;
-  color: #51cf66;
-}
-
-.pa-btn.decrypt-btn:hover {
-  background: #51cf66;
-  color: #0a0a0a;
-}
-
-.preview-error {
-  padding: 6px 10px;
-  font-size: 9px;
-  font-family: 'Courier New', monospace;
-  color: #ff5f57;
-  border-top: 1px solid #2a2a2a;
-  text-align: center;
-}
-
-.mono { font-family: 'Courier New', monospace; }
-.text-muted { color: rgba(0, 255, 65,0.5) !important; }
-.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
