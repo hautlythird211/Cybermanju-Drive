@@ -192,7 +192,7 @@ pub fn run() {
     // ensuring the accept thread is joined from the MAIN thread (not from
     // the accept thread's own Drop, which would self-deadlock).
 
-    let mut builder = tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
@@ -207,9 +207,7 @@ pub fn run() {
 
     // Windows-only: snap layout for frameless windows
     #[cfg(target_os = "windows")]
-    {
-        builder = builder.plugin(tauri_plugin_snap_layout::init());
-    }
+    let builder = builder.plugin(tauri_plugin_snap_layout::init());
 
     builder
         .manage(state)
