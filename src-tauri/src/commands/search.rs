@@ -12,6 +12,7 @@ pub struct SearchResult {
     pub file_name: String,
     pub score: f64,
     pub snippet: Option<String>,
+    pub match_type: Option<String>,
 }
 
 /// Search files using the Tantivy full-text search index.
@@ -44,6 +45,7 @@ pub fn search_files(
             } else {
                 Some(r.snippet)
             },
+            match_type: Some(r.match_type),
         })
         .collect();
 
@@ -89,6 +91,7 @@ pub fn search_files_paginated(
             } else {
                 Some(r.snippet)
             },
+            match_type: Some(r.match_type),
         })
         .collect();
 

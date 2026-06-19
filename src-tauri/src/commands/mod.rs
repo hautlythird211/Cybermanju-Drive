@@ -16,6 +16,8 @@ pub mod portable_db;
 pub mod search;
 pub mod share;
 pub mod sync;
+pub mod system_info;
 pub mod trash;
 pub mod users;
 pub mod versions;
+pub mod web;

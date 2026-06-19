@@ -142,6 +142,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Duplicates Panel -->
+    <DuplicatesPanel v-if="panelType === 'duplicates'" />
   </div>
 </template>
 
@@ -154,6 +157,7 @@ import type { PanelType } from '@/types'
 import ActivityPanel from '@/components/ActivityPanel.vue'
 import TrashPanel from '@/components/TrashPanel.vue'
 import HistoryPanel from '@/components/HistoryPanel.vue'
+import DuplicatesPanel from '@/components/DuplicatesPanel.vue'
 
 const props = defineProps<{
   panelType: PanelType

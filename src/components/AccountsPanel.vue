@@ -240,7 +240,12 @@ function browseAlbum(acc: Account, album: Collection) {
 }
 
 function openCollection(col: Collection) {
-  store.notifySuccess(`Collection: ${col.name} (${col.itemIds?.length || 0} items)`)
+  if (col.itemIds && col.itemIds.length > 0) {
+    store.selectedFileId = col.itemIds[0]
+    store.currentPanel = 'files'
+  } else {
+    store.notifySuccess(`Collection: ${col.name} (empty)`)
+  }
 }
 
 async function disconnectAccount(acc: Account) {

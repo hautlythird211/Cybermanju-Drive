@@ -1,10 +1,12 @@
 <template>
   <div class="desktop-shell" @contextmenu.prevent="onDesktopContext">
-    <!-- Animated ambient background -->
+    <!-- Animated psychedelic ambient background -->
     <div class="desktop-ambient" aria-hidden="true">
       <div class="ambient-orb ambient-orb--1"></div>
       <div class="ambient-orb ambient-orb--2"></div>
       <div class="ambient-orb ambient-orb--3"></div>
+      <div class="ambient-orb ambient-orb--4"></div>
+      <div class="ambient-orb ambient-orb--5"></div>
     </div>
     <div class="desktop-wallpaper">
       <slot name="wallpaper" />
@@ -30,7 +32,7 @@
             v-for="(scr, si) in allScreens"
             :key="si"
             class="overview-screen"
-            :class="{ hovered: hoverScreen === si, active: si === currentScreen }"
+            :class="{ hovered: hoverScreen === si, active: scr.x === wm.currentScreen.value.x && scr.y === wm.currentScreen.value.y }"
             @mouseenter="hoverScreen = si"
             @mouseleave="hoverScreen = null"
             @click="jumpToScreen(si)"
@@ -38,7 +40,7 @@
             <div class="overview-screen-label">SCREEN {{ si + 1 }}</div>
             <div class="overview-screen-grid">
               <div
-                v-for="(w, wi) in scr"
+                v-for="w in scr.windows"
                 :key="w.id"
                 class="overview-tile"
                 :style="overviewTileBg(w)"
@@ -47,15 +49,11 @@
                 <span class="overview-tile-label">{{ w.title }}</span>
               </div>
               <div
-                v-for="n in (4 - scr.length)"
+                v-for="n in Math.max(0, 4 - scr.windows.length)"
                 :key="'e' + n"
                 class="overview-tile overview-tile-empty"
               />
             </div>
-          </div>
-          <div class="overview-screen overview-screen-new" @click="createNewScreen">
-            <Icon icon="mdi:plus-circle-outline" width="24" height="24" />
-            <span>NEW SCREEN</span>
           </div>
         </div>
         <div class="overview-hint">click a screen to jump · 3-finger swipe to close</div>
@@ -63,11 +61,10 @@
 
       <div ref="gridRef" class="desktop-grid" :class="{ 'screen-swiping': screenTransitioning }">
         <AppWindow
-          v-for="(win, idx) in visibleWindows"
+          v-for="win in visibleWindows"
           :key="win.id"
           :win="win"
           :focused="win.id === wm.activeWindow.value?.id"
-          :tile-style="getTileStyle(idx)"
           @close="(id: string) => wm.close(id)"
           @minimize="(id: string) => wm.minimize(id)"
           @focus="(id: string) => wm.focus(id)"
@@ -103,40 +100,16 @@ const workspaceRef = ref<HTMLElement | null>(null)
 const gridRef = ref<HTMLElement | null>(null)
 const overviewRef = ref<HTMLElement | null>(null)
 const screenTransitioning = ref(false)
-const currentScreen = ref(0)
 const overview = ref(false)
 const hoverScreen = ref<number | null>(null)
 const gsapCtx = ref<gsap.Context | null>(null)
 
-const visibleWindows = computed(() => {
-  const windows = wm.windows.value.filter(w => !w.minimized)
-  const perScreen = 4
-  const start = currentScreen.value * perScreen
-  return windows.slice(start, start + perScreen)
+const allScreens = computed(() => wm.getAllScreens())
+const currentScreenIdx = computed(() => {
+  const screens = allScreens.value
+  return screens.findIndex(s => s.x === wm.currentScreen.value.x && s.y === wm.currentScreen.value.y)
 })
-
-const allScreens = computed(() => {
-  const windows = wm.windows.value.filter(w => !w.minimized)
-  const perScreen = 4
-  const screens: typeof windows[] = []
-  for (let i = 0; i < windows.length; i += perScreen) {
-    screens.push(windows.slice(i, i + perScreen))
-  }
-  if (screens.length === 0) screens.push([])
-  return screens
-})
-
-function getTileStyle(index: number) {
-  const pos = index % 4
-  const col = pos % 2
-  const row = Math.floor(pos / 2)
-  return {
-    left: `${col * 50}%`,
-    top: `${row * 50}%`,
-    width: '50%',
-    height: '50%',
-  }
-}
+const visibleWindows = computed(() => wm.getCurrentScreenWindows())
 
 function overviewTileBg(w: { title: string; icon: string }) {
   const colours = ['#ff5f57', '#febc2e', '#28c840', '#5dade2', '#af7ac5', '#f5b041']
@@ -144,20 +117,24 @@ function overviewTileBg(w: { title: string; icon: string }) {
   return { background: `${bg}22`, borderColor: bg }
 }
 
-function jumpToScreen(si: number) {
-  currentScreen.value = Math.max(0, Math.min(si, allScreens.value.length - 1))
+function jumpToScreen(idx: number) {
+  const screen = allScreens.value[idx]
+  if (screen) {
+    wm.currentScreen.value = { x: screen.x, y: screen.y }
+  }
   exitOverview()
-}
-
-function createNewScreen() {
-  const total = allScreens.value.length
-  currentScreen.value = total
-  overview.value = false
 }
 
 function exitOverview() {
   overview.value = false
   hoverScreen.value = null
+}
+
+function retileFromResize() {
+  if (gridRef.value) {
+    const rect = gridRef.value.getBoundingClientRect()
+    wm.retileAll(rect.width, rect.height)
+  }
 }
 
 // ── Touch handling ──
@@ -206,7 +183,6 @@ function onTouchEnd(e: TouchEvent) {
 
   if (absDx < minDist && absDy < minDist) { touchFingerCount = 0; return }
 
-  // 3-finger swipe up from center → toggle overview (mission control)
   if (touchFingerCount >= 3) {
     if (dy < 0 && inCenterZone(touchStartX, touchStartY)) {
       overview.value = true
@@ -217,7 +193,6 @@ function onTouchEnd(e: TouchEvent) {
     return
   }
 
-  // 2-finger horizontal swipe → navigate screens
   if (touchFingerCount === 2 && absDx > absDy) {
     navigateScreen(dx > 0 ? -1 : 1)
   }
@@ -225,7 +200,6 @@ function onTouchEnd(e: TouchEvent) {
   touchFingerCount = 0
 }
 
-// ── Wheel navigation (Ctrl+Wheel) ──
 function onWheel(e: WheelEvent) {
   if (!e.ctrlKey && !e.metaKey) return
   e.preventDefault()
@@ -237,16 +211,20 @@ function onWheel(e: WheelEvent) {
 }
 
 function navigateScreen(dir: number) {
-  const max = Math.max(0, allScreens.value.length - 1)
-  const next = Math.max(0, Math.min(currentScreen.value + dir, max))
-  if (next === currentScreen.value) return
+  const screens = allScreens.value
+  const idx = currentScreenIdx.value
+  const nextIdx = Math.max(0, Math.min(idx + dir, screens.length - 1))
+  if (nextIdx === idx) return
+  const next = screens[nextIdx]
+  if (!next) return
+
   screenTransitioning.value = true
   if (gridRef.value) {
     gsapCtx.value?.add(() => {
       anim.fadeOut(gridRef.value!, { duration: 0.15 })
     })
   }
-  currentScreen.value = next
+  wm.currentScreen.value = { x: next.x, y: next.y }
   setTimeout(() => {
     if (gridRef.value) {
       gsapCtx.value?.add(() => {
@@ -288,6 +266,8 @@ onMounted(async () => {
       anim.fadeIn(workspaceRef.value, { from: { opacity: 0 } })
     }
   })
+  nextTick(retileFromResize)
+  window.addEventListener('resize', retileFromResize)
 })
 
 watch(overview, async (val) => {
@@ -303,6 +283,7 @@ watch(overview, async (val) => {
 
 onUnmounted(() => {
   gsapCtx.value?.revert()
+  window.removeEventListener('resize', retileFromResize)
 })
 </script>
 
@@ -524,32 +505,49 @@ onUnmounted(() => {
 }
 
 .ambient-orb--1 {
-  width: clamp(300px, 50vw, 600px);
-  height: clamp(300px, 50vw, 600px);
-  background: radial-gradient(circle, rgba(0, 255, 65, 0.12), transparent 70%);
+  width: clamp(300px, 50vw, 700px);
+  height: clamp(300px, 50vw, 700px);
+  background: radial-gradient(circle, rgba(0, 255, 65, 0.18), rgba(0, 200, 255, 0.06) 50%, transparent 70%);
   top: -10%;
   left: -10%;
-  animation: ambient-drift 20s ease-in-out infinite;
+  animation: psychedelic-drift-1 12s ease-in-out infinite, hue-crazy 8s linear infinite;
 }
 
 .ambient-orb--2 {
-  width: clamp(400px, 60vw, 700px);
-  height: clamp(400px, 60vw, 700px);
-  background: radial-gradient(circle, rgba(90, 240, 255, 0.08), transparent 70%);
+  width: clamp(400px, 60vw, 800px);
+  height: clamp(400px, 60vw, 800px);
+  background: radial-gradient(circle, rgba(255, 107, 157, 0.14), rgba(179, 136, 255, 0.08) 50%, transparent 70%);
   bottom: -15%;
   right: -10%;
-  animation: ambient-drift 25s ease-in-out infinite reverse;
+  animation: psychedelic-drift-2 15s ease-in-out infinite reverse, hue-crazy 10s linear infinite reverse;
 }
 
 .ambient-orb--3 {
-  width: clamp(200px, 30vw, 400px);
-  height: clamp(200px, 30vw, 400px);
-  background: radial-gradient(circle, rgba(255, 107, 157, 0.06), transparent 70%);
+  width: clamp(200px, 35vw, 500px);
+  height: clamp(200px, 35vw, 500px);
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.12), rgba(255, 153, 51, 0.06) 50%, transparent 70%);
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  animation: ambient-drift 30s ease-in-out infinite;
-  animation-delay: -10s;
+  animation: psychedelic-drift-3 18s ease-in-out infinite, hue-crazy 12s linear infinite;
+}
+
+.ambient-orb--4 {
+  width: clamp(250px, 40vw, 550px);
+  height: clamp(250px, 40vw, 550px);
+  background: radial-gradient(circle, rgba(90, 240, 255, 0.12), rgba(0, 255, 65, 0.05) 50%, transparent 70%);
+  top: 30%;
+  right: 10%;
+  animation: psychedelic-drift-4 20s ease-in-out infinite reverse, hue-crazy 6s linear infinite;
+}
+
+.ambient-orb--5 {
+  width: clamp(180px, 25vw, 350px);
+  height: clamp(180px, 25vw, 350px);
+  background: radial-gradient(circle, rgba(179, 136, 255, 0.1), rgba(255, 107, 157, 0.06) 50%, transparent 70%);
+  bottom: 20%;
+  left: 15%;
+  animation: psychedelic-drift-5 22s ease-in-out infinite, hue-crazy 14s linear infinite reverse;
 }
 
 .desktop-content {
@@ -558,11 +556,42 @@ onUnmounted(() => {
   isolation: isolate;
 }
 
-@keyframes ambient-drift {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  25% { transform: translate(5%, 3%) scale(1.05); }
-  50% { transform: translate(-3%, 5%) scale(0.95); }
-  75% { transform: translate(4%, -2%) scale(1.02); }
+@keyframes psychedelic-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  25% { transform: translate(8%, 5%) scale(1.12) rotate(3deg); }
+  50% { transform: translate(-5%, 8%) scale(0.92) rotate(-2deg); }
+  75% { transform: translate(6%, -4%) scale(1.06) rotate(4deg); }
+}
+
+@keyframes psychedelic-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  20% { transform: translate(-6%, -4%) scale(1.08) rotate(-3deg); }
+  50% { transform: translate(4%, -6%) scale(0.94) rotate(2deg); }
+  80% { transform: translate(-3%, 5%) scale(1.1) rotate(-4deg); }
+}
+
+@keyframes psychedelic-drift-3 {
+  0%, 100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+  33% { transform: translate(calc(-50% + 6%), calc(-50% - 4%)) scale(1.15) rotate(5deg); }
+  66% { transform: translate(calc(-50% - 5%), calc(-50% + 6%)) scale(0.88) rotate(-3deg); }
+}
+
+@keyframes psychedelic-drift-4 {
+  0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  25% { transform: translate(-7%, 6%) scale(1.08) rotate(-5deg); }
+  50% { transform: translate(5%, -5%) scale(1.14) rotate(3deg); }
+  75% { transform: translate(-4%, -3%) scale(0.92) rotate(-2deg); }
+}
+
+@keyframes psychedelic-drift-5 {
+  0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  30% { transform: translate(5%, -7%) scale(1.1) rotate(4deg); }
+  60% { transform: translate(-6%, 4%) scale(0.9) rotate(-5deg); }
+}
+
+@keyframes hue-crazy {
+  0% { filter: hue-rotate(0deg) blur(80px); }
+  100% { filter: hue-rotate(360deg) blur(80px); }
 }
 
 /* ── Screen transitions ── */

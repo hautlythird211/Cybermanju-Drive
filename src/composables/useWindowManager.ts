@@ -22,6 +22,7 @@ import WindowContent from '@/components/WindowContent.vue'
 import SystemMonitor from '@/components/SystemMonitor.vue'
 import TaskManager from '@/components/TaskManager.vue'
 import Terminal from '@/components/Terminal.vue'
+import WebBrowserPanel from '@/components/WebBrowserPanel.vue'
 
 export interface WindowState {
   id: string
@@ -40,6 +41,13 @@ export interface WindowState {
   screenY: number
   tileSlot: number
   animState: 'idle' | 'entering' | 'exiting'
+}
+
+export interface TileRect {
+  x: number
+  y: number
+  width: number
+  height: number
 }
 
 type SizeMap = { [K in PanelType]?: { width: number; height: number } } & {
@@ -75,6 +83,7 @@ const defaultSizes: SizeMap = {
   'task-manager': { width: 540, height: 420 },
   terminal: { width: 480, height: 360 },
   history: { width: 440, height: 380 },
+  browser: { width: 640, height: 480 },
 }
 
 const inlinePanels: PanelType[] = [
@@ -104,6 +113,7 @@ const panelComponentMap: Record<string, Component> = {
   'task-manager': TaskManager,
   terminal: Terminal,
   accounts: AccountsPanel,
+  browser: WebBrowserPanel,
 }
 
 function getComponent(panelType: PanelType): Component | null {
@@ -117,6 +127,10 @@ let windowCounter = 0
 const windows = ref<WindowState[]>([])
 const nextZIndex = ref(10)
 const windowFocusHistory = ref<string[]>([])
+const currentScreen = ref({ x: 0, y: 0 })
+
+const TILE_GAP = 6
+const MAX_Z_INDEX = 9999
 
 export function useWindowManager() {
   const activeWindow = computed(() => {
@@ -125,11 +139,9 @@ export function useWindowManager() {
     return windows.value.find(w => w.id === id) || null
   })
 
-  const currentScreen = ref({ x: 0, y: 0 })
-
   function allocateTile(screenX: number, screenY: number): number {
     const taken = windows.value
-      .filter(w => w.screenX === screenX && w.screenY === screenY)
+      .filter(w => w.screenX === screenX && w.screenY === screenY && w.animState !== 'exiting')
       .map(w => w.tileSlot)
     for (let slot = 0; slot < 4; slot++) {
       if (!taken.includes(slot)) return slot
@@ -150,9 +162,47 @@ export function useWindowManager() {
     return { x: cx + 1, y: cy }
   }
 
+  function getTileRect(screenX: number, screenY: number, slot: number, containerWidth: number, containerHeight: number): TileRect {
+    const col = slot % 2
+    const row = Math.floor(slot / 2)
+    const halfW = (containerWidth - TILE_GAP * 3) / 2
+    const halfH = (containerHeight - TILE_GAP * 3) / 2
+    return {
+      x: TILE_GAP + col * (halfW + TILE_GAP),
+      y: TILE_GAP + row * (halfH + TILE_GAP),
+      width: halfW,
+      height: halfH,
+    }
+  }
+
+  function getWindowsForScreen(sx: number, sy: number): WindowState[] {
+    return windows.value.filter(w => w.screenX === sx && w.screenY === sy && !w.minimized)
+  }
+
+  function getAllScreens(): Array<{ x: number; y: number; windows: WindowState[] }> {
+    const screenMap = new Map<string, { x: number; y: number; windows: WindowState[] }>()
+    for (const w of windows.value.filter(w => !w.minimized)) {
+      const key = `${w.screenX},${w.screenY}`
+      if (!screenMap.has(key)) {
+        screenMap.set(key, { x: w.screenX, y: w.screenY, windows: [] })
+      }
+      screenMap.get(key)!.windows.push(w)
+    }
+    const screens = Array.from(screenMap.values())
+    screens.sort((a, b) => a.x - b.x || a.y - b.y)
+    if (screens.length === 0) {
+      screens.push({ x: 0, y: 0, windows: [] })
+    }
+    return screens
+  }
+
+  function getCurrentScreenWindows(): WindowState[] {
+    return getWindowsForScreen(currentScreen.value.x, currentScreen.value.y)
+  }
+
   function open(panelType: PanelType, props?: Record<string, unknown>) {
     const existing = windows.value.find(
-      w => w.panelType === panelType && !w.minimized
+      w => w.panelType === panelType && !w.minimized && w.animState !== 'exiting'
     )
     if (existing) {
       focus(existing.id)
@@ -167,20 +217,24 @@ export function useWindowManager() {
     const screen = findNextScreen()
     const tileSlot = allocateTile(screen.x, screen.y)
 
+    if (tileSlot < 0) return null
+
     const resolvedProps = { ...(props || {}) }
     if (inlinePanels.includes(panelType)) {
       resolvedProps.panelType = panelType
     }
+
+    const tile = getTileRect(screen.x, screen.y, tileSlot, 1200, 800)
 
     const win: WindowState = {
       id,
       panelType,
       title: meta.label,
       icon: meta.icon,
-      x: 0,
-      y: 0,
-      width: size.width,
-      height: size.height,
+      x: tile.x,
+      y: tile.y,
+      width: Math.min(size.width, tile.width),
+      height: Math.min(size.height, tile.height),
       minimized: false,
       zIndex: nextZIndex.value++,
       component: comp,
@@ -198,24 +252,24 @@ export function useWindowManager() {
   }
 
   function close(id: string) {
-    const win = windows.value.find(w => w.id === id)
-    if (win) {
-      win.animState = 'exiting'
-      setTimeout(() => {
-        windows.value = windows.value.filter(w => w.id !== id)
-        windowFocusHistory.value = windowFocusHistory.value.filter(w => w !== id)
-      }, 300)
-    }
+    const idx = windows.value.findIndex(w => w.id === id)
+    if (idx === -1) return
+    const win = windows.value[idx]
+    win.animState = 'exiting'
+    windowFocusHistory.value = windowFocusHistory.value.filter(w => w !== id)
+    setTimeout(() => {
+      windows.value = windows.value.filter(w => w.id !== id)
+    }, 300)
   }
 
   function minimize(id: string) {
     const win = windows.value.find(w => w.id === id)
     if (win) {
       win.animState = 'exiting'
+      windowFocusHistory.value = windowFocusHistory.value.filter(w => w !== id)
       setTimeout(() => {
         win.minimized = true
         win.animState = 'idle'
-        windowFocusHistory.value = windowFocusHistory.value.filter(w => w !== id)
       }, 300)
     }
   }
@@ -235,6 +289,12 @@ export function useWindowManager() {
   function focus(id: string) {
     const win = windows.value.find(w => w.id === id)
     if (win && !win.minimized) {
+      if (nextZIndex.value > MAX_Z_INDEX) {
+        const minZ = Math.min(...windows.value.map(w => w.zIndex))
+        const shift = minZ - 1
+        windows.value.forEach(w => { w.zIndex -= shift })
+        nextZIndex.value -= shift
+      }
       win.zIndex = nextZIndex.value++
       windowFocusHistory.value = windowFocusHistory.value.filter(w => w !== id)
       windowFocusHistory.value.push(id)
@@ -244,7 +304,7 @@ export function useWindowManager() {
 
   function toggle(panelType: PanelType, props?: Record<string, unknown>) {
     const existing = windows.value.find(
-      w => w.panelType === panelType
+      w => w.panelType === panelType && w.animState !== 'exiting'
     )
     if (existing) {
       if (existing.minimized) {
@@ -261,21 +321,21 @@ export function useWindowManager() {
 
   function closeAll() {
     windows.value.forEach(w => { w.animState = 'exiting' })
+    windowFocusHistory.value = []
     setTimeout(() => {
       windows.value = []
-      windowFocusHistory.value = []
     }, 300)
   }
 
   function minimizeAll() {
     windows.value.forEach(w => {
       w.animState = 'exiting'
+      windowFocusHistory.value = []
       setTimeout(() => {
         w.minimized = true
         w.animState = 'idle'
       }, 300)
     })
-    windowFocusHistory.value = []
   }
 
   function updatePosition(id: string, x: number, y: number) {
@@ -294,12 +354,33 @@ export function useWindowManager() {
     }
   }
 
+  function updateTilePosition(id: string, containerWidth: number, containerHeight: number) {
+    const win = windows.value.find(w => w.id === id)
+    if (!win) return
+    const tile = getTileRect(win.screenX, win.screenY, win.tileSlot, containerWidth, containerHeight)
+    win.x = tile.x
+    win.y = tile.y
+    win.width = tile.width
+    win.height = tile.height
+  }
+
+  function retileAll(containerWidth: number, containerHeight: number) {
+    for (const win of windows.value) {
+      if (win.minimized || win.animState === 'exiting') continue
+      const tile = getTileRect(win.screenX, win.screenY, win.tileSlot, containerWidth, containerHeight)
+      win.x = tile.x
+      win.y = tile.y
+      win.width = tile.width
+      win.height = tile.height
+    }
+  }
+
   const openWindowCount = computed(() =>
-    windows.value.filter(w => !w.minimized).length
+    windows.value.filter(w => !w.minimized && w.animState !== 'exiting').length
   )
 
   const isOpen = (panelType: PanelType) =>
-    windows.value.some(w => w.panelType === panelType)
+    windows.value.some(w => w.panelType === panelType && w.animState !== 'exiting')
 
   return {
     windows,
@@ -316,9 +397,16 @@ export function useWindowManager() {
     minimizeAll,
     updatePosition,
     updateSize,
+    updateTilePosition,
+    retileAll,
+    getTileRect,
+    getWindowsForScreen,
+    getAllScreens,
+    getCurrentScreenWindows,
     openWindowCount,
     isOpen,
     inlinePanels,
+    TILE_GAP,
   }
 }
 

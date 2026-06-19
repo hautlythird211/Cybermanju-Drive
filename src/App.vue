@@ -17,7 +17,6 @@ import LandingPage from '@/components/LandingPage.vue'
 import BootScreen from '@/components/BootScreen.vue'
 import PostScreen from '@/components/PostScreen.vue'
 
-import SetupWizard from '@/components/SetupWizard.vue'
 import CanvasEngine from '@/components/CanvasEngine.vue'
 import NotificationStack from '@/components/NotificationStack.vue'
 import CommandPalette from '@/components/CommandPalette.vue'
@@ -32,6 +31,7 @@ import UnboxDialog from '@/components/UnboxDialog.vue'
 import MobileNav from '@/components/MobileNav.vue'
 import ContextMenu from '@/components/ContextMenu.vue'
 import CrashReporter from '@/components/CrashReporter.vue'
+import DataTransparencyReport from '@/components/DataTransparencyReport.vue'
 import type { PanelType, FileNode } from '@/types'
 
 const store = useAppStore()
@@ -515,9 +515,10 @@ function handleUpload() {
 
 import { useLogin } from '@/composables/useLogin'
 
-const { needsSetup, restoreSession } = useLogin()
+const { restoreSession } = useLogin()
 
 const bootPhase = ref<'post' | 'kernel' | 'desktop'>('post')
+const showTransparencyReport = ref(false)
 
 onMounted(async () => {
   store.currentPanel = 'landing'
@@ -532,16 +533,10 @@ function onPostComplete() {
 
 function onKernelBootComplete() {
   bootPhase.value = 'desktop'
-}
-
-function onSetupComplete() {
-  needsSetup.value = false
-  store.currentPanel = 'files'
-  wm.open('files')
+  showTransparencyReport.value = true
 }
 
 function handleLandingLaunch() {
-  if (needsSetup.value !== false) return
   store.currentPanel = 'files'
   wm.open('files')
 }
@@ -551,17 +546,12 @@ function handleLandingLaunch() {
   <div class="cybermanju-shell">
     <PostScreen v-if="bootPhase === 'post'" @complete="onPostComplete" />
     <BootScreen v-else-if="bootPhase === 'kernel'" @complete="onKernelBootComplete" />
-    <template v-if="bootPhase === 'desktop'">
-      <SetupWizard
-        v-if="needsSetup === true"
-        @complete="onSetupComplete"
-      />
-      <LandingPage
-        v-else-if="store.currentPanel === 'landing'"
-        :key="'landing'"
-        @open-app="handleLandingLaunch"
-      />
-      <template v-else>
+    <LandingPage
+      v-else-if="bootPhase === 'desktop' && store.currentPanel === 'landing'"
+      :key="'landing'"
+      @open-app="handleLandingLaunch"
+    />
+    <template v-else-if="bootPhase === 'desktop'">
         <DesktopShell>
           <template #wallpaper>
             <CanvasEngine :enabled="store.matrixRainEnabled" />
@@ -629,8 +619,8 @@ function handleLandingLaunch() {
         />
         <MobileNav />
         <ContextMenu />
+        <DataTransparencyReport v-if="showTransparencyReport" @close="showTransparencyReport = false" />
         <CrashReporter />
-      </template>
     </template>
   </div>
 </template>

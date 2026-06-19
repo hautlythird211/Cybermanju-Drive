@@ -73,6 +73,7 @@
             v-for="col in store.collections"
             :key="col.id"
             class="sidebar-item"
+            @click="openCollection(col)"
           >
             <div class="bw-dot bw-dot-on" />
             <div class="item-info">
@@ -178,6 +179,7 @@
           <button class="ql-item" @click="store.currentPanel = 'favorites'" aria-label="OPEN FAVORITES">[*] FAVORITES ({{ store.starredFiles.length }})</button>
           <button class="ql-item" @click="store.currentPanel = 'recent'" aria-label="OPEN RECENT FILES">[T] RECENT FILES</button>
           <button class="ql-item" @click="store.currentPanel = 'activity'" aria-label="OPEN ACTIVITY LOG">[~] ACTIVITY LOG</button>
+          <button class="ql-item" @click="store.currentPanel = 'duplicates'; store.fetchDuplicates()" aria-label="OPEN DUPLICATES">[=] DUPLICATES</button>
           <button class="ql-item" @click="store.currentPanel = 'settings'" aria-label="OPEN SETTINGS">[@] SETTINGS</button>
           <button class="ql-item" @click="store.currentPanel = 'trash'" aria-label="OPEN TRASH">[%] TRASH</button>
         </div>
@@ -249,6 +251,15 @@ const rootFolders = computed(() =>
 
 function showTreeContextMenu(e: MouseEvent) {
   ctx.open(e, 'sidebar_bg')
+}
+
+function openCollection(col: { id: string; name: string; itemIds: string[] }) {
+  if (col.itemIds && col.itemIds.length > 0) {
+    store.selectedFileId = col.itemIds[0]
+    store.currentPanel = 'files'
+  } else {
+    store.notifySuccess(`Collection: ${col.name} (empty)`)
+  }
 }
 </script>
 

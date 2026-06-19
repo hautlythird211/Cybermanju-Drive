@@ -28,8 +28,17 @@ const PROVIDER_META = [
   { id: 'telegram', label: 'Telegram', icon: 'logos:telegram', color: '#0088CC' },
   { id: 'mega', label: 'Mega.nz', icon: 'logos:mega', color: '#D9272E' },
 ]
+
+const PROVIDER_TO_OAUTH: Record<string, OAuthProvider> = {
+  google: 'googleDrive',
+  github: 'github',
+  gitlab: 'gitlab',
+  telegram: 'telegram',
+}
+
 const connectedProviders = ref<string[]>([])
 const connectingProvider = ref<string | null>(null)
+const providerError = ref('')
 const showClientIdForm = ref<string | null>(null)
 const clientIdInput = ref('')
 
@@ -46,59 +55,87 @@ let timer: ReturnType<typeof setInterval> | null = null
 let glitchTimer: ReturnType<typeof setInterval> | null = null
 let bootTimeout: ReturnType<typeof setTimeout> | null = null
 
-const BOOT_LINES: Array<{ msg: string; delay: number; pct: number }> = [
-  { msg: '[BOOT] Cybermanju Drive Kernel v4.2.0-RELEASE (x86_64)', delay: 80, pct: 1 },
-  { msg: '[BOOT] CPU: HYBRID PQC-NEON @ 2.8GHz, 8 cores / 16 threads', delay: 60, pct: 3 },
-  { msg: '[BOOT] MEM: 32768MB POST-QUANTUM CRYPTO RAM (ECC)', delay: 70, pct: 5 },
-  { msg: '[BIOS] CMOS checksum OK — system battery nominal', delay: 90, pct: 7 },
-  { msg: '[BIOS] ACPI: IRQ routing table loaded', delay: 50, pct: 8 },
-  { msg: '[BIOS] PCI: Enumeration complete — 47 devices on bus', delay: 65, pct: 10 },
-  { msg: '[BIOS] SATA: 6 devices detected (SSD x2, NVMe x4)', delay: 55, pct: 12 },
-  { msg: '[KERN] Initializing memory protection — NX, ASLR, SMEP', delay: 70, pct: 14 },
-  { msg: '[KERN] CRYPTO: ChaCha20-Poly1305 hardware acceleration ENABLED', delay: 60, pct: 16 },
-  { msg: '[KERN] CRYPTO: Kyber-1024 key encapsulation module loaded', delay: 75, pct: 18 },
-  { msg: '[KERN] CRYPTO: Dilithium-5 signature verification online', delay: 65, pct: 20 },
-  { msg: '[KERN] VFS: Mounting root filesystem (ext4, encrypted)', delay: 80, pct: 23 },
-  { msg: '[KERN] VFS: /dev/sda1 — LUKS2 (Argon2id) unlocked', delay: 70, pct: 25 },
-  { msg: '[KERN] VFS: /dev/sdb1 — XFS, journal replay OK', delay: 55, pct: 27 },
-  { msg: '[KERN] NET: eth0 — 10 GbE link UP (MAC: 2A:4F:8E:0C:D1:73)', delay: 60, pct: 29 },
-  { msg: '[KERN] NET: wlan0 — 802.11ax (6 GHz) scan complete', delay: 65, pct: 31 },
-  { msg: '[KERN] NET: IPv6 stack ready — SLAAC configured', delay: 50, pct: 33 },
-  { msg: '[KERN] USB: OHCI controller #1 at 0xFE800000 (irq 16)', delay: 55, pct: 35 },
-  { msg: '[KERN] USB: 4 hubs, 12 devices enumerated', delay: 50, pct: 37 },
-  { msg: '[KERN] ACPI: Thermal zone monitoring active', delay: 45, pct: 39 },
-  { msg: '[KERN] DRM: efifb — 1920x1080 @ 60Hz (32 bpp)', delay: 60, pct: 41 },
-  { msg: '[KERN] DRM: fbcon — font set to "Terminus" 8x16', delay: 55, pct: 43 },
-  { msg: '[KERN] SND: HDA Intel PCH — Realtek ALC1220 detected', delay: 50, pct: 45 },
-  { msg: '[KERN] SND: ALSA device list: hdaudioC0D0, hdaudioC0D2', delay: 50, pct: 47 },
-  { msg: '[KERN] RNG: crng init done — entropy pool seeded', delay: 60, pct: 49 },
-  { msg: '[KERN] RTC: system clock synced to hardware (UTC)', delay: 45, pct: 51 },
-  { msg: '[INIT] Starting init daemon (PID 1): openrc-0.52', delay: 55, pct: 53 },
-  { msg: '[INIT] Mounting pseudo-filesystems: proc, sysfs, tmpfs, devpts', delay: 60, pct: 55 },
-  { msg: '[INIT] Activating swap: /dev/sda2 (32 GB, encrypted)', delay: 50, pct: 57 },
-  { msg: '[INIT] Loading kernel modules: cryptodev, ipsec, wireguard', delay: 55, pct: 59 },
-  { msg: '[INIT] Starting udev: device manager online', delay: 45, pct: 61 },
-  { msg: '[INIT] Starting syslog-ng: logging daemon active', delay: 50, pct: 63 },
-  { msg: '[INIT] Starting cronie: periodic scheduler loaded', delay: 45, pct: 65 },
-  { msg: '[INIT] Starting sshd: OpenSSH_9.4 (port 2222)', delay: 55, pct: 67 },
-  { msg: '[INIT] Starting nginx: HTTPS reverse proxy online', delay: 50, pct: 69 },
-  { msg: '[INIT] Starting postgresql: database cluster ready', delay: 60, pct: 71 },
-  { msg: '[INIT] Starting redis: cache layer initialized', delay: 45, pct: 73 },
-  { msg: '[DAEMON] cybermanju-syncd — sync orchestrator starting...', delay: 55, pct: 75 },
-  { msg: '[DAEMON] cybermanju-syncd — 6 backends registered', delay: 50, pct: 77 },
-  { msg: '[DAEMON] cybermanju-cryptd — quantum-safe tunnel established', delay: 60, pct: 79 },
-  { msg: '[DAEMON] cybermanju-watchd — file watcher active (inotify)', delay: 45, pct: 81 },
-  { msg: '[DAEMON] cybermanju-indexd — full-text index rebuilt', delay: 55, pct: 83 },
-  { msg: '[DAEMON] cybermanju-faced — facial recognition model loaded (453 tags)', delay: 65, pct: 85 },
-  { msg: '[DAEMON] cybermanju-geod — geotag index initialized (41 markers)', delay: 50, pct: 87 },
-  { msg: '[SHELL] Starting Cybermanju Drive Session Manager (SDM)', delay: 55, pct: 89 },
-  { msg: '[SHELL] SDM: policykit authority acquired', delay: 45, pct: 91 },
-  { msg: '[SHELL] SDM: D-Bus session bus listening', delay: 50, pct: 93 },
-  { msg: '[SHELL] SDM: compositor starting — Wayland (wlroots)', delay: 60, pct: 95 },
-  { msg: '[SHELL] SDM: desktop environment — cybermanju-shell', delay: 55, pct: 97 },
-  { msg: '[SHELL] SDM: startup sequence complete.', delay: 80, pct: 99 },
-  { msg: '[SHELL] Welcome to Cybermanju Drive. initializing UI...', delay: 120, pct: 100 },
-]
+interface SysInfo {
+  os_name: string
+  os_version: string
+  os_arch: string
+  hostname: string
+  cpu_brand: string
+  cpu_cores: number
+  cpu_threads: number
+  total_memory_mb: number
+  used_memory_mb: number
+  total_disk_gb: number
+  used_disk_gb: number
+  kernel_version: string
+  uptime_seconds: number
+}
+
+function buildBootLines(s: SysInfo | null): Array<{ msg: string; delay: number; pct: number }> {
+  const cpu = s?.cpu_brand || 'Unknown CPU'
+  const mem = s?.total_memory_mb || 0
+  const cores = s?.cpu_cores || 1
+  const threads = s?.cpu_threads || 1
+  const kernel = s?.kernel_version || 'unknown'
+  const os = s?.os_name || 'Unknown'
+  const arch = s?.os_arch || 'unknown'
+  const hostname = s?.hostname || 'localhost'
+  const disk = s?.total_disk_gb || 0
+
+  return [
+    { msg: `[BOOT] Cybermanju Drive Kernel v4.2.0-RELEASE (${arch})`, delay: 80, pct: 1 },
+    { msg: `[BOOT] CPU: ${cpu}, ${cores}C/${threads}T`, delay: 60, pct: 3 },
+    { msg: `[BOOT] MEM: ${mem}MB POST-QUANTUM CRYPTO RAM (ECC)`, delay: 70, pct: 5 },
+    { msg: '[BIOS] CMOS checksum OK — system battery nominal', delay: 90, pct: 7 },
+    { msg: '[BIOS] ACPI: IRQ routing table loaded', delay: 50, pct: 8 },
+    { msg: `[BIOS] PCI: Enumeration complete — devices on bus`, delay: 65, pct: 10 },
+    { msg: '[BIOS] SATA: devices detected', delay: 55, pct: 12 },
+    { msg: '[KERN] Initializing memory protection — NX, ASLR, SMEP', delay: 70, pct: 14 },
+    { msg: '[KERN] CRYPTO: ChaCha20-Poly1305 hardware acceleration ENABLED', delay: 60, pct: 16 },
+    { msg: '[KERN] CRYPTO: Kyber-1024 key encapsulation module loaded', delay: 75, pct: 18 },
+    { msg: '[KERN] CRYPTO: Dilithium-5 signature verification online', delay: 65, pct: 20 },
+    { msg: '[KERN] VFS: Mounting root filesystem (ext4, encrypted)', delay: 80, pct: 23 },
+    { msg: '[KERN] VFS: /dev/sda1 — LUKS2 (Argon2id) unlocked', delay: 70, pct: 25 },
+    { msg: '[KERN] VFS: /dev/sdb1 — XFS, journal replay OK', delay: 55, pct: 27 },
+    { msg: `[KERN] NET: eth0 — link UP`, delay: 60, pct: 29 },
+    { msg: '[KERN] NET: wlan0 — scan complete', delay: 65, pct: 31 },
+    { msg: '[KERN] NET: IPv6 stack ready — SLAAC configured', delay: 50, pct: 33 },
+    { msg: '[KERN] USB: OHCI controller #1 at 0xFE800000 (irq 16)', delay: 55, pct: 35 },
+    { msg: '[KERN] USB: hubs, devices enumerated', delay: 50, pct: 37 },
+    { msg: '[KERN] ACPI: Thermal zone monitoring active', delay: 45, pct: 39 },
+    { msg: '[KERN] DRM: efifb — display active', delay: 60, pct: 41 },
+    { msg: '[KERN] DRM: fbcon — font set to "Terminus" 8x16', delay: 55, pct: 43 },
+    { msg: '[KERN] SND: Audio controller detected', delay: 50, pct: 45 },
+    { msg: '[KERN] SND: ALSA device list loaded', delay: 50, pct: 47 },
+    { msg: '[KERN] RNG: crng init done — entropy pool seeded', delay: 60, pct: 49 },
+    { msg: '[KERN] RTC: system clock synced to hardware (UTC)', delay: 45, pct: 51 },
+    { msg: '[INIT] Starting init daemon (PID 1): openrc-0.52', delay: 55, pct: 53 },
+    { msg: '[INIT] Mounting pseudo-filesystems: proc, sysfs, tmpfs, devpts', delay: 60, pct: 55 },
+    { msg: `[INIT] Activating swap: encrypted`, delay: 50, pct: 57 },
+    { msg: '[INIT] Loading kernel modules: cryptodev, ipsec, wireguard', delay: 55, pct: 59 },
+    { msg: '[INIT] Starting udev: device manager online', delay: 45, pct: 61 },
+    { msg: '[INIT] Starting syslog-ng: logging daemon active', delay: 50, pct: 63 },
+    { msg: '[INIT] Starting cronie: periodic scheduler loaded', delay: 45, pct: 65 },
+    { msg: '[INIT] Starting sshd: OpenSSH_9.4 (port 2222)', delay: 55, pct: 67 },
+    { msg: '[INIT] Starting nginx: HTTPS reverse proxy online', delay: 50, pct: 69 },
+    { msg: '[INIT] Starting postgresql: database cluster ready', delay: 60, pct: 71 },
+    { msg: '[INIT] Starting redis: cache layer initialized', delay: 45, pct: 73 },
+    { msg: '[DAEMON] cybermanju-syncd — sync orchestrator starting...', delay: 55, pct: 75 },
+    { msg: '[DAEMON] cybermanju-syncd — 6 backends registered', delay: 50, pct: 77 },
+    { msg: '[DAEMON] cybermanju-cryptd — quantum-safe tunnel established', delay: 60, pct: 79 },
+    { msg: '[DAEMON] cybermanju-watchd — file watcher active (inotify)', delay: 45, pct: 81 },
+    { msg: '[DAEMON] cybermanju-indexd — full-text index rebuilt', delay: 55, pct: 83 },
+    { msg: '[DAEMON] cybermanju-faced — facial recognition model loaded', delay: 65, pct: 85 },
+    { msg: '[DAEMON] cybermanju-geod — geotag index initialized', delay: 50, pct: 87 },
+    { msg: '[SHELL] Starting Cybermanju Drive Session Manager (SDM)', delay: 55, pct: 89 },
+    { msg: '[SHELL] SDM: policykit authority acquired', delay: 45, pct: 91 },
+    { msg: '[SHELL] SDM: D-Bus session bus listening', delay: 50, pct: 93 },
+    { msg: `[SHELL] SDM: ${os} ${kernel} (${arch})`, delay: 60, pct: 95 },
+    { msg: `[SHELL] SDM: ${hostname} — desktop environment ready`, delay: 55, pct: 97 },
+    { msg: `[SHELL] SDM: ${disk > 0 ? `Disk ${disk.toFixed(0)}GB mounted` : 'Storage mounted'} — startup sequence complete.`, delay: 80, pct: 99 },
+    { msg: '[SHELL] Welcome to Cybermanju Drive. initializing UI...', delay: 120, pct: 100 },
+  ]
+}
 
 function addBootLine(line: string) {
   bootLogs.value.push(line)
@@ -118,7 +155,15 @@ function triggerGlitch() {
 }
 
 async function runBoot() {
-  for (const entry of BOOT_LINES) {
+  let sysInfo: SysInfo | null = null
+  try {
+    const { invoke } = await import('@tauri-apps/api/core')
+    sysInfo = await invoke<SysInfo>('get_system_info')
+  } catch {}
+
+  const bootLines = buildBootLines(sysInfo)
+
+  for (const entry of bootLines) {
     await new Promise(r => setTimeout(r, entry.delay + Math.random() * 40))
     addBootLine(entry.msg)
     progress.value = entry.pct
@@ -131,7 +176,7 @@ async function runBoot() {
     if (entry.msg.includes('NVMe')) {
       addBootLine('  \x1b[31mERR\x1b[0m: NVMe nvme2: link training retry (3/3), OK')
     }
-    if (entry.msg.includes('eth0')) {
+    if (entry.msg.includes('eth0') || entry.msg.includes('NET:')) {
       addBootLine('  \x1b[33mWARN\x1b[0m: interface rx buffer adjusted (4096 -> 8192)')
     }
 
@@ -171,26 +216,39 @@ async function connectProvider(pid: string) {
     return
   }
   if (connectingProvider.value) return
+  providerError.value = ''
+
+  const oauthKey = PROVIDER_TO_OAUTH[pid]
+  if (!oauthKey) return
+
   connectingProvider.value = pid
   try {
     const { oauth } = await import('@/wasm')
     const data = await import('@/wasm/data')
     oauth.loadClientIdsFromEnv()
-    const provider = pid as OAuthProvider
-    const clientId = oauth.getProviderClientId(provider)
+
+    const clientId = oauth.getProviderClientId(oauthKey)
     if (!clientId) {
       showClientIdForm.value = pid
+      connectingProvider.value = null
       return
     }
-    const existingToken = await oauth.loadTokenFromStorage(provider)
+
+    const existingToken = await oauth.loadTokenFromStorage(oauthKey)
     let token = existingToken ? await oauth.getValidToken(existingToken) : null
     if (token) {
-      oauth.saveTokenToStorage(token)
+      await oauth.saveTokenToStorage(token)
     } else {
-      token = await oauth.authenticateWithPopup(provider)
-      oauth.saveTokenToStorage(token)
+      token = await oauth.authenticateWithPopup(oauthKey)
+      await oauth.saveTokenToStorage(token)
     }
-    await data.upsertOAuthAccount(provider, token)
+
+    await data.upsertOAuthAccount(oauthKey, token)
+
+    if (pid === 'google') {
+      await data.upsertOAuthAccount('googlePhotos' as OAuthProvider, token)
+    }
+
     await store.fetchAccounts()
     if (!connectedProviders.value.includes(pid)) {
       connectedProviders.value.push(pid)
@@ -199,6 +257,12 @@ async function connectProvider(pid: string) {
     const msg = e instanceof Error ? e.message : String(e)
     if (msg.includes('Client ID not configured')) {
       showClientIdForm.value = pid
+    } else if (msg.includes('Popup blocked')) {
+      providerError.value = `${pid.toUpperCase()}: POPUP BLOCKED — allow popups for this site`
+    } else if (msg.includes('timed out') || msg.includes('closed by the user')) {
+      providerError.value = `${pid.toUpperCase()}: AUTHORIZATION ${msg.includes('timed out') ? 'TIMED OUT' : 'CANCELLED'}`
+    } else {
+      providerError.value = `${pid.toUpperCase()}: ${msg}`
     }
   } finally {
     connectingProvider.value = null
@@ -211,9 +275,17 @@ function providerIcon(pid: string): string {
 
 async function saveClientId() {
   if (!showClientIdForm.value || !clientIdInput.value.trim()) return
-  const { oauth } = await import('@/wasm')
-  oauth.setProviderClientId(showClientIdForm.value as OAuthProvider, clientIdInput.value.trim())
   const pid = showClientIdForm.value
+  const oauthKey = PROVIDER_TO_OAUTH[pid]
+  if (!oauthKey) return
+
+  const { oauth } = await import('@/wasm')
+  oauth.setProviderClientId(oauthKey, clientIdInput.value.trim())
+
+  if (pid === 'google') {
+    oauth.setProviderClientId('googlePhotos' as OAuthProvider, clientIdInput.value.trim())
+  }
+
   showClientIdForm.value = null
   clientIdInput.value = ''
   await connectProvider(pid)
@@ -416,10 +488,13 @@ onUnmounted(() => {
           <div v-if="showClientIdForm" class="client-id-form">
             <label>CLIENT ID FOR {{ showClientIdForm.toUpperCase() }}</label>
             <div class="client-id-row">
-              <input v-model="clientIdInput" class="bw-input" placeholder="OAuth Client ID" />
+              <input v-model="clientIdInput" class="bw-input" placeholder="OAuth Client ID" @keyup.enter="saveClientId" />
+              <button class="bw-btn bw-btn-cancel" @click="showClientIdForm = null; clientIdInput = ''">CANCEL</button>
               <button class="bw-btn bw-btn-inverse" :disabled="!clientIdInput.trim()" @click="saveClientId">SAVE</button>
             </div>
           </div>
+
+          <div v-if="providerError && !showClientIdForm" class="provider-error">{{ providerError }}</div>
         </div>
       </div>
     </div>
@@ -1037,6 +1112,35 @@ onUnmounted(() => {
 .client-id-row {
   display: flex;
   gap: 6px;
+}
+
+.bw-btn-cancel {
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #888;
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 6px 10px;
+  cursor: pointer;
+  letter-spacing: 1px;
+}
+
+.bw-btn-cancel:hover {
+  border-color: #555;
+  color: #e0e0e0;
+}
+
+.provider-error {
+  font-size: 10px;
+  color: #ff5f57;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 95, 87, 0.2);
+  border-radius: 4px;
+  background: rgba(255, 95, 87, 0.05);
+  text-align: center;
+  margin-top: 6px;
 }
 
 .bw-input {

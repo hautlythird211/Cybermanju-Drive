@@ -87,6 +87,42 @@ const isSyncActive = computed(() =>
   z-index: 10;
   font-family: var(--font-mono);
   color: var(--text-muted);
+  position: relative;
+  isolation: isolate;
+}
+
+/* Velvet texture overlay */
+.statusbar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    repeating-radial-gradient(circle at 50% 50%, transparent 0, rgba(255,255,255,0.012) 1px, transparent 2px),
+    repeating-conic-gradient(rgba(255,255,255,0.006) 0% 25%, transparent 0% 50%) 0 0 / 4px 4px,
+    radial-gradient(ellipse at 40% 100%, rgba(0,255,65,0.03) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 0%, rgba(90,240,255,0.025) 0%, transparent 50%);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+/* Top psychedelic glow line */
+.statusbar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(90, 240, 255, 0.15) 20%,
+    rgba(0, 255, 65, 0.2) 40%,
+    rgba(179, 136, 255, 0.15) 60%,
+    rgba(255, 107, 157, 0.1) 80%,
+    transparent 100%);
+  background-size: 200% 100%;
+  animation: velvet-shimmer 8s ease-in-out infinite;
 }
 
 .sb-left {
@@ -165,7 +201,7 @@ const isSyncActive = computed(() =>
 
 .sb-clickable:hover {
   color: var(--text-primary);
-  background: var(--bg-overlay);
+  background: rgba(0, 255, 65, 0.06);
 }
 
 .sb-clickable:focus-visible {
@@ -175,6 +211,7 @@ const isSyncActive = computed(() =>
 .sb-active {
   color: var(--accent);
   font-weight: 700;
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
 }
 
 @media (max-width: 768px) {
@@ -186,50 +223,9 @@ const isSyncActive = computed(() =>
   }
 }
 
-/* Enhanced status bar glass */
-.status-bar {
-  backdrop-filter: blur(var(--glass-blur-xl)) !important;
-  -webkit-backdrop-filter: blur(var(--glass-blur-xl)) !important;
-  box-shadow: var(--shadow-glass), var(--panel-inset), 0 -1px 0 rgba(0, 255, 65, 0.08) !important;
-  position: relative;
-}
-
-/* Top accent glow line */
-.status-bar::before {
-  content: '';
-  position: absolute;
-  top: -1px;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.15), rgba(90, 240, 255, 0.15), transparent);
-  background-size: 200% 100%;
-  animation: shimmer 4s ease-in-out infinite;
-}
-
-/* Status items enhancement */
-.status-item {
-  transition: all var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1);
-  position: relative;
-}
-
-.status-item:hover {
-  background: var(--bg-glass);
-}
-
-.status-item:active {
-  transform: scale(0.97);
-}
-
-/* Clickable status items with focus ring */
-.status-item.clickable:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--bg-deep), 0 0 0 4px var(--accent);
-  border-radius: 4px;
-}
-
-@keyframes shimmer {
+@keyframes velvet-shimmer {
   0% { background-position: 200% 0; }
+  50% { background-position: 0% 0; }
   100% { background-position: -200% 0; }
 }
 </style>

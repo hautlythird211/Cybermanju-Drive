@@ -75,6 +75,9 @@ tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
 # Platform paths (cross-platform data/home directories)
 dirs = "6"
 
+# System info
+sysinfo = "0.31"
+
 # File ops
 walkdir = "2.5"
 rayon = "1.10"

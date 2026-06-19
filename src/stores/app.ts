@@ -69,6 +69,10 @@ export const useAppStore = defineStore('cybermanju', () => {
   const syncConfigs = ref<SyncConfig[]>([])
   const syncProgress = ref<SyncProgress | null>(null)
 
+  // ── Duplicates State ──────────────────────────────────────
+  const duplicateGroups = ref<FileNode[][]>([])
+  const isLoadingDuplicates = ref(false)
+
   // ── Code Intelligence State ───────────────────────────────
   const parseResult = ref<ParseResult | null>(null)
 
@@ -87,6 +91,7 @@ export const useAppStore = defineStore('cybermanju', () => {
 
   // ── UI State ──────────────────────────────────────────────
   const searchQuery = ref('')
+  const searchSuggestions = ref<string[]>([])
   const isSearching = ref(false)
   const isLoading = ref(false)
   const lastError = ref<string | null>(null)
@@ -397,6 +402,30 @@ export const useAppStore = defineStore('cybermanju', () => {
   function loadMoreSearchResults() {
     if (searchQuery.value.trim()) {
       searchFiles(searchQuery.value, searchPage.value + 1)
+    }
+  }
+
+  async function fetchSuggestions(prefix: string) {
+    if (!prefix.trim()) {
+      searchSuggestions.value = []
+      return
+    }
+    try {
+      searchSuggestions.value = await invoke<string[]>('suggest', { prefix, limit: 8 })
+    } catch {
+      searchSuggestions.value = []
+    }
+  }
+
+  // ── Actions: Duplicates ───────────────────────────────────
+  async function fetchDuplicates() {
+    isLoadingDuplicates.value = true
+    try {
+      duplicateGroups.value = await invoke<FileNode[][]>('find_duplicates')
+    } catch (e) {
+      notifyError('Failed to find duplicates', e)
+    } finally {
+      isLoadingDuplicates.value = false
     }
   }
 
@@ -1021,8 +1050,9 @@ export const useAppStore = defineStore('cybermanju', () => {
     files, accounts, activeAccountId, collections, faceGroups, looseGroups,
     searchResults, geoMarkers, encryptionStatus, encryptionKeys,
     compressionStats, parseResult, syncConfigs, syncProgress,
+    duplicateGroups, isLoadingDuplicates,
     trashItems, showTrashPanel, auditLog, fileVersions, dashboardStatus, shareLinks,
-    searchQuery, searchTotalResults, isSearching, isLoading, lastError, matrixRainEnabled,
+    searchQuery, searchSuggestions, searchTotalResults, isSearching, isLoading, lastError, matrixRainEnabled,
     showEncryptionPanel, showCompressionPanel, showPermissionsPanel, commandPaletteOpen,
     showShortcutsHelp, createFolderPromptOpen, showLoginPopup,
     selectedFileIds, isMultiSelect, users, autoRefreshInterval, sortBy,
@@ -1035,7 +1065,7 @@ export const useAppStore = defineStore('cybermanju', () => {
     initialize, selectFile, toggleStar, clearError,
     fetchFiles, getFile, createFolder, deleteFile, renameFile, duplicateFileContext,
     confirmAndDelete, confirmDeleteAction, cancelDeleteAction,
-    searchFiles, loadMoreSearchResults, fetchEncryptionStatus, generateKeypair, listKeys, encryptFile, decryptFile,
+    searchFiles, loadMoreSearchResults, fetchSuggestions, fetchEncryptionStatus, generateKeypair, listKeys, encryptFile, decryptFile,
     compressFile, decompressFile, fetchCollections, createCollection, addToCollection, removeFromCollection,
     fetchFaceGroups, detectFaces, detectFacesBatch, reclusterFaces,
     renameFaceGroup, mergeFaceGroups, deleteFaceGroup, findSimilarFaces,
@@ -1043,6 +1073,7 @@ export const useAppStore = defineStore('cybermanju', () => {
     parseFileCode, fetchLooseGroups,
     fetchSyncConfigs, createSyncConfig, deleteSyncConfig, startSync,
     getSyncProgress, testSyncConnection, cancelSync, listRemoteFiles,
+    fetchDuplicates,
     // User Management
     fetchUsers, createUser, deleteUser, updateUserRole,
     // Trash

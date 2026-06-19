@@ -348,6 +348,11 @@ pub fn run() {
             // KV Store (general-purpose key-value persistence)
             commands::kv::kv_set,
             commands::kv::kv_get,
+            // System info
+            commands::system_info::get_system_info,
+            // Web browser
+            commands::web::web_search,
+            commands::web::fetch_page,
         ])
         .run(tauri::generate_context!())
         .expect("Fatal error while running Cybermanju Drive — see logs above");

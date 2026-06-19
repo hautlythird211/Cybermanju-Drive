@@ -209,14 +209,55 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 4px 8px;
-  background: rgba(12, 12, 12, 0.85);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  padding: 4px 10px;
+  background: rgba(8, 8, 12, 0.88);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  border-radius: 14px;
+  box-shadow:
+    0 4px 28px rgba(0, 0, 0, 0.5),
+    0 0 1px rgba(0, 255, 65, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
   pointer-events: auto;
+  position: relative;
+  isolation: isolate;
+}
+
+/* Velvet texture overlay */
+.dock::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: -1;
+  background:
+    repeating-radial-gradient(circle at 50% 50%, transparent 0, rgba(255,255,255,0.018) 1px, transparent 2px),
+    repeating-conic-gradient(rgba(255,255,255,0.01) 0% 25%, transparent 0% 50%) 0 0 / 3px 3px,
+    radial-gradient(ellipse at 50% 0%, rgba(0,255,65,0.05) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 100%, rgba(90,240,255,0.04) 0%, transparent 40%),
+    radial-gradient(ellipse at 80% 100%, rgba(179,136,255,0.03) 0%, transparent 40%);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+/* Bottom psychedelic glow line */
+.dock::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(0, 255, 65, 0.2) 25%,
+    rgba(90, 240, 255, 0.25) 50%,
+    rgba(179, 136, 255, 0.2) 75%,
+    transparent 100%);
+  background-size: 200% 100%;
+  animation: dock-shimmer 5s ease-in-out infinite;
+  border-radius: 0 0 14px 14px;
 }
 
 .dock-item {
@@ -231,7 +272,7 @@ onUnmounted(() => {
   position: relative;
   will-change: transform;
   outline: none;
-  transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all 0.15s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .dock-item:focus-visible {
@@ -240,6 +281,7 @@ onUnmounted(() => {
 
 .dock-item:hover {
   transform: translateY(-1px);
+  background: rgba(0, 255, 65, 0.05);
 }
 
 .dock-item:active {
@@ -247,7 +289,7 @@ onUnmounted(() => {
 }
 
 .dock-item.active {
-  background: rgba(0, 255, 65, 0.06);
+  background: rgba(0, 255, 65, 0.08);
 }
 
 .dock-icon {
@@ -261,15 +303,16 @@ onUnmounted(() => {
 
 .dock-iconify {
   color: rgba(255, 255, 255, 0.55);
-  transition: color 0.15s;
+  transition: all 0.15s;
 }
 
 .dock-item.active .dock-iconify {
   color: rgba(0, 255, 65, 0.9);
+  filter: drop-shadow(0 0 6px rgba(0, 255, 65, 0.3));
 }
 
 .dock-item:hover .dock-iconify {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .dock-icon.minimized {
@@ -317,6 +360,7 @@ onUnmounted(() => {
   width: 12px;
   border-radius: 2px;
   height: 2.5px;
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
 }
 
 .indicator-dot.muted {
@@ -336,5 +380,11 @@ onUnmounted(() => {
 
 .dock-label {
   display: none;
+}
+
+@keyframes dock-shimmer {
+  0% { background-position: 200% 0; }
+  50% { background-position: 0% 0; }
+  100% { background-position: -200% 0; }
 }
 </style>

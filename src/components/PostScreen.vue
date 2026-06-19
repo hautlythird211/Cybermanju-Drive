@@ -5,36 +5,59 @@ const emit = defineEmits<{ (e: 'complete'): void }>()
 
 const lines = ref<string[]>([])
 const showBootMenu = ref(false)
-const keyBuffer = ref('')
 let timer: ReturnType<typeof setTimeout> | null = null
 
-const POST_SEQUENCE = [
-  { text: 'CYBERMANJU UEFI BIOS v2.4.1 (Build 2025-03-15)', delay: 600 },
-  { text: 'CPU: Hybrid PQC-NEON @ 2.8GHz, 8C/16T [PASS]', delay: 400 },
-  { text: 'CPU Features: AES-NI, SHA-NI, AVX2, AVX-512, VAES, VPCLMULQDQ', delay: 350 },
-  { text: 'MEM: Testing 32768MB ECC DDR5-6400...', delay: 300 },
-  { text: 'MEM: Channel A: 16384MB [OK]', delay: 250 },
-  { text: 'MEM: Channel B: 16384MB [OK]', delay: 250 },
-  { text: 'MEM: POST-QUANTUM CRYPTO ZONES: 16 GUARD REGIONS [ACTIVE]', delay: 350 },
-  { text: 'PCH: Z890 Chipset — DMI 4.0 x8 [DETECTED]', delay: 300 },
-  { text: 'PCI: Bus enumeration... 47 devices found [COMPLETE]', delay: 350 },
-  { text: 'PCI: NVMe Controller #1 — Samsung PM9E1 2TB [DETECTED]', delay: 300 },
-  { text: 'PCI: NVMe Controller #2 — WD Black SN850X 4TB [DETECTED]', delay: 300 },
-  { text: 'PCI: SATA Controller — 6 ports, 2 devices [DETECTED]', delay: 300 },
-  { text: 'USB: XHCI Controller #0 at 0xFE800000 (irq 16)', delay: 250 },
-  { text: 'USB: 5 hubs, 14 devices enumerated [OK]', delay: 250 },
-  { text: 'NET: Intel I226-V 2.5GbE — MAC: 2A:4F:8E:0C:D1:73 [DETECTED]', delay: 300 },
-  { text: 'NET: Intel BE201 Wi-Fi 7 + Bluetooth 5.4 [DETECTED]', delay: 300 },
-  { text: 'SND: Realtek ALC1220 — HD Audio Codec [INITIALIZED]', delay: 250 },
-  { text: 'SND: NVIDIA GPU HDMI/DP Audio Controller [DETECTED]', delay: 250 },
-  { text: 'TPM: 2.0 Security Module — firmware v9.1.2 [ACTIVE]', delay: 300 },
-  { text: 'RTC: System Clock — 2025-03-15 14:23:07 UTC [SYNCED]', delay: 250 },
-  { text: 'ACPI: DSDT loaded — 347 tables [PARSED]', delay: 300 },
-  { text: 'ACPI: Thermal zones: CPU=42°C, PCH=38°C, NVMe1=35°C [NOMINAL]', delay: 350 },
-  { text: 'SYS: CMOS checksum OK — battery voltage 3.12V [NOMINAL]', delay: 300 },
-  { text: 'SYS: SMBIOS v3.7 — Cybermanju Drive MB rev 2.0 [DETECTED]', delay: 300 },
-  { text: 'SYS: POST complete — press DEL for Setup, F12 for Boot Menu, any key to boot', delay: 600 },
-]
+interface SystemInfo {
+  os_name: string
+  os_version: string
+  os_arch: string
+  hostname: string
+  cpu_brand: string
+  cpu_cores: number
+  cpu_threads: number
+  total_memory_mb: number
+  used_memory_mb: number
+  total_disk_gb: number
+  used_disk_gb: number
+  kernel_version: string
+  uptime_seconds: number
+}
+
+const sys = ref<SystemInfo | null>(null)
+
+function buildPostSequence(s: SystemInfo): Array<{ text: string; delay: number }> {
+  const memChannels = Math.max(2, Math.ceil(s.cpu_cores / 4))
+  const memPerChannel = Math.round(s.total_memory_mb / memChannels)
+  const now = new Date()
+  const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
+
+  return [
+    { text: `CYBERMANJU UEFI BIOS v2.4.1 (Build ${dateStr})`, delay: 600 },
+    { text: `CPU: ${s.cpu_brand} — ${s.cpu_cores}C/${s.cpu_threads}T [PASS]`, delay: 400 },
+    { text: `CPU Features: AES-NI, SHA-NI, AVX2, AVX-512, VAES, VPCLMULQDQ`, delay: 350 },
+    { text: `MEM: Testing ${s.total_memory_mb}MB DDR5...`, delay: 300 },
+    ...Array.from({ length: memChannels }, (_, i) => ({
+      text: `MEM: Channel ${String.fromCharCode(65 + i)}: ${memPerChannel}MB [OK]`,
+      delay: 250,
+    })),
+    { text: `MEM: POST-QUANTUM CRYPTO ZONES: ${Math.max(4, Math.floor(s.cpu_cores / 2))} GUARD REGIONS [ACTIVE]`, delay: 350 },
+    { text: `PCH: Chipset — DMI 4.0 x8 [DETECTED]`, delay: 300 },
+    { text: `PCI: Bus enumeration... devices found [COMPLETE]`, delay: 350 },
+    { text: `USB: XHCI Controller at 0xFE800000 (irq 16)`, delay: 250 },
+    { text: `USB: hubs, devices enumerated [OK]`, delay: 250 },
+    { text: `NET: Network interface [DETECTED]`, delay: 300 },
+    { text: `NET: Wireless adapter [DETECTED]`, delay: 300 },
+    { text: `SND: Audio Controller [INITIALIZED]`, delay: 250 },
+    { text: `TPM: 2.0 Security Module [ACTIVE]`, delay: 300 },
+    { text: `RTC: System Clock — ${dateStr} UTC [SYNCED]`, delay: 250 },
+    { text: `ACPI: DSDT loaded [PARSED]`, delay: 300 },
+    { text: `SYS: CMOS checksum OK [NOMINAL]`, delay: 300 },
+    { text: `SYS: Kernel ${s.kernel_version} (${s.os_arch}) [DETECTED]`, delay: 300 },
+    { text: `SYS: ${s.os_name} ${s.os_version} — ${s.hostname}`, delay: 300 },
+    { text: `SYS: Disk ${(s.total_disk_gb).toFixed(0)}GB — ${s.used_disk_gb.toFixed(0)}GB used [MOUNTED]`, delay: 300 },
+    { text: `SYS: POST complete — press any key to boot Cybermanju OS`, delay: 600 },
+  ]
+}
 
 function tack() {
   const el = document.querySelector('.post-terminal-text')
@@ -42,16 +65,21 @@ function tack() {
 }
 
 function runPost() {
+  const seq = buildPostSequence(sys.value || {
+    os_name: 'Unknown', os_version: '', os_arch: 'unknown', hostname: 'localhost',
+    cpu_brand: 'Unknown CPU', cpu_cores: 1, cpu_threads: 1,
+    total_memory_mb: 0, used_memory_mb: 0,
+    total_disk_gb: 0, used_disk_gb: 0,
+    kernel_version: 'unknown', uptime_seconds: 0,
+  })
   let i = 0
   function next() {
-    if (i < POST_SEQUENCE.length) {
-      const entry = POST_SEQUENCE[i]
+    if (i < seq.length) {
+      const entry = seq[i]
       lines.value.push(entry.text)
       tack()
       i++
-      if (entry.text.includes('Z890') || entry.text.includes('CMOS') || entry.text.includes('SBY')) {
-        timer = setTimeout(next, entry.delay + 200)
-      } else if (entry.text.includes('POST complete')) {
+      if (entry.text.includes('POST complete')) {
         timer = setTimeout(() => {
           showBootMenu.value = true
           emit('complete')
@@ -64,7 +92,13 @@ function runPost() {
   next()
 }
 
-onMounted(() => {
+onMounted(async () => {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core')
+    sys.value = await invoke<SystemInfo>('get_system_info')
+  } catch {
+    // Fallback: run with placeholder data if Tauri invoke fails
+  }
   runPost()
 })
 
@@ -74,7 +108,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="post-screen" @keydown="keyBuffer = ''" tabindex="0">
+  <div class="post-screen" tabindex="0">
     <div class="post-terminal">
       <div class="post-terminal-header">
         <span class="post-motherboard">CYBERMANJU DRIVE MB rev 2.0</span>
@@ -82,7 +116,7 @@ onUnmounted(() => {
       </div>
       <div class="post-terminal-text">
         <div v-for="(line, i) in lines" :key="i" class="post-line"
-          :class="{ 'post-ok': line.includes('[OK]') || line.includes('[ACTIVE]') || line.includes('[COMPLETE]') || line.includes('[NOMINAL]') || line.includes('[INITIALIZED]') || line.includes('[PASS]') || line.includes('[DETECTED]') || line.includes('[SYNCED]') || line.includes('[PARSED]') }">
+          :class="{ 'post-ok': line.includes('[OK]') || line.includes('[ACTIVE]') || line.includes('[COMPLETE]') || line.includes('[NOMINAL]') || line.includes('[INITIALIZED]') || line.includes('[PASS]') || line.includes('[DETECTED]') || line.includes('[SYNCED]') || line.includes('[PARSED]') || line.includes('[MOUNTED]') }">
           <span class="post-bracket">{{ '[' + i.toString().padStart(3, '0') + ']' }}</span>
           {{ line }}
         </div>

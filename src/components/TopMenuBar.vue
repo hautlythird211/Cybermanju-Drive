@@ -56,8 +56,22 @@
           placeholder="TANTIVY_SEARCH..."
           aria-label="Search files"
           @keyup.enter="handleSearch"
+          @input="handleSuggest"
+          @focus="showSuggestions = store.searchSuggestions.length > 0"
+          @blur="hideSuggestions"
         />
         <span v-if="store.isSearching" class="search-cursor">_</span>
+      </div>
+      <div v-if="showSuggestions && store.searchSuggestions.length > 0" class="search-suggestions">
+        <div
+          v-for="(suggestion, i) in store.searchSuggestions"
+          :key="i"
+          class="suggestion-item"
+          @mousedown.prevent="applySuggestion(suggestion)"
+        >
+          <Icon icon="mdi:magnify" width="10" height="10" class="suggestion-icon" />
+          <span>{{ suggestion }}</span>
+        </div>
       </div>
     </div>
 
@@ -170,6 +184,8 @@ const openMenu = ref<string | null>(null)
 const menuRef = ref<HTMLElement | null>(null)
 const menuBarRef = ref<HTMLElement | null>(null)
 const dropdownRefs = ref<Record<string, HTMLElement>>({})
+const showSuggestions = ref(false)
+let suggestTimeout: ReturnType<typeof setTimeout> | null = null
 
 interface MenuItem {
   id: string
@@ -340,6 +356,27 @@ function handleSearch() {
   }
 }
 
+function handleSuggest() {
+  if (suggestTimeout) clearTimeout(suggestTimeout)
+  suggestTimeout = setTimeout(() => {
+    store.fetchSuggestions(store.searchQuery)
+    showSuggestions.value = store.searchSuggestions.length > 0
+  }, 200)
+}
+
+function hideSuggestions() {
+  setTimeout(() => {
+    showSuggestions.value = false
+  }, 150)
+}
+
+function applySuggestion(suggestion: string) {
+  store.searchQuery = suggestion
+  store.searchFiles(suggestion)
+  showSuggestions.value = false
+  wm.open('search')
+}
+
 function openDateInfo() {
   wm.open('settings')
 }
@@ -380,6 +417,41 @@ onUnmounted(() => {
   gap: 8px;
   -webkit-app-region: drag;
   user-select: none;
+  isolation: isolate;
+}
+
+/* Velvet texture overlay */
+.top-menu-bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    repeating-radial-gradient(circle at 50% 50%, transparent 0, rgba(255,255,255,0.015) 1px, transparent 2px),
+    repeating-conic-gradient(rgba(255,255,255,0.008) 0% 25%, transparent 0% 50%) 0 0 / 4px 4px,
+    radial-gradient(ellipse at 30% 0%, rgba(0,255,65,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 100%, rgba(90,240,255,0.03) 0%, transparent 50%);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+/* Bottom psychedelic glow line */
+.top-menu-bar::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(0, 255, 65, 0.25) 20%,
+    rgba(90, 240, 255, 0.2) 40%,
+    rgba(179, 136, 255, 0.2) 60%,
+    rgba(255, 107, 157, 0.15) 80%,
+    transparent 100%);
+  background-size: 200% 100%;
+  animation: velvet-shimmer 6s ease-in-out infinite;
 }
 
 .tmb-left {
@@ -407,6 +479,7 @@ onUnmounted(() => {
 
 .app-logo:hover .logo-brand {
   color: var(--accent);
+  text-shadow: 0 0 12px rgba(0, 255, 65, 0.4);
 }
 
 .logo-brand {
@@ -415,7 +488,7 @@ onUnmounted(() => {
   font-weight: 800;
   letter-spacing: 1.5px;
   color: var(--text-primary);
-  transition: color var(--transition-fast);
+  transition: all var(--transition-fast);
 }
 
 .logo-drive {
@@ -438,6 +511,7 @@ onUnmounted(() => {
   cursor: pointer;
   border-radius: var(--radius-sm);
   outline: none;
+  transition: all var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .menu-item:focus-visible {
@@ -445,7 +519,11 @@ onUnmounted(() => {
 }
 
 .menu-item:hover {
-  background: var(--bg-overlay);
+  background: rgba(0, 255, 65, 0.06);
+}
+
+.menu-item:active {
+  transform: scale(0.97);
 }
 
 .menu-label {
@@ -466,14 +544,26 @@ onUnmounted(() => {
   left: 0;
   min-width: 220px;
   background: var(--bg-glass-heavy);
-  backdrop-filter: blur(var(--glass-blur-heavy));
-  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-lg);
   padding: 4px;
-  box-shadow: var(--shadow-dropdown);
+  box-shadow: var(--shadow-elevated), var(--glow-accent);
   z-index: 200;
   will-change: transform, opacity;
+}
+
+/* Dropdown velvet texture */
+.menu-dropdown::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    repeating-radial-gradient(circle at 50% 50%, transparent 0, rgba(255,255,255,0.01) 1px, transparent 2px),
+    radial-gradient(ellipse at 50% 0%, rgba(0,255,65,0.03) 0%, transparent 60%);
+  pointer-events: none;
 }
 
 .menu-dropdown-item {
@@ -486,13 +576,15 @@ onUnmounted(() => {
   color: var(--text-secondary);
   cursor: pointer;
   border-radius: var(--radius-sm);
-  transition: background var(--transition-fast);
+  transition: all var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1);
   outline: none;
+  position: relative;
 }
 
 .menu-dropdown-item:hover {
-  background: var(--bg-overlay);
+  background: rgba(0, 255, 65, 0.08);
   color: var(--text-primary);
+  padding-left: 12px;
 }
 
 .menu-dropdown-item:focus-visible {
@@ -547,11 +639,12 @@ onUnmounted(() => {
   border-radius: var(--radius-md);
   padding: 0 8px;
   height: 22px;
-  transition: border-color var(--transition-normal);
+  transition: all var(--transition-normal);
 }
 
 .search-wrap:focus-within {
   border-color: var(--accent);
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.1);
 }
 
 .search-prompt {
@@ -586,6 +679,41 @@ onUnmounted(() => {
   50% { opacity: 0; }
 }
 
+.search-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  transition: background var(--transition-fast);
+}
+
+.suggestion-item:hover {
+  background: var(--bg-hover);
+}
+
+.suggestion-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
 .tmb-right {
   display: flex;
   align-items: center;
@@ -615,11 +743,12 @@ onUnmounted(() => {
 
 .tray-icon:hover {
   color: var(--text-primary);
-  background: var(--bg-overlay);
+  background: rgba(0, 255, 65, 0.06);
 }
 
 .tray-icon.active {
   color: var(--accent);
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.4);
 }
 
 .tmb-separator {
@@ -663,70 +792,9 @@ onUnmounted(() => {
   line-height: 1.2;
 }
 
-/* Enhanced menubar glass */
-.menu-bar {
-  backdrop-filter: blur(var(--glass-blur-xl)) !important;
-  -webkit-backdrop-filter: blur(var(--glass-blur-xl)) !important;
-  box-shadow: var(--shadow-glass), var(--panel-inset), 0 1px 0 rgba(0, 255, 65, 0.08) !important;
-  position: relative;
-  z-index: var(--z-overlay);
-}
-
-/* Bottom accent glow line */
-.menu-bar::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0, 255, 65, 0.2), rgba(90, 240, 255, 0.2), transparent);
-  background-size: 200% 100%;
-  animation: shimmer 4s ease-in-out infinite;
-}
-
-/* Menu items enhancement */
-.menu-item {
-  position: relative;
-  transition: all var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.menu-item:hover {
-  background: var(--bg-glass);
-  transform: translateY(0);
-}
-
-.menu-item:active {
-  transform: scale(0.97);
-}
-
-/* Enhanced dropdown glass */
-.menu-dropdown {
-  backdrop-filter: blur(var(--glass-blur-xl));
-  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
-  background: var(--bg-glass-heavy) !important;
-  border: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-elevated), var(--glow-accent);
-}
-
-.menu-dropdown-item {
-  transition: all var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1);
-  position: relative;
-}
-
-.menu-dropdown-item:hover {
-  background: rgba(0, 255, 65, 0.08);
-  padding-left: 2px;
-}
-
-/* Separator enhancement */
-.menu-separator {
-  border-color: var(--border-subtle);
-  margin: 4px 8px;
-}
-
-@keyframes shimmer {
+@keyframes velvet-shimmer {
   0% { background-position: 200% 0; }
+  50% { background-position: 0% 0; }
   100% { background-position: -200% 0; }
 }
 </style>

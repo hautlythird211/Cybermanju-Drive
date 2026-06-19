@@ -1,10 +1,8 @@
 import { ref } from 'vue'
 import { useAppStore } from '@/stores/app'
-import { kvGet } from '@/composables/useTauri'
 
 const currentUser = ref<string | null>(null)
 const isLoggedIn = ref(false)
-const needsSetup = ref<boolean | null>(null)
 
 export function useLogin() {
   const store = useAppStore()
@@ -36,16 +34,6 @@ export function useLogin() {
     }
 
     await store.fetchUsers()
-    await checkSetup()
-  }
-
-  async function checkSetup() {
-    try {
-      const complete = await kvGet('setup_complete')
-      needsSetup.value = complete !== 'true'
-    } catch {
-      needsSetup.value = true
-    }
   }
 
   function restoreSession() {
@@ -60,9 +48,7 @@ export function useLogin() {
   return {
     currentUser,
     isLoggedIn,
-    needsSetup,
     login,
-    checkSetup,
     restoreSession,
   }
 }

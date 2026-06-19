@@ -11,7 +11,6 @@
     :focused="focused"
     :anim-state="win.animState"
     no-padding
-    :style="tileStyle"
     @close="onClose"
     @minimize="onMinimize"
     @focus="$emit('focus', win.id)"
@@ -37,7 +36,6 @@ const gsapCtx = ref<gsap.Context | null>(null)
 const props = defineProps<{
   win: WindowState
   focused: boolean
-  tileStyle?: Record<string, string | number>
 }>()
 
 const emit = defineEmits<{

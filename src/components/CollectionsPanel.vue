@@ -20,6 +20,7 @@
         @dragover.prevent="dragOverCollectionId = col.id"
         @dragleave.prevent="dragOverCollectionId = null"
         @drop.prevent="handleDrop(col.id)"
+        @click="openCollection(col)"
       >
         <div class="col-header">
           <span class="col-name">{{ col.name }}</span>
@@ -66,6 +67,15 @@ function handleDrop(collectionId: string) {
   const fileId = store.selectedFileId
   if (fileId) {
     store.addToCollection(collectionId, fileId)
+  }
+}
+
+function openCollection(col: { id: string; name: string; itemIds: string[] }) {
+  if (col.itemIds && col.itemIds.length > 0) {
+    store.selectedFileId = col.itemIds[0]
+    store.currentPanel = 'files'
+  } else {
+    store.notifySuccess(`Collection: ${col.name} (empty)`)
   }
 }
 </script>
