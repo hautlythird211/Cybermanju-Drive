@@ -133,6 +133,12 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Build WASM
+        env:
+          VITE_OAUTH_GOOGLE_DRIVE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          VITE_OAUTH_GOOGLE_PHOTOS_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          VITE_OAUTH_GITHUB_CLIENT_ID: ${{ secrets.GH_CLIENT_ID }}
+          VITE_OAUTH_GITLAB_CLIENT_ID: ${{ secrets.GITLAB_CLIENT_ID }}
+          VITE_OAUTH_TELEGRAM_CLIENT_ID: ${{ secrets.TELEGRAM_CLIENT_ID }}
         run: |
           for attempt in 1 2 3; do
             echo "=== WASM build attempt $attempt/3 ==="
