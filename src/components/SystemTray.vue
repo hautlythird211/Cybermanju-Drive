@@ -106,15 +106,15 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 8px;
+  padding: 4px 6px;
   height: 100%;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--transition-fast);
   position: relative;
 }
 
 .tray-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 255, 65, 0.06);
 }
 
 .tray-icon {
@@ -140,14 +140,14 @@ onUnmounted(() => {
 
 .tray-percent {
   font-size: 9px;
-  color: #888;
-  font-family: 'Courier New', monospace;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
 }
 
 .tray-separator {
   width: 1px;
   height: 16px;
-  background: #1a1a1a;
+  background: var(--border-subtle);
   margin: 0 4px;
 }
 
@@ -161,13 +161,13 @@ onUnmounted(() => {
 .tray-time {
   font-size: 11px;
   font-weight: 700;
-  color: #ddd;
-  font-family: 'Courier New', monospace;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
 }
 
 .tray-date {
   font-size: 8px;
-  color: #555;
+  color: var(--text-muted);
   letter-spacing: 0.5px;
 }
 
@@ -179,30 +179,33 @@ onUnmounted(() => {
 
 .popup-panel {
   position: absolute;
-  right: 60px;
-  bottom: 48px;
+  right: 12px;
+  top: 36px;
   width: 240px;
-  background: #0a0a0a;
-  border: 1px solid #1a1a1a;
+  background: var(--bg-glass-heavy);
+  border: 1px solid var(--border-glass);
   border-radius: 10px;
   padding: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), var(--glow-accent);
   z-index: 100000;
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
 }
 
 .popup-header {
   font-size: 11px;
   font-weight: 700;
-  color: #ddd;
+  color: var(--text-primary);
   letter-spacing: 1px;
   margin-bottom: 12px;
+  font-family: var(--font-mono);
 }
 
 .tray-slider {
   width: 100%;
   -webkit-appearance: none;
   height: 4px;
-  background: #1a1a1a;
+  background: var(--border-medium);
   border-radius: 2px;
   outline: none;
 }
@@ -212,17 +215,17 @@ onUnmounted(() => {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #00ff41;
+  background: var(--accent);
   cursor: pointer;
   box-shadow: 0 0 6px rgba(0, 255, 65, 0.3);
 }
 
 .popup-value {
   font-size: 10px;
-  color: #555;
+  color: var(--text-muted);
   text-align: center;
   margin-top: 6px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
 }
 
 .popup-calendar {
@@ -238,30 +241,32 @@ onUnmounted(() => {
 
 .cal-day-header {
   font-size: 8px;
-  color: #444;
+  color: var(--text-muted);
   text-align: center;
   font-weight: 700;
   letter-spacing: 1px;
   padding: 4px 0;
+  font-family: var(--font-mono);
 }
 
 .cal-day {
   font-size: 10px;
-  color: #666;
+  color: var(--text-muted);
   text-align: center;
   padding: 4px 0;
   border-radius: 4px;
+  font-family: var(--font-mono);
 }
 
 .cal-today {
-  color: #00ff41;
+  color: var(--accent);
   font-weight: 700;
   background: rgba(0, 255, 65, 0.08);
   box-shadow: 0 0 4px rgba(0, 255, 65, 0.15);
 }
 
 .calendar-events {
-  border-top: 1px solid #1a1a1a;
+  border-top: 1px solid var(--border-subtle);
   padding-top: 8px;
 }
 
@@ -270,8 +275,9 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 9px;
-  color: #555;
+  color: var(--text-muted);
   padding: 4px 0;
+  font-family: var(--font-mono);
 }
 
 .event-dot {

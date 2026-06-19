@@ -74,8 +74,6 @@
       </div>
     </div>
 
-    <StatusBar class="desktop-statusbar" />
-
     <Dock class="desktop-dock" />
   </div>
 </template>
@@ -88,7 +86,6 @@ import { useAppStore } from '@/stores/app'
 import { useWindowManager } from '@/composables/useWindowManager'
 import { useGsapAnimation } from '@/composables/useGsapAnimation'
 import TopMenuBar from '@/components/TopMenuBar.vue'
-import StatusBar from '@/components/StatusBar.vue'
 import Dock from '@/components/Dock.vue'
 import AppWindow from '@/components/AppWindow.vue'
 
@@ -346,11 +343,6 @@ onUnmounted(() => {
   gap: 20px;
 }
 
-@keyframes overview-fadein {
-  0% { opacity: 0; backdrop-filter: blur(0px); }
-  100% { opacity: 1; backdrop-filter: blur(16px); }
-}
-
 .overview-header {
   font-family: 'Courier New', monospace;
   font-size: 13px;
@@ -449,35 +441,11 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-.overview-screen-new {
-  border-style: dashed;
-  border-color: #444;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: #666;
-  font-family: 'Courier New', monospace;
-  font-size: 9px;
-  letter-spacing: 1px;
-}
-
-.overview-screen-new:hover {
-  border-color: #00ff41;
-  color: #00ff41;
-}
-
 .overview-hint {
   font-family: 'Courier New', monospace;
   font-size: 9px;
   color: #444;
   letter-spacing: 1px;
-}
-
-.desktop-statusbar {
-  position: relative;
-  z-index: 100;
 }
 
 .desktop-dock {
@@ -592,25 +560,5 @@ onUnmounted(() => {
 @keyframes hue-crazy {
   0% { filter: hue-rotate(0deg) blur(80px); }
   100% { filter: hue-rotate(360deg) blur(80px); }
-}
-
-/* ── Screen transitions ── */
-.screen-enter-active,
-.screen-leave-active {
-  transition: opacity var(--duration-slow) cubic-bezier(0.22, 1, 0.36, 1),
-              transform var(--duration-slow) cubic-bezier(0.22, 1, 0.36, 1),
-              filter var(--duration-slow) cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.screen-enter-from {
-  opacity: 0;
-  transform: scale(0.97) translateY(8px);
-  filter: blur(4px);
-}
-
-.screen-leave-to {
-  opacity: 0;
-  transform: scale(0.97) translateY(-8px);
-  filter: blur(4px);
 }
 </style>

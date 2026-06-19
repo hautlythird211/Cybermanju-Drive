@@ -5,6 +5,12 @@
         <span class="logo-brand">CYBERMANJU</span>
         <span class="logo-drive">DRIVE</span>
       </div>
+
+      <div class="tmb-path-wrap">
+        <span class="tmb-path">{{ store.currentPath }}</span>
+        <Icon v-if="store.isLoading" icon="svg-spinners:3-dots-bounce" width="14" height="14" class="tmb-spinner" />
+      </div>
+
       <nav ref="menuRef" class="menu-items" role="menubar" aria-label="Main Menu">
         <div
           v-for="item in menuStructure"
@@ -76,6 +82,40 @@
     </div>
 
     <div class="tmb-right">
+      <span
+        class="tmb-sync"
+        :class="{ 'tmb-active': isSyncActive }"
+        title="SYNC STATUS"
+        aria-label="SYNC STATUS"
+        role="button"
+        tabindex="0"
+        @click="wm.open('sync')"
+        @keydown.enter="wm.open('sync')"
+        @keydown.space.prevent="wm.open('sync')"
+      >{{ isSyncActive ? 'SYNC:' + store.syncProgress?.status.toUpperCase() : 'SYNC:IDLE' }}</span>
+
+      <span class="tmb-div">|</span>
+
+      <span class="tmb-info">{{ store.files.length }} FILES</span>
+      <template v-if="store.selectedFile">
+        <span class="tmb-div">|</span>
+        <span class="tmb-info">SEL: {{ store.selectedFile.name }}</span>
+      </template>
+      <template v-if="store.selectedFile?.encrypted">
+        <span class="tmb-div">|</span>
+        <span class="tmb-badge">ENC {{ store.selectedFile.encryptionAlgorithm?.toUpperCase() || '' }}</span>
+      </template>
+      <template v-if="store.selectedFile?.compressionLayers && store.selectedFile.compressionLayers[0] && store.selectedFile.compressionLayers[0] !== 'none'">
+        <span class="tmb-div">|</span>
+        <span class="tmb-badge">{{ store.selectedFile.compressionLayers[0].toUpperCase() }}</span>
+      </template>
+      <template v-if="store.selectedFile?.hashBlake3">
+        <span class="tmb-div">|</span>
+        <span class="tmb-hash">B3:{{ store.selectedFile.hashBlake3.substring(0, 10) }}..</span>
+      </template>
+
+      <div class="tmb-separator" />
+
       <div class="sys-tray">
         <button
           class="tray-icon"
@@ -111,8 +151,8 @@
           class="tray-icon"
           :class="{ active: store.matrixRainEnabled }"
           @click="store.matrixRainEnabled = !store.matrixRainEnabled"
-          title="Toggle background effects"
-          aria-label="Toggle background effects"
+          :title="store.matrixRainEnabled ? 'GFX:ON' : 'GFX:OFF'"
+          :aria-label="store.matrixRainEnabled ? 'GFX:ON' : 'GFX:OFF'"
         >
           <Icon icon="mdi:lightning-bolt-outline" width="14" height="14" />
         </button>
@@ -121,7 +161,7 @@
           class="tray-icon"
           :class="{ active: openWindowCountValue > 0 }"
           @click="store.commandPaletteOpen = true"
-          title="Command Palette"
+          title="Command Palette (Ctrl+K)"
           aria-label="Open Command Palette"
         >
           <Icon icon="mdi:code-brackets" width="14" height="14" />
@@ -139,10 +179,9 @@
 
       <div class="tmb-separator" />
 
-      <div class="clock" @click="openDateInfo" role="button" tabindex="0" aria-label="Open date info" @keydown.enter="openDateInfo" @keydown.space.prevent="openDateInfo">
-        <span class="clock-time">{{ timeStr }}</span>
-        <span class="clock-date">{{ dateStr }}</span>
-      </div>
+      <span class="tmb-mode">{{ isWebMode() ? 'WEB' : 'TAURI' }}</span>
+
+      <SystemTray />
     </div>
   </header>
 </template>
@@ -154,31 +193,19 @@ import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 import { useWindowManager } from '@/composables/useWindowManager'
 import { useGsapAnimation } from '@/composables/useGsapAnimation'
+import { isWebMode } from '@/composables/useTauri'
+import SystemTray from '@/components/SystemTray.vue'
 
 const anim = useGsapAnimation()
 const store = useAppStore()
 const wm = useWindowManager()
 const openWindowCountValue = computed(() => wm.windows.value.filter(w => !w.minimized).length)
 
-const timeStr = ref('')
-const dateStr = ref('')
-let clockTimer: ReturnType<typeof setInterval> | null = null
+const isSyncActive = computed(() =>
+  store.syncProgress !== null && store.syncProgress.status !== 'idle' && store.syncProgress.status !== 'done'
+)
+
 const gsapCtx = ref<gsap.Context | null>(null)
-
-function updateClock() {
-  const now = new Date()
-  timeStr.value = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-  dateStr.value = now.toLocaleDateString([], { month: 'short', day: 'numeric' })
-}
-
-onMounted(() => {
-  updateClock()
-  clockTimer = setInterval(updateClock, 1000)
-})
-
-onUnmounted(() => {
-  if (clockTimer) clearInterval(clockTimer)
-})
 
 const openMenu = ref<string | null>(null)
 const menuRef = ref<HTMLElement | null>(null)
@@ -377,10 +404,6 @@ function applySuggestion(suggestion: string) {
   wm.open('search')
 }
 
-function openDateInfo() {
-  wm.open('settings')
-}
-
 function handleClickOutside(e: MouseEvent) {
   if (menuRef.value && !menuRef.value.contains(e.target as Node)) {
     openMenu.value = null
@@ -418,6 +441,7 @@ onUnmounted(() => {
   -webkit-app-region: drag;
   user-select: none;
   isolation: isolate;
+  overflow: hidden;
 }
 
 /* Velvet texture overlay */
@@ -497,6 +521,33 @@ onUnmounted(() => {
   font-weight: 600;
   color: var(--text-muted);
   letter-spacing: 0.5px;
+}
+
+/* ── Path display ── */
+.tmb-path-wrap {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-subtle);
+  padding-right: 8px;
+  margin-right: 4px;
+}
+
+.tmb-path {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+
+.tmb-spinner {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 6px;
 }
 
 .menu-items {
@@ -719,6 +770,72 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   -webkit-app-region: no-drag;
+  flex-shrink: 0;
+}
+
+/* ── Status indicators (merged from StatusBar) ── */
+.tmb-sync {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  outline: none;
+  white-space: nowrap;
+}
+
+.tmb-sync:hover {
+  color: var(--text-primary);
+  background: rgba(0, 255, 65, 0.06);
+}
+
+.tmb-sync:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.tmb-active {
+  color: var(--accent);
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
+}
+
+.tmb-info {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.tmb-badge {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--font-size-xs);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+.tmb-hash {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.tmb-div {
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.tmb-mode {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .sys-tray {
@@ -758,43 +875,37 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.clock {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  padding: 0 6px;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: background var(--transition-fast);
-  outline: none;
-}
-
-.clock:hover {
-  background: var(--bg-overlay);
-}
-
-.clock:focus-visible {
-  box-shadow: var(--focus-ring);
-}
-
-.clock-time {
-  font-family: var(--font-mono);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--text-secondary);
-  line-height: 1.2;
-}
-
-.clock-date {
-  font-family: var(--font-mono);
-  font-size: 8px;
-  color: var(--text-muted);
-  line-height: 1.2;
-}
-
 @keyframes velvet-shimmer {
   0% { background-position: 200% 0; }
   50% { background-position: 0% 0; }
   100% { background-position: -200% 0; }
+}
+
+/* ── Mobile responsive ── */
+@media (max-width: 900px) {
+  .tmb-info,
+  .tmb-badge,
+  .tmb-hash,
+  .tmb-div {
+    display: none;
+  }
+  .tmb-path {
+    max-width: 100px;
+  }
+}
+
+@media (max-width: 600px) {
+  .tmb-path-wrap {
+    display: none;
+  }
+  .tmb-sync {
+    display: none;
+  }
+  .tmb-mode {
+    display: none;
+  }
+  .tmb-center {
+    max-width: 200px;
+  }
 }
 </style>
