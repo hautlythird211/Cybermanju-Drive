@@ -448,11 +448,13 @@ jobs:
       - name: Build WASM module
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-          source "$HOME/.cargo/env"
+          export PATH="$HOME/.cargo/bin:$PATH"
           rustup target add wasm32-unknown-unknown
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           brew install llvm
-          cd crates/drive-wasm && CC_wasm32_unknown_unknown="$(brew --prefix llvm)/bin/clang" AR_wasm32_unknown_unknown="$(brew --prefix llvm)/bin/llvm-ar" wasm-pack build --target bundler --out-dir ../../node_modules/cybermanju-drive-wasm
+          export CC_wasm32_unknown_unknown="$(brew --prefix llvm)/bin/clang"
+          export AR_wasm32_unknown_unknown="$(brew --prefix llvm)/bin/llvm-ar"
+          cd crates/drive-wasm && wasm-pack build --target bundler --out-dir ../../node_modules/cybermanju-drive-wasm
 
       - name: Setup sccache
         uses: mozilla/sccache-action@v0.0.10
@@ -524,6 +526,39 @@ jobs:
 
       - name: Initialize Android project
         run: npx tauri android init
+
+      - name: Add JitPack repo for serialplugin (usb-serial-for-android)
+        run: |
+          python3 << 'EOF'
+          import os
+          jitpack = "maven { url = uri(\"https://www.jitpack.io\") }"
+          for root, dirs, files in os.walk("src-tauri/gen/android"):
+              for f in files:
+                  if f in ("settings.gradle.kts", "settings.gradle"):
+                      path = os.path.join(root, f)
+                      with open(path) as fh:
+                          content = fh.read()
+                      if "jitpack" not in content.lower():
+                          content = content.replace(
+                              "mavenCentral()",
+                              "mavenCentral()\n            " + jitpack
+                          )
+                          with open(path, "w") as fh:
+                              fh.write(content)
+                          print(f"Added JitPack to {path}")
+                  elif f in ("build.gradle.kts", "build.gradle"):
+                      path = os.path.join(root, f)
+                      with open(path) as fh:
+                          content = fh.read()
+                      if "jitpack" not in content.lower() and "allprojects" in content:
+                          content = content.replace(
+                              "mavenCentral()",
+                              "mavenCentral()\n            " + jitpack
+                          )
+                          with open(path, "w") as fh:
+                              fh.write(content)
+                          print(f"Added JitPack to {path}")
+          EOF
 
       - name: Pin to arm64-v8a ABI only (ort-sys has no armv7 prebuilt)
         run: |
