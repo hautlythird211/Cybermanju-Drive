@@ -447,8 +447,12 @@ jobs:
 
       - name: Build WASM module
         run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source "$HOME/.cargo/env"
+          rustup target add wasm32-unknown-unknown
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-          cd crates/drive-wasm && wasm-pack build --target bundler --out-dir ../../node_modules/cybermanju-drive-wasm
+          brew install llvm
+          cd crates/drive-wasm && CC_wasm32_unknown_unknown="$(brew --prefix llvm)/bin/clang" AR_wasm32_unknown_unknown="$(brew --prefix llvm)/bin/llvm-ar" wasm-pack build --target bundler --out-dir ../../node_modules/cybermanju-drive-wasm
 
       - name: Setup sccache
         uses: mozilla/sccache-action@v0.0.10

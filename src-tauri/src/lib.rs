@@ -202,12 +202,15 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_conduit::init().build())
-        .plugin(tauri_plugin_clipboard_next::init())
         .plugin(tauri_plugin_serialplugin::init());
+
+    // clipboard-rs has no Android support
+    #[cfg(not(target_os = "android"))]
+    let builder = builder.plugin(tauri_plugin_clipboard_next::init());
 
     // Windows-only: snap layout for frameless windows
     #[cfg(target_os = "windows")]
-    let builder = builder.plugin(tauri_plugin_snap_layout::init());
+    let builder = builder.plugin(tauri_plugin_snap_layout::init().build());
 
     builder
         .manage(state)

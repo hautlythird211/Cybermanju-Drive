@@ -40,9 +40,6 @@ tauri-plugin-process = "2"
 # Conduit — 2.4x faster IPC (drop-in replacement for invoke)
 tauri-plugin-conduit = "1"
 
-# Clipboard — Advanced clipboard (text, image, HTML, RTF, files)
-tauri-plugin-clipboard-next = "0.2"
-
 # Serial — Cross-platform serial port communication
 tauri-plugin-serialplugin = "2"
 
@@ -95,3 +92,7 @@ rayon = "1.10"
 # Snap Layout — Windows 11 snap layout for frameless windows
 [target.'cfg(target_os = "windows")'.dependencies]
 tauri-plugin-snap-layout = "1"
+
+# Clipboard — clipboard-rs has no Android support
+[target.'cfg(not(target_os = "android"))'.dependencies]
+tauri-plugin-clipboard-next = "0.2"
