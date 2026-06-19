@@ -385,7 +385,7 @@ jobs:
           cache-on-failure: true
 
       - name: Fix cache ownership
-        run: chown -R builder:builder $GITHUB_WORKSPACE/target
+        run: chown -R builder:builder $GITHUB_WORKSPACE/target 2>/dev/null || true
 
       - name: Build Arch package
         run: |
