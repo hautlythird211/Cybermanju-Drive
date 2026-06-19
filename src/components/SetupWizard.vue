@@ -32,7 +32,7 @@ const AVAILABLE_PROVIDERS = [
   { id: 'github', label: 'GitHub', color: '#333', oauth: true },
   { id: 'gitlab', label: 'GitLab', color: '#FC6D26', oauth: true },
   { id: 'telegram', label: 'Telegram', color: '#0088CC', oauth: true },
-  { id: 'mega', label: 'Mega.nz', color: '#D9272E', oauth: true },
+  { id: 'mega', label: 'Mega.nz', color: '#D9272E', oauth: false },
 ]
 
 interface ProviderAccount {

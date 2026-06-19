@@ -33,6 +33,15 @@ const connectingProvider = ref<string | null>(null)
 const showClientIdForm = ref<string | null>(null)
 const clientIdInput = ref('')
 
+// Mega.nz login modal
+const showMegaModal = ref(false)
+const megaEmail = ref('')
+const megaPassword = ref('')
+const megaLabel = ref('Mega')
+const mega2FACode = ref('')
+const megaVerifying = ref(false)
+const megaVerifyError = ref('')
+
 let timer: ReturnType<typeof setInterval> | null = null
 let glitchTimer: ReturnType<typeof setInterval> | null = null
 let bootTimeout: ReturnType<typeof setTimeout> | null = null
@@ -157,6 +166,10 @@ function handleUsernameKeydown(e: KeyboardEvent) {
 
 /* --- Storage provider connection --- */
 async function connectProvider(pid: string) {
+  if (pid === 'mega') {
+    openMegaModal()
+    return
+  }
   if (connectingProvider.value) return
   connectingProvider.value = pid
   try {
@@ -204,6 +217,78 @@ async function saveClientId() {
   showClientIdForm.value = null
   clientIdInput.value = ''
   await connectProvider(pid)
+}
+
+function openMegaModal() {
+  megaEmail.value = ''
+  megaPassword.value = ''
+  megaLabel.value = 'Mega'
+  megaVerifyError.value = ''
+  mega2FACode.value = ''
+  showMegaModal.value = true
+}
+
+function closeMegaModal() {
+  showMegaModal.value = false
+  megaVerifying.value = false
+  megaVerifyError.value = ''
+  mega2FACode.value = ''
+}
+
+async function verifyAndConnectMega() {
+  megaVerifyError.value = ''
+  if (!megaEmail.value.trim() || !megaPassword.value.trim()) {
+    megaVerifyError.value = 'EMAIL AND PASSWORD ARE REQUIRED'
+    return
+  }
+
+  megaVerifying.value = true
+  connectingProvider.value = 'mega'
+  try {
+    const label = megaLabel.value.trim() || 'Mega'
+    const token = `${megaEmail.value.trim()}|${megaPassword.value}`
+
+    const testConfig: any = {
+      id: '',
+      backendType: 'mega',
+      enabled: true,
+      name: label,
+      basePath: '/',
+      token,
+      secondFactorCode: mega2FACode.value.trim() || undefined,
+      autoSync: false,
+      compressBeforeUpload: false,
+      createPreviews: false,
+      deleteRawAfterSync: false,
+      maxConcurrentUploads: 1,
+    }
+
+    await store.testSyncConnection(testConfig)
+
+    const { saveTokenToStorage } = await import('@/wasm/oauth')
+    await saveTokenToStorage({
+      accessToken: token,
+      refreshToken: null,
+      expiresAt: null,
+      tokenType: 'mega',
+      scope: null,
+      provider: 'mega' as any,
+    })
+
+    const data = await import('@/wasm/data')
+    await data.upsertMegaAccount(label, token)
+    await store.fetchAccounts()
+
+    if (!connectedProviders.value.includes('mega')) {
+      connectedProviders.value.push('mega')
+    }
+    closeMegaModal()
+  } catch (e) {
+    megaVerifyError.value = e instanceof Error ? e.message : 'CONNECTION FAILED'
+  } finally {
+    megaVerifying.value = false
+    connectingProvider.value = null
+  }
 }
 
 onMounted(() => {
@@ -335,6 +420,69 @@ onUnmounted(() => {
               <button class="bw-btn bw-btn-inverse" :disabled="!clientIdInput.trim()" @click="saveClientId">SAVE</button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showMegaModal" class="mega-modal-overlay" @click.self="closeMegaModal">
+      <div class="mega-modal">
+        <div class="mega-modal-header">
+          <Icon icon="logos:mega" width="28" height="28" />
+          <span>CONNECT MEGA.NZ</span>
+        </div>
+        <div class="mega-modal-body">
+          <div class="form-row">
+            <label>EMAIL</label>
+            <input
+              v-model="megaEmail"
+              class="bw-input"
+              placeholder="Mega.nz account email"
+              autocomplete="email"
+              @keyup.enter="verifyAndConnectMega"
+            />
+          </div>
+          <div class="form-row">
+            <label>PASSWORD</label>
+            <input
+              v-model="megaPassword"
+              class="bw-input"
+              type="password"
+              placeholder="Mega.nz password"
+              autocomplete="current-password"
+              @keyup.enter="verifyAndConnectMega"
+            />
+          </div>
+          <div class="form-row">
+            <label>LABEL (OPTIONAL)</label>
+            <input v-model="megaLabel" class="bw-input" placeholder="e.g. My Mega" />
+          </div>
+          <div class="form-row">
+            <label>2FA CODE (OPTIONAL)</label>
+            <input
+              v-model="mega2FACode"
+              class="bw-input"
+              placeholder="Six-digit authenticator code"
+              autocomplete="one-time-code"
+              inputmode="numeric"
+              maxlength="6"
+              @keyup.enter="verifyAndConnectMega"
+            />
+          </div>
+          <div v-if="megaVerifyError" class="mega-modal-error">{{ megaVerifyError }}</div>
+          <div v-if="megaVerifying" class="mega-modal-verifying">
+            <Icon icon="svg-spinners:blocks-wave" width="16" height="16" />
+            VERIFYING...
+          </div>
+        </div>
+        <div class="mega-modal-footer">
+          <button class="bw-btn" :disabled="megaVerifying" @click="closeMegaModal">CANCEL</button>
+          <button
+            class="bw-btn bw-btn-inverse"
+            :disabled="megaVerifying || !megaEmail.trim() || !megaPassword.trim()"
+            @click="verifyAndConnectMega"
+          >
+            {{ megaVerifying ? 'VERIFYING...' : 'VERIFY & CONNECT' }}
+          </button>
         </div>
       </div>
     </div>
@@ -965,5 +1113,72 @@ onUnmounted(() => {
   .boot-title {
     font-size: 9px;
   }
+}
+
+.mega-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 9999;
+}
+
+.mega-modal {
+  width: 380px;
+  max-width: 92vw;
+  background: #0a0a0a;
+  border: 1px solid #D9272E;
+  border-radius: 12px;
+  box-shadow: 0 0 60px rgba(217, 39, 46, 0.08);
+  overflow: hidden;
+}
+
+.mega-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  color: #e0e0e0;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.mega-modal-body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mega-modal-error {
+  font-size: 10px;
+  color: #ff5f57;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 95, 87, 0.2);
+  border-radius: 4px;
+  background: rgba(255, 95, 87, 0.05);
+  text-align: center;
+}
+
+.mega-modal-verifying {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 10px;
+  color: #febc2e;
+  letter-spacing: 1px;
+}
+
+.mega-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid #1a1a1a;
 }
 </style>
