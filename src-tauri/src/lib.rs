@@ -201,9 +201,9 @@ pub fn run() {
         .plugin(tauri_plugin_log::Builder::default().build())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_conduit::init())
+        .plugin(tauri_plugin_conduit::init().build())
         .plugin(tauri_plugin_clipboard_next::init())
-        .plugin(tauri_plugin_serialplugin::Builder::new().build());
+        .plugin(tauri_plugin_serialplugin::init());
 
     // Windows-only: snap layout for frameless windows
     #[cfg(target_os = "windows")]
