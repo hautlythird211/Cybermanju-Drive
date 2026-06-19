@@ -159,6 +159,16 @@
 
         <button
           class="tray-icon"
+          :class="{ active: store.autoArrange }"
+          @click="store.autoArrange = !store.autoArrange"
+          :title="store.autoArrange ? 'TILE:4-QUADRANT (ON)' : 'TILE:FREE (OFF)'"
+          :aria-label="store.autoArrange ? 'Auto-arrange tiles enabled' : 'Auto-arrange tiles disabled'"
+        >
+          <Icon icon="mdi:view-grid-outline" width="14" height="14" />
+        </button>
+
+        <button
+          class="tray-icon"
           :class="{ active: openWindowCountValue > 0 }"
           @click="store.commandPaletteOpen = true"
           title="Command Palette (Ctrl+K)"
@@ -180,6 +190,19 @@
       <div class="tmb-separator" />
 
       <span class="tmb-mode">{{ isWebMode() ? 'WEB' : 'TAURI' }}</span>
+
+      <div class="tmb-clipboard" @click="showClipboardHistory = !showClipboardHistory" :title="'Clipboard: ' + (clipboardHistory.length ? clipboardHistory[clipboardHistory.length - 1] : 'empty')">
+        <Icon icon="mdi:clipboard-text-outline" width="14" height="14" />
+        <span v-if="clipboardHistory.length" class="clipboard-count">{{ clipboardHistory.length }}</span>
+        <Transition name="clip-fade">
+          <div v-if="showClipboardHistory && clipboardHistory.length" class="clipboard-popup" @click.stop>
+            <div class="clip-header">CLIPBOARD HISTORY</div>
+            <div v-for="(item, i) in clipboardHistory.slice().reverse()" :key="i" class="clip-item" @click="pasteFromHistory(item)">
+              {{ item.length > 50 ? item.slice(0, 47) + '...' : item }}
+            </div>
+          </div>
+        </Transition>
+      </div>
 
       <SystemTray />
     </div>
@@ -206,6 +229,19 @@ const isSyncActive = computed(() =>
 )
 
 const gsapCtx = ref<gsap.Context | null>(null)
+
+const clipboardHistory = ref<string[]>([])
+const showClipboardHistory = ref(false)
+
+function onClipboardUpdate(e: Event) {
+  const detail = (e as CustomEvent).detail
+  if (detail?.history) clipboardHistory.value = detail.history
+}
+
+function pasteFromHistory(text: string) {
+  navigator.clipboard.writeText(text)
+  showClipboardHistory.value = false
+}
 
 const openMenu = ref<string | null>(null)
 const menuRef = ref<HTMLElement | null>(null)
@@ -412,6 +448,7 @@ function handleClickOutside(e: MouseEvent) {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  document.addEventListener('cybermanju:clipboard-update', onClipboardUpdate)
   gsapCtx.value = gsap.context(() => {
     if (menuBarRef.value) {
       anim.fadeIn(menuBarRef.value, { from: { y: -4, opacity: 0 } })
@@ -421,6 +458,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('cybermanju:clipboard-update', onClipboardUpdate)
   gsapCtx.value?.revert()
 })
 </script>
@@ -837,6 +875,96 @@ onUnmounted(() => {
   letter-spacing: 0.5px;
   white-space: nowrap;
 }
+
+/* ── Clipboard history ── */
+.tmb-clipboard {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 22px;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  background: transparent;
+  border: none;
+}
+
+.tmb-clipboard:hover {
+  color: var(--text-primary);
+  background: rgba(0, 255, 65, 0.06);
+}
+
+.clipboard-count {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 7px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--bg-surface);
+  border-radius: 50%;
+  width: 10px;
+  height: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.clipboard-popup {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  min-width: 260px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--bg-glass-heavy);
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  box-shadow: var(--shadow-elevated);
+  z-index: 300;
+}
+
+.clip-header {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  padding: 4px 8px;
+  letter-spacing: 1px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 2px;
+}
+
+.clip-item {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.clip-item:hover {
+  background: rgba(0, 255, 65, 0.08);
+  color: var(--text-primary);
+  padding-left: 12px;
+}
+
+.clip-fade-enter-active { transition: all 0.12s ease-out; }
+.clip-fade-leave-active { transition: all 0.1s ease-in; }
+.clip-fade-enter-from { opacity: 0; transform: translateY(-4px); }
+.clip-fade-leave-to { opacity: 0; transform: translateY(-4px); }
 
 .sys-tray {
   display: flex;
