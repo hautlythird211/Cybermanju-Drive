@@ -20,7 +20,7 @@ pub async fn web_search(
         .build()
         .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
 
-    let encoded_query = url::form_urlencoded::byte_serialize(query.as_bytes());
+    let encoded_query: String = url::form_urlencoded::byte_serialize(query.as_bytes()).collect();
     let url = format!("https://lite.duckduckgo.com/lite/?q={}", encoded_query);
 
     let resp = client
