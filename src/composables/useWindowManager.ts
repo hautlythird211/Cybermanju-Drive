@@ -137,6 +137,7 @@ const windows = ref<WindowState[]>([])
 const nextZIndex = ref(10)
 const windowFocusHistory = ref<string[]>([])
 const currentScreen = ref({ x: 0, y: 0 })
+const lastContainerSize = ref({ width: 1200, height: 800 })
 
 const TILE_GAP = 6
 const MAX_Z_INDEX = 9999
@@ -211,10 +212,14 @@ export function useWindowManager() {
 
   function open(panelType: PanelType, props?: Record<string, unknown>) {
     const existing = windows.value.find(
-      w => w.panelType === panelType && !w.minimized && w.animState !== 'exiting'
+      w => w.panelType === panelType && w.animState !== 'exiting'
     )
     if (existing) {
-      focus(existing.id)
+      if (existing.minimized) {
+        restore(existing.id)
+      } else {
+        focus(existing.id)
+      }
       return existing.id
     }
 
@@ -233,7 +238,7 @@ export function useWindowManager() {
       resolvedProps.panelType = panelType
     }
 
-    const tile = getTileRect(screen.x, screen.y, tileSlot, 1200, 800)
+    const tile = getTileRect(screen.x, screen.y, tileSlot, lastContainerSize.value.width, lastContainerSize.value.height)
 
     const win: WindowState = {
       id,
@@ -374,6 +379,7 @@ export function useWindowManager() {
   }
 
   function retileAll(containerWidth: number, containerHeight: number) {
+    lastContainerSize.value = { width: containerWidth, height: containerHeight }
     for (const win of windows.value) {
       if (win.minimized || win.animState === 'exiting') continue
       const tile = getTileRect(win.screenX, win.screenY, win.tileSlot, containerWidth, containerHeight)
@@ -382,6 +388,11 @@ export function useWindowManager() {
       win.width = tile.width
       win.height = tile.height
     }
+  }
+
+  function arrangeWindows() {
+    const { width, height } = lastContainerSize.value
+    retileAll(width, height)
   }
 
   const openWindowCount = computed(() =>
@@ -408,6 +419,7 @@ export function useWindowManager() {
     updateSize,
     updateTilePosition,
     retileAll,
+    arrangeWindows,
     getTileRect,
     getWindowsForScreen,
     getAllScreens,

@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
+import { invoke } from '@/composables/useTauri'
 import { Icon } from '@iconify/vue'
-import TopMenuBar from './TopMenuBar.vue'
-import Dock from './Dock.vue'
 
 const emit = defineEmits<{ (e: 'open-app'): void }>()
 
@@ -469,8 +467,6 @@ onUnmounted(() => {
 
 <template>
   <div class="landing-os" @click="focusInput" tabindex="0">
-    <TopMenuBar />
-
     <div class="landing-content">
       <div class="desktop-landing">
         <div class="ascii-background">
@@ -537,8 +533,6 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-
-    <Dock />
   </div>
 </template>
 
