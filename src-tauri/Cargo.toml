@@ -40,11 +40,6 @@ tauri-plugin-process = "2"
 # Conduit — 2.4x faster IPC (drop-in replacement for invoke)
 tauri-plugin-conduit = "1"
 
-# Snap Layout — Windows 11 snap layout for frameless windows
-[target.'cfg(target_os = "windows")'.dependencies]
-tauri-plugin-snap-layout = "1"
-
-[dependencies]
 # Clipboard — Advanced clipboard (text, image, HTML, RTF, files)
 tauri-plugin-clipboard-next = "0.2"
 
@@ -96,3 +91,7 @@ sysinfo = "0.31"
 # File ops
 walkdir = "2.5"
 rayon = "1.10"
+
+# Snap Layout — Windows 11 snap layout for frameless windows
+[target.'cfg(target_os = "windows")'.dependencies]
+tauri-plugin-snap-layout = "1"
