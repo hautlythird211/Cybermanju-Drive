@@ -375,10 +375,10 @@ jobs:
 
       - name: Build WASM module
         run: |
-          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           sudo -u builder bash -c "
             export HOME=/home/builder
             export PATH=\$HOME/.cargo/bin:\$PATH
+            curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
             cd $GITHUB_WORKSPACE/crates/drive-wasm
             wasm-pack build --target bundler --out-dir ../../node_modules/cybermanju-drive-wasm
           "
