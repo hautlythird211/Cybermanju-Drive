@@ -45,10 +45,10 @@ tauri-plugin-conduit = "1"
 tauri-plugin-snap-layout = "1"
 
 # Clipboard — Advanced clipboard (text, image, HTML, RTF, files)
-tauri-plugin-clipboard-next = "1"
+tauri-plugin-clipboard-next = "0.2"
 
 # Serial — Cross-platform serial port communication
-tauri-plugin-serialplugin = "1"
+tauri-plugin-serialplugin = "2"
 
 # General
 serde = { version = "1", features = ["derive"] }

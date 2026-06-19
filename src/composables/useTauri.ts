@@ -612,9 +612,9 @@ function isMegaTestConnection(cmd: string, args?: Record<string, unknown>): bool
 export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   if (isTauri()) {
     // Use Conduit plugin for faster IPC (2.4x faster than standard invoke)
-    const conduit = await import('tauri-plugin-conduit')
+    const { invoke: conduitInvoke } = await import('tauri-plugin-conduit') as { invoke: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T> }
     try {
-      return await conduit.invoke<T>(cmd, args)
+      return await conduitInvoke<T>(cmd, args)
     } catch (rustError) {
       // For mega login, fall back to WASM bridge if the Rust backend fails
       // (e.g. 2FA not supported by megalib, or API incompatibility)
