@@ -44,6 +44,7 @@ tauri-plugin-conduit = "1"
 [target.'cfg(target_os = "windows")'.dependencies]
 tauri-plugin-snap-layout = "1"
 
+[dependencies]
 # Clipboard — Advanced clipboard (text, image, HTML, RTF, files)
 tauri-plugin-clipboard-next = "0.2"
 
