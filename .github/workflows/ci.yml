@@ -24,8 +24,6 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 1
   RUST_BACKTRACE: 1
-  SCCACHE_GHA_ENABLED: true
-  SCCACHE_GHA_CACHE_TAG: rust-sccache
   # Shared apt packages across Linux jobs
   SYS_DEPS: >-
     libwebkit2gtk-4.1-dev
@@ -59,9 +57,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ${{ env.SYS_DEPS }}
-
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.10
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
@@ -181,9 +176,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.10
-
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
         with:
@@ -250,9 +242,6 @@ jobs:
         run: |
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           cd crates/drive-wasm && wasm-pack build --target bundler --out-dir ../../node_modules/cybermanju-drive-wasm
-
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.10
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
@@ -456,9 +445,6 @@ jobs:
           export AR_wasm32_unknown_unknown="$(brew --prefix llvm)/bin/llvm-ar"
           cd crates/drive-wasm && wasm-pack build --target bundler --out-dir ../../node_modules/cybermanju-drive-wasm
 
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.10
-
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
         with:
@@ -515,9 +501,6 @@ jobs:
 
       - name: Install Rust target (arm64 only)
         run: rustup target add aarch64-linux-android
-
-      - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.10
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
