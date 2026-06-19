@@ -222,7 +222,7 @@ async function handleOAuth(provider: string) {
     const p = provider as OAuthProvider
     const clientId = oauth.getProviderClientId(p)
     if (!clientId) {
-      errorMsg.value = `${provider}: CLIENT ID NOT CONFIGURED — set VITE_OAUTH_${provider.toUpperCase()}_CLIENT_ID in .env`
+      errorMsg.value = `${provider}: CLIENT ID NOT CONFIGURED — set VITE_OAUTH_${provider.toUpperCase()}_CLIENT_ID or ${provider.toUpperCase()}_CLIENT_ID in GitHub Secrets`
       return
     }
 
@@ -251,7 +251,7 @@ async function handleGoogleOAuth(oauth: typeof import('@/wasm/oauth')) {
 
   const clientId = oauth.getProviderClientId('googleDrive')
   if (!clientId) {
-    errorMsg.value = 'GOOGLE: CLIENT ID NOT CONFIGURED — set VITE_OAUTH_GOOGLE_DRIVE_CLIENT_ID in .env'
+    errorMsg.value = 'GOOGLE: CLIENT ID NOT CONFIGURED — set VITE_OAUTH_GOOGLE_CLIENT_ID or GOOGLE_CLIENT_ID in GitHub Secrets'
     return
   }
 

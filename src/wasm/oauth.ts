@@ -65,19 +65,65 @@ const PROVIDER_CONFIGS: Record<OAuthProvider, OAuthConfig> = {
   },
 }
 
-const ENV_MAP: Record<string, OAuthProvider> = {
-  VITE_OAUTH_GOOGLE_DRIVE_CLIENT_ID: 'googleDrive',
-  VITE_OAUTH_GOOGLE_PHOTOS_CLIENT_ID: 'googlePhotos',
-  VITE_OAUTH_GITHUB_CLIENT_ID: 'github',
-  VITE_OAUTH_GITLAB_CLIENT_ID: 'gitlab',
-  VITE_OAUTH_TELEGRAM_CLIENT_ID: 'telegram',
-}
+// Primary env var names (with VITE_ prefix, as Vite requires for client exposure)
+// Plus fallbacks: with OAUTH prefix, without VITE_ prefix, bare names
+const ENV_MAP: Record<string, OAuthProvider>[] = [
+  // 1. Standard VITE_ prefix with OAUTH segment
+  {
+    VITE_OAUTH_GOOGLE_DRIVE_CLIENT_ID: 'googleDrive',
+    VITE_OAUTH_GOOGLE_PHOTOS_CLIENT_ID: 'googlePhotos',
+    VITE_OAUTH_GITHUB_CLIENT_ID: 'github',
+    VITE_OAUTH_GITLAB_CLIENT_ID: 'gitlab',
+    VITE_OAUTH_TELEGRAM_CLIENT_ID: 'telegram',
+  },
+  // 2. VITE_ prefix without OAUTH segment
+  {
+    VITE_GOOGLE_DRIVE_CLIENT_ID: 'googleDrive',
+    VITE_GOOGLE_PHOTOS_CLIENT_ID: 'googlePhotos',
+    VITE_GITHUB_CLIENT_ID: 'github',
+    VITE_GITLAB_CLIENT_ID: 'gitlab',
+    VITE_TELEGRAM_CLIENT_ID: 'telegram',
+  },
+  // 3. Bare names (no VITE_ prefix — won't be exposed by Vite but may be set at runtime)
+  {
+    GOOGLE_DRIVE_CLIENT_ID: 'googleDrive',
+    GOOGLE_PHOTOS_CLIENT_ID: 'googlePhotos',
+    GITHUB_CLIENT_ID: 'github',
+    GITLAB_CLIENT_ID: 'gitlab',
+    TELEGRAM_CLIENT_ID: 'telegram',
+  },
+  // 4. Single Google client ID for both Drive & Photos
+  {
+    VITE_OAUTH_GOOGLE_CLIENT_ID: 'googleDrive',
+    VITE_GOOGLE_CLIENT_ID: 'googleDrive',
+    GOOGLE_CLIENT_ID: 'googleDrive',
+  },
+]
 
 export function loadClientIdsFromEnv(): void {
   if (typeof import.meta === 'undefined' || !import.meta.env) return
-  for (const [key, provider] of Object.entries(ENV_MAP)) {
-    const val = (import.meta.env as Record<string, string | undefined>)[key]
-    if (val) PROVIDER_CONFIGS[provider].clientId = val
+  const env = import.meta.env as Record<string, string | undefined>
+  const found: string[] = []
+
+  for (const map of ENV_MAP) {
+    for (const [key, provider] of Object.entries(map)) {
+      const val = env[key]
+      if (val && !PROVIDER_CONFIGS[provider].clientId) {
+        PROVIDER_CONFIGS[provider].clientId = val
+        found.push(`${key}=${val.slice(0, 8)}...`)
+      }
+    }
+  }
+
+  // Also populate googlePhotos from googleDrive if only one Google ID was set
+  if (PROVIDER_CONFIGS.googleDrive.clientId && !PROVIDER_CONFIGS.googlePhotos.clientId) {
+    PROVIDER_CONFIGS.googlePhotos.clientId = PROVIDER_CONFIGS.googleDrive.clientId
+  }
+
+  if (found.length > 0) {
+    console.log('[OAuth] Client IDs loaded:', found.join(', '))
+  } else {
+    console.warn('[OAuth] No client IDs found in environment. Tried:', Object.values(ENV_MAP).flatMap(m => Object.keys(m)).join(', '))
   }
 }
 
