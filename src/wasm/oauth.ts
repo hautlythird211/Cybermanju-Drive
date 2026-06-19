@@ -101,13 +101,24 @@ const ENV_MAP: Record<string, OAuthProvider>[] = [
 ]
 
 export function loadClientIdsFromEnv(): void {
-  if (typeof import.meta === 'undefined' || !import.meta.env) return
+  if (typeof import.meta === 'undefined' || !import.meta.env) {
+    console.warn('[OAuth][DEBUG] import.meta.env is undefined — env vars unavailable')
+    return
+  }
   const env = import.meta.env as Record<string, string | undefined>
   const found: string[] = []
+  const allKeys = Object.keys(env).filter(k => k.startsWith('VITE_') || k.includes('CLIENT_ID') || k.includes('OAUTH'))
+
+  console.log('[OAuth][DEBUG] ── ENV VAR SCAN ──')
+  console.log('[OAuth][DEBUG] Total env keys:', Object.keys(env).length)
+  console.log('[OAuth][DEBUG] VITE_*/CLIENT_ID/OAUTH keys:', allKeys.length ? allKeys.join(', ') : '(none found)')
+  console.log('[OAuth][DEBUG] Checking provider client IDs:')
 
   for (const map of ENV_MAP) {
     for (const [key, provider] of Object.entries(map)) {
       const val = env[key]
+      const status = val ? `SET (${val.slice(0, 6)}...${val.slice(-3)})` : 'NOT SET'
+      console.log(`[OAuth][DEBUG]   ${key} → ${provider}: ${status}`)
       if (val && !PROVIDER_CONFIGS[provider].clientId) {
         PROVIDER_CONFIGS[provider].clientId = val
         found.push(`${key}=${val.slice(0, 8)}...`)
@@ -118,12 +129,22 @@ export function loadClientIdsFromEnv(): void {
   // Also populate googlePhotos from googleDrive if only one Google ID was set
   if (PROVIDER_CONFIGS.googleDrive.clientId && !PROVIDER_CONFIGS.googlePhotos.clientId) {
     PROVIDER_CONFIGS.googlePhotos.clientId = PROVIDER_CONFIGS.googleDrive.clientId
+    console.log('[OAuth][DEBUG] googlePhotos inheriting clientId from googleDrive')
+  }
+
+  console.log('[OAuth][DEBUG] ── FINAL CLIENT ID STATUS ──')
+  for (const [provider, config] of Object.entries(PROVIDER_CONFIGS)) {
+    const has = config.clientId ? `YES (${config.clientId.slice(0, 6)}...${config.clientId.slice(-3)})` : 'NO'
+    console.log(`[OAuth][DEBUG]   ${provider}: ${has}`)
   }
 
   if (found.length > 0) {
     console.log('[OAuth] Client IDs loaded:', found.join(', '))
   } else {
-    console.warn('[OAuth] No client IDs found in environment. Tried:', Object.values(ENV_MAP).flatMap(m => Object.keys(m)).join(', '))
+    console.warn('[OAuth] ⚠ NO CLIENT IDs FOUND IN ENVIRONMENT')
+    console.warn('[OAuth] Tried env keys:', Object.values(ENV_MAP).flatMap(m => Object.keys(m)).join(', '))
+    console.warn('[OAuth] Solution: Create .env file from .env.example and fill in your OAuth client IDs')
+    console.warn('[OAuth] Or set VITE_OAUTH_* env vars before running `npm run dev`')
   }
 }
 
@@ -216,7 +237,14 @@ export async function buildAuthorizationUrlAsync(
   const redirectUri = config.redirectUri || providerConfig.redirectUri
   const scopes = config.scopes || providerConfig.scopes
 
+  console.log(`[OAuth][DEBUG] buildAuthorizationUrlAsync(${provider})`)
+  console.log(`[OAuth][DEBUG]   clientId: ${clientId ? `${clientId.slice(0, 6)}...${clientId.slice(-3)}` : '(EMPTY)'}`)
+  console.log(`[OAuth][DEBUG]   redirectUri: ${redirectUri}`)
+  console.log(`[OAuth][DEBUG]   scopes: ${scopes.join(' ')}`)
+  console.log(`[OAuth][DEBUG]   authUrl: ${providerConfig.authUrl}`)
+
   if (!clientId) {
+    console.error(`[OAuth][ERROR] Client ID not configured for ${provider}. Cannot build auth URL.`)
     throw new Error(`Client ID not configured for ${provider}. Call setProviderClientId() first.`)
   }
 
@@ -236,8 +264,13 @@ export async function buildAuthorizationUrlAsync(
     code_challenge: challenge,
   })
 
+  const fullUrl = `${providerConfig.authUrl}?${params.toString()}`
+  console.log(`[OAuth][DEBUG]   Full auth URL: ${fullUrl}`)
+  console.log(`[OAuth][DEBUG]   PKCE state: ${state.slice(0, 8)}...`)
+  console.log(`[OAuth][DEBUG]   PKCE challenge: ${challenge.slice(0, 12)}...`)
+
   return {
-    url: `${providerConfig.authUrl}?${params.toString()}`,
+    url: fullUrl,
     verifier,
     state,
   }
@@ -251,6 +284,13 @@ export async function exchangeCodeForToken(
 ): Promise<OAuthToken> {
   const config = PROVIDER_CONFIGS[provider]
 
+  console.log(`[OAuth][DEBUG] exchangeCodeForToken(${provider})`)
+  console.log(`[OAuth][DEBUG]   tokenUrl: ${config.tokenUrl}`)
+  console.log(`[OAuth][DEBUG]   clientId: ${config.clientId ? `${config.clientId.slice(0, 6)}...${config.clientId.slice(-3)}` : '(EMPTY)'}`)
+  console.log(`[OAuth][DEBUG]   code: ${code.slice(0, 8)}...`)
+  console.log(`[OAuth][DEBUG]   redirectUri: ${redirectUri}`)
+  console.log(`[OAuth][DEBUG]   verifier: ${verifier.slice(0, 12)}...`)
+
   const params = new URLSearchParams({
     client_id: config.clientId,
     code,
@@ -258,6 +298,9 @@ export async function exchangeCodeForToken(
     grant_type: 'authorization_code',
     code_verifier: verifier,
   })
+
+  console.log(`[OAuth][DEBUG]   POST ${config.tokenUrl}`)
+  console.log(`[OAuth][DEBUG]   Body params: ${[...params.keys()].join(', ')}`)
 
   const response = await fetch(config.tokenUrl, {
     method: 'POST',
@@ -268,8 +311,11 @@ export async function exchangeCodeForToken(
     body: params.toString(),
   })
 
+  console.log(`[OAuth][DEBUG]   Response status: ${response.status} ${response.statusText}`)
+
   if (!response.ok) {
     const errorText = await response.text()
+    console.error(`[OAuth][ERROR] Token exchange FAILED (${response.status}):`, errorText)
     throw new Error(`Token exchange failed (${response.status}): ${errorText}`)
   }
 
@@ -277,6 +323,13 @@ export async function exchangeCodeForToken(
   const expiresAt = data.expires_in
     ? Math.floor(Date.now() / 1000) + data.expires_in
     : null
+
+  console.log(`[OAuth][DEBUG]   Token exchange SUCCESS`)
+  console.log(`[OAuth][DEBUG]   token_type: ${data.token_type || 'Bearer'}`)
+  console.log(`[OAuth][DEBUG]   expires_in: ${data.expires_in || 'N/A'}s`)
+  console.log(`[OAuth][DEBUG]   scope: ${data.scope || 'N/A'}`)
+  console.log(`[OAuth][DEBUG]   has_refresh_token: ${!!data.refresh_token}`)
+  console.log(`[OAuth][DEBUG]   access_token: ${data.access_token ? `${data.access_token.slice(0, 8)}...` : '(MISSING)'}`)
 
   return {
     accessToken: data.access_token,
@@ -359,19 +412,28 @@ export async function authenticateWithPopup(
   provider: OAuthProvider,
   config: { clientId?: string; redirectUri?: string; scopes?: string[] } = {}
 ): Promise<OAuthToken> {
+  console.log(`[OAuth][DEBUG] authenticateWithPopup(${provider}) — starting popup flow`)
+
   const { url, verifier, state: originalState } = await buildAuthorizationUrlAsync(provider, config)
+
+  console.log(`[OAuth][DEBUG]   Opening popup for: ${provider}`)
+  console.log(`[OAuth][DEBUG]   Auth URL (first 120 chars): ${url.slice(0, 120)}...`)
 
   return new Promise((resolve, reject) => {
     const popup = openAuthPopup(url)
     if (!popup) {
+      console.error(`[OAuth][ERROR] Popup was blocked by browser for ${provider}`)
       reject(new Error('Popup blocked. Please allow popups for this site.'))
       return
     }
+
+    console.log(`[OAuth][DEBUG]   Popup opened, polling for redirect...`)
 
     const interval = setInterval(() => {
       try {
         if (popup.closed) {
           clearInterval(interval)
+          console.warn(`[OAuth][WARN] Popup closed by user for ${provider}`)
           reject(new Error('Authorization popup was closed by the user'))
           return
         }
@@ -384,21 +446,35 @@ export async function authenticateWithPopup(
         const state = urlObj.searchParams.get('state')
         const error = urlObj.searchParams.get('error')
 
+        console.log(`[OAuth][DEBUG]   Popup URL: ${popupUrl.slice(0, 100)}...`)
+
         if (error) {
           clearInterval(interval)
+          const errorDesc = urlObj.searchParams.get('error_description')
+          console.error(`[OAuth][ERROR] OAuth error from ${provider}: ${error}`)
+          if (errorDesc) console.error(`[OAuth][ERROR]   description: ${errorDesc}`)
           popup.close()
-          reject(new Error(`OAuth error: ${error}`))
+          reject(new Error(`OAuth error: ${error}${errorDesc ? ` — ${errorDesc}` : ''}`))
           return
         }
 
         if (code && state === originalState) {
           clearInterval(interval)
+          console.log(`[OAuth][DEBUG]   Received auth code: ${code.slice(0, 8)}...`)
+          console.log(`[OAuth][DEBUG]   State verified ✓`)
           popup.close()
 
           const redirectUri = config.redirectUri || PROVIDER_CONFIGS[provider].redirectUri
+          console.log(`[OAuth][DEBUG]   Exchanging code for token...`)
           exchangeCodeForToken(provider, code, verifier, redirectUri)
-            .then(resolve)
-            .catch(reject)
+            .then((token) => {
+              console.log(`[OAuth][DEBUG]   Token obtained for ${provider} ✓`)
+              resolve(token)
+            })
+            .catch((err) => {
+              console.error(`[OAuth][ERROR] Token exchange failed for ${provider}:`, err)
+              reject(err)
+            })
         }
       } catch {
         // Cross-origin errors until redirected to our origin
@@ -407,6 +483,7 @@ export async function authenticateWithPopup(
 
     setTimeout(() => {
       clearInterval(interval)
+      console.error(`[OAuth][ERROR] Authorization timed out after 5 minutes for ${provider}`)
       popup.close()
       reject(new Error('OAuth authorization timed out after 5 minutes'))
     }, 300000)

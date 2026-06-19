@@ -28,6 +28,24 @@
 
       <OsDivider />
 
+      <OsSection :ref="(el) => setSectionRef(7, el)" title="WINDOW TILING" icon="mdi:view-grid-outline" collapsible>
+        <OsCard variant="glass" padding="md">
+          <div class="setting-row">
+            <span class="setting-label">AUTO-ARRANGE</span>
+            <OsToggle v-model="store.autoArrange" variant="neon" size="md" label="4-QUADRANT" />
+          </div>
+          <OsDivider spacing="sm" />
+          <p class="text-muted">WHEN ENABLED, WINDOWS AUTO-TILE INTO 4 EQUAL QUADRANTS PER VIRTUAL SCREEN. THE SCREEN IS SPLIT: TOP-LEFT, TOP-RIGHT, BOTTOM-LEFT, BOTTOM-RIGHT.</p>
+          <OsDivider spacing="sm" />
+          <div class="setting-row">
+            <span class="setting-label">ARRANGE NOW</span>
+            <OsButton variant="neon" size="sm" @click="wm.arrangeWindows()">RE-TILE ALL</OsButton>
+          </div>
+        </OsCard>
+      </OsSection>
+
+      <OsDivider />
+
       <OsSection :ref="(el) => setSectionRef(2, el)" title="ABOUT" icon="mdi:information-outline" collapsible>
         <OsCard variant="glass" padding="md">
           <div class="info-row"><span class="info-key">VERSION</span><span class="info-value">0.1.0</span></div>
@@ -105,6 +123,7 @@ import { ref, computed, onMounted, nextTick, onUnmounted } from 'vue'
 import gsap from 'gsap'
 import { useAppStore } from '@/stores/app'
 import { useTouchConfig } from '@/composables/useTouchConfig'
+import { useWindowManager } from '@/composables/useWindowManager'
 import { isWebMode } from '@/composables/useTauri'
 import { useGsapAnimation } from '@/composables/useGsapAnimation'
 import { OsPanel, OsSection, OsCard, OsButton, OsInput, OsSelect, OsToggle, OsBadge, OsDivider } from '@/components/ui'
@@ -112,6 +131,7 @@ import type { SelectOption } from '@/components/ui'
 
 const anim = useGsapAnimation()
 const store = useAppStore()
+const wm = useWindowManager()
 const touchConfig = useTouchConfig({ autoDetect: true })
 
 const sectionRefs = ref<(HTMLElement | null)[]>([])

@@ -107,6 +107,7 @@ export const useAppStore = defineStore('cybermanju', () => {
   let autoRefreshTimer: ReturnType<typeof setInterval> | null = null
   const selectedFileIds = ref<string[]>([])
   const isMultiSelect = ref(false)
+  const autoArrange = ref(true)
 
   // ── Module Helpers ─────────────────────────────────────────
   const currentModule = computed<ModuleInfo>(() =>
@@ -217,6 +218,7 @@ export const useAppStore = defineStore('cybermanju', () => {
         if (typeof cfg.autoRefreshInterval === 'number') autoRefreshInterval.value = cfg.autoRefreshInterval
         if (typeof cfg.matrixRainEnabled === 'boolean') matrixRainEnabled.value = cfg.matrixRainEnabled
         if (cfg.sortBy) sortBy.value = cfg.sortBy
+        if (typeof cfg.autoArrange === 'boolean') autoArrange.value = cfg.autoArrange
       }
     } catch { /* skip on first load */ }
   }
@@ -229,11 +231,12 @@ export const useAppStore = defineStore('cybermanju', () => {
         autoRefreshInterval: autoRefreshInterval.value,
         matrixRainEnabled: matrixRainEnabled.value,
         sortBy: sortBy.value,
+        autoArrange: autoArrange.value,
       }))
     } catch { /* best-effort */ }
   }
 
-  ;[viewMode, sidebarCollapsed, autoRefreshInterval, matrixRainEnabled, sortBy].forEach(ref => {
+  ;[viewMode, sidebarCollapsed, autoRefreshInterval, matrixRainEnabled, sortBy, autoArrange].forEach(ref => {
     watch(ref, saveConfig, { deep: false })
   })
 
@@ -1055,7 +1058,7 @@ export const useAppStore = defineStore('cybermanju', () => {
     searchQuery, searchSuggestions, searchTotalResults, isSearching, isLoading, lastError, matrixRainEnabled,
     showEncryptionPanel, showCompressionPanel, showPermissionsPanel, commandPaletteOpen,
     showShortcutsHelp, createFolderPromptOpen, showLoginPopup,
-    selectedFileIds, isMultiSelect, users, autoRefreshInterval, sortBy,
+    selectedFileIds, isMultiSelect, users, autoRefreshInterval, sortBy, autoArrange,
     trashCount: computed(() => trashItems.value.length),
     lastDeletedFileId, deleteConfirmVisible, pendingDeleteFileName, lastPendingDeleteId,
     // Computed

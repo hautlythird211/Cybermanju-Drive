@@ -128,6 +128,13 @@ function exitOverview() {
 }
 
 function retileFromResize() {
+  if (gridRef.value && store.autoArrange) {
+    const rect = gridRef.value.getBoundingClientRect()
+    wm.retileAll(rect.width, rect.height)
+  }
+}
+
+function forceRetile() {
   if (gridRef.value) {
     const rect = gridRef.value.getBoundingClientRect()
     wm.retileAll(rect.width, rect.height)
@@ -257,13 +264,17 @@ watch(() => wm.windows.value.map(w => w.id).join(','), () => {
   if (!wm.windows.value.some(w => w.panelType === 'permissions')) store.showPermissionsPanel = false
 })
 
+watch(() => store.autoArrange, (enabled) => {
+  if (enabled) nextTick(forceRetile)
+})
+
 onMounted(async () => {
   gsapCtx.value = gsap.context(() => {
     if (workspaceRef.value) {
       anim.fadeIn(workspaceRef.value, { from: { opacity: 0 } })
     }
   })
-  nextTick(retileFromResize)
+  nextTick(forceRetile)
   window.addEventListener('resize', retileFromResize)
 })
 

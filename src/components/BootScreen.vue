@@ -221,31 +221,44 @@ async function connectProvider(pid: string) {
   const oauthKey = PROVIDER_TO_OAUTH[pid]
   if (!oauthKey) return
 
+  console.log(`[OAuth][UI] connectProvider(${pid}) → oauth key: ${oauthKey}`)
+
   connectingProvider.value = pid
   try {
     const { oauth } = await import('@/wasm')
     const data = await import('@/wasm/data')
+
+    console.log(`[OAuth][UI] Reloading client IDs from env...`)
     oauth.loadClientIdsFromEnv()
 
     const clientId = oauth.getProviderClientId(oauthKey)
+    console.log(`[OAuth][UI] Client ID for ${oauthKey}: ${clientId ? `${clientId.slice(0, 6)}...${clientId.slice(-3)}` : '(EMPTY)'}`)
+
     if (!clientId) {
+      console.warn(`[OAuth][UI] No client ID for ${pid} — showing manual input form`)
       showClientIdForm.value = pid
       connectingProvider.value = null
       return
     }
 
+    console.log(`[OAuth][UI] Checking existing stored token for ${oauthKey}...`)
     const existingToken = await oauth.loadTokenFromStorage(oauthKey)
     let token = existingToken ? await oauth.getValidToken(existingToken) : null
     if (token) {
+      console.log(`[OAuth][UI] Using existing valid token for ${oauthKey} ✓`)
       await oauth.saveTokenToStorage(token)
     } else {
+      console.log(`[OAuth][UI] No valid token — launching popup auth for ${oauthKey}...`)
       token = await oauth.authenticateWithPopup(oauthKey)
+      console.log(`[OAuth][UI] Popup auth completed for ${oauthKey} ✓`)
       await oauth.saveTokenToStorage(token)
     }
 
+    console.log(`[OAuth][UI] Upserting OAuth account for ${oauthKey}...`)
     await data.upsertOAuthAccount(oauthKey, token)
 
     if (pid === 'google') {
+      console.log(`[OAuth][UI] Also upserting googlePhotos account...`)
       await data.upsertOAuthAccount('googlePhotos' as OAuthProvider, token)
     }
 
@@ -253,8 +266,10 @@ async function connectProvider(pid: string) {
     if (!connectedProviders.value.includes(pid)) {
       connectedProviders.value.push(pid)
     }
+    console.log(`[OAuth][UI] ${pid} connected successfully ✓`)
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
+    console.error(`[OAuth][UI] Error connecting ${pid}:`, msg)
     if (msg.includes('Client ID not configured')) {
       showClientIdForm.value = pid
     } else if (msg.includes('Popup blocked')) {
