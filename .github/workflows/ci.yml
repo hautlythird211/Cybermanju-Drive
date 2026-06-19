@@ -37,6 +37,7 @@ env:
     pkg-config
     build-essential
     libssl-dev
+    libudev-dev
 
 jobs:
   # ─── Rust: Lint & Test (gate) ─────────────────────────────────────
