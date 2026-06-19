@@ -77,7 +77,11 @@ fn parse_duckduckgo_lite(html: &str, limit: usize) -> Vec<WebSearchResult> {
             .unwrap_or_default();
 
         if !title.is_empty() {
-            results.push(WebSearchResult { title, url, snippet });
+            results.push(WebSearchResult {
+                title,
+                url,
+                snippet,
+            });
         }
 
         if results.len() >= limit {

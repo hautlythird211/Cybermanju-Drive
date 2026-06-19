@@ -42,7 +42,9 @@ pub fn get_system_info() -> Result<SystemInfo, String> {
         os_version: System::os_version().unwrap_or_else(|| "Unknown".into()),
         os_arch: std::env::consts::ARCH.to_string(),
         hostname: System::host_name().unwrap_or_else(|| "Unknown".into()),
-        cpu_brand: cpu.map(|c| c.brand().to_string()).unwrap_or_else(|| "Unknown".into()),
+        cpu_brand: cpu
+            .map(|c| c.brand().to_string())
+            .unwrap_or_else(|| "Unknown".into()),
         cpu_cores: sys.cpus().len(),
         cpu_threads: sys.cpus().len(),
         total_memory_mb: total_memory / 1024 / 1024,
