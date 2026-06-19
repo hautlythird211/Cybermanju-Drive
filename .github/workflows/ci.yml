@@ -196,12 +196,12 @@ jobs:
       - name: Build WASM module
         run: |
           choco install llvm -y
-          echo "C:\Program Files\LLVM\bin" >> $GITHUB_PATH
+          echo "C:/Program Files/LLVM/bin" >> $GITHUB_PATH
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           cd crates/drive-wasm && wasm-pack build --target bundler --out-dir ../../node_modules/cybermanju-drive-wasm
         env:
-          CC_wasm32_unknown_unknown: "C:\Program Files\LLVM\bin\clang.exe"
-          AR_wasm32_unknown_unknown: "C:\Program Files\LLVM\bin\llvm-ar.exe"
+          CC_wasm32_unknown_unknown: "C:/Program Files/LLVM/bin/clang.exe"
+          AR_wasm32_unknown_unknown: "C:/Program Files/LLVM/bin/llvm-ar.exe"
 
       - name: Build Tauri app
         run: npm run tauri build
