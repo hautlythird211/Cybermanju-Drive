@@ -378,11 +378,13 @@ jobs:
           sudo -u builder bash -c "
             export HOME=/home/builder
             export PATH=\$HOME/.cargo/bin:\$PATH
+            which rustup && rustup --version
             curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+            which wasm-pack
             cd $GITHUB_WORKSPACE/crates/drive-wasm
             wasm-pack build --target bundler --out-dir ../../node_modules/cybermanju-drive-wasm
           "
-          chown -R builder:builder $GITHUB_WORKSPACE/node_modules/cybermanju-drive-wasm
+          chown -R builder:builder $GITHUB_WORKSPACE/node_modules/cybermanju-drive-wasm 2>/dev/null || true
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
