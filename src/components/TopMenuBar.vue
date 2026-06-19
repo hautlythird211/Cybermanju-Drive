@@ -159,10 +159,10 @@
 
         <button
           class="tray-icon"
-          :class="{ active: store.autoArrange }"
-          @click="store.autoArrange = !store.autoArrange"
-          :title="store.autoArrange ? 'TILE:4-QUADRANT (ON)' : 'TILE:FREE (OFF)'"
-          :aria-label="store.autoArrange ? 'Auto-arrange tiles enabled' : 'Auto-arrange tiles disabled'"
+          :class="{ active: (store as any).autoArrange }"
+          @click="(store as any).autoArrange = !(store as any).autoArrange"
+          :title="(store as any).autoArrange ? 'TILE:4-QUADRANT (ON)' : 'TILE:FREE (OFF)'"
+          :aria-label="(store as any).autoArrange ? 'Auto-arrange tiles enabled' : 'Auto-arrange tiles disabled'"
         >
           <Icon icon="mdi:view-grid-outline" width="14" height="14" />
         </button>
