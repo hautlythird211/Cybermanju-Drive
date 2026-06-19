@@ -17,38 +17,45 @@ export interface OAuthConfig {
   tokenUrl: string
 }
 
+function computeRedirectUri(): string {
+  const origin = window.location.origin
+  const path = window.location.pathname
+  const base = path.endsWith('/') ? path : path.substring(0, path.lastIndexOf('/') + 1)
+  return `${origin}${base}oauth/callback`
+}
+
 const PROVIDER_CONFIGS: Record<OAuthProvider, OAuthConfig> = {
   googleDrive: {
     clientId: '',
-    redirectUri: `${window.location.origin}/oauth/callback`,
+    redirectUri: computeRedirectUri(),
     scopes: ['https://www.googleapis.com/auth/drive.file'],
     authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
   },
   googlePhotos: {
     clientId: '',
-    redirectUri: `${window.location.origin}/oauth/callback`,
+    redirectUri: computeRedirectUri(),
     scopes: ['https://www.googleapis.com/auth/photoslibrary.appendonly'],
     authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
     tokenUrl: 'https://oauth2.googleapis.com/token',
   },
   github: {
     clientId: '',
-    redirectUri: `${window.location.origin}/oauth/callback`,
+    redirectUri: computeRedirectUri(),
     scopes: ['repo'],
     authUrl: 'https://github.com/login/oauth/authorize',
     tokenUrl: 'https://github.com/login/oauth/access_token',
   },
   gitlab: {
     clientId: '',
-    redirectUri: `${window.location.origin}/oauth/callback`,
+    redirectUri: computeRedirectUri(),
     scopes: ['api'],
     authUrl: 'https://gitlab.com/oauth/authorize',
     tokenUrl: 'https://gitlab.com/oauth/token',
   },
   telegram: {
     clientId: '',
-    redirectUri: `${window.location.origin}/oauth/callback`,
+    redirectUri: computeRedirectUri(),
     scopes: ['bot'],
     authUrl: 'https://oauth.telegram.org/auth',
     tokenUrl: 'https://oauth.telegram.org/token',
