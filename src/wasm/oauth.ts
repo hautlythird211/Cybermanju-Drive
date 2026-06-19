@@ -18,10 +18,13 @@ export interface OAuthConfig {
 }
 
 function computeRedirectUri(): string {
-  const origin = window.location.origin
-  const path = window.location.pathname
-  const base = path.endsWith('/') ? path : path.substring(0, path.lastIndexOf('/') + 1)
-  return `${origin}${base}oauth/callback`
+  const { origin, pathname } = window.location
+  const parts = pathname.split('/')
+  if (parts.length > 1 && parts[parts.length - 1].includes('.')) {
+    parts.pop()
+  }
+  let dir = parts.join('/').replace(/\/?$/, '/').replace(/\/+/g, '/')
+  return `${origin}${dir}oauth/callback`
 }
 
 const PROVIDER_CONFIGS: Record<OAuthProvider, OAuthConfig> = {
