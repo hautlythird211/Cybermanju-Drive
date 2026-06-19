@@ -81,15 +81,10 @@ jobs:
         working-directory: src-tauri
         run: cargo test --no-fail-fast
 
-      - name: Pre-build release artifacts
-        working-directory: src-tauri
-        run: cargo build --release
-
   # ─── Docker: Build Image (gate only) ──────────────────────────────
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: rust-check
     steps:
       - uses: actions/checkout@v5
 
@@ -166,7 +161,6 @@ jobs:
   windows-build:
     name: Build Windows
     runs-on: windows-latest
-    needs: [rust-check, wasm-build]
     steps:
       - uses: actions/checkout@v5
 
@@ -187,11 +181,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download pre-built WASM
-        uses: actions/download-artifact@v6
-        with:
-          name: wasm-node-module
-          path: node_modules/cybermanju-drive-wasm
+      - name: Build WASM module
+        run: |
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          cd crates/drive-wasm && wasm-pack build --target bundler --out-dir ../../node_modules/cybermanju-drive-wasm
 
       - name: Build Tauri app
         run: npm run tauri build
@@ -211,7 +204,6 @@ jobs:
   linux-build:
     name: Build Linux (deb+AppImage+rpm)
     runs-on: ubuntu-latest
-    needs: [rust-check, wasm-build]
     steps:
       - uses: actions/checkout@v5
 
@@ -237,11 +229,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download pre-built WASM
-        uses: actions/download-artifact@v6
-        with:
-          name: wasm-node-module
-          path: node_modules/cybermanju-drive-wasm
+      - name: Build WASM module
+        run: |
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          cd crates/drive-wasm && wasm-pack build --target bundler --out-dir ../../node_modules/cybermanju-drive-wasm
 
       - name: Setup sccache
         uses: mozilla/sccache-action@v0.0.10
@@ -292,7 +283,7 @@ jobs:
   flatpak-build:
     name: Build Linux (Flatpak)
     runs-on: ubuntu-latest
-    needs: [rust-check, linux-build]
+    needs: [linux-build]
     steps:
       - uses: actions/checkout@v5
 
@@ -328,7 +319,7 @@ jobs:
   arch-build:
     name: Build Linux (Arch/CachyOS)
     runs-on: ubuntu-latest
-    needs: [rust-check, wasm-build, linux-build]
+    needs: [linux-build]
     container:
       image: archlinux:latest
     steps:
@@ -376,14 +367,16 @@ jobs:
             npm ci
           "
 
-      - name: Download pre-built WASM
-        uses: actions/download-artifact@v6
-        with:
-          name: wasm-node-module
-          path: node_modules/cybermanju-drive-wasm
-
-      - name: Fix WASM ownership
-        run: chown -R builder:builder $GITHUB_WORKSPACE/node_modules/cybermanju-drive-wasm
+      - name: Build WASM module
+        run: |
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          sudo -u builder bash -c "
+            export HOME=/home/builder
+            export PATH=\$HOME/.cargo/bin:\$PATH
+            cd $GITHUB_WORKSPACE/crates/drive-wasm
+            wasm-pack build --target bundler --out-dir ../../node_modules/cybermanju-drive-wasm
+          "
+          chown -R builder:builder $GITHUB_WORKSPACE/node_modules/cybermanju-drive-wasm
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@v2
@@ -423,7 +416,6 @@ jobs:
   macos-build:
     name: Build macOS
     runs-on: macos-latest
-    needs: [rust-check, wasm-build]
     steps:
       - uses: actions/checkout@v5
 
@@ -436,11 +428,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download pre-built WASM
-        uses: actions/download-artifact@v6
-        with:
-          name: wasm-node-module
-          path: node_modules/cybermanju-drive-wasm
+      - name: Build WASM module
+        run: |
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          cd crates/drive-wasm && wasm-pack build --target bundler --out-dir ../../node_modules/cybermanju-drive-wasm
 
       - name: Setup sccache
         uses: mozilla/sccache-action@v0.0.10
@@ -468,7 +459,6 @@ jobs:
   android-build:
     name: Build Android
     runs-on: ubuntu-latest
-    needs: [rust-check, wasm-build]
     steps:
       - uses: actions/checkout@v5
 
@@ -495,11 +485,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download pre-built WASM
-        uses: actions/download-artifact@v6
-        with:
-          name: wasm-node-module
-          path: node_modules/cybermanju-drive-wasm
+      - name: Build WASM module
+        run: |
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          cd crates/drive-wasm && wasm-pack build --target bundler --out-dir ../../node_modules/cybermanju-drive-wasm
 
       - name: Install Rust target (arm64 only)
         run: rustup target add aarch64-linux-android
@@ -583,7 +572,6 @@ jobs:
     name: Publish Release
     runs-on: ubuntu-latest
     needs:
-      - rust-check
       - wasm-build
       - windows-build
       - linux-build
