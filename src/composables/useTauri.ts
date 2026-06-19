@@ -608,12 +608,13 @@ function isMegaTestConnection(cmd: string, args?: Record<string, unknown>): bool
   return cmd === 'test_sync_connection' && (args?.config as any)?.backendType === 'mega'
 }
 
-/** The core invoke — works in Tauri, Web REST, and WASM bridge modes. */
+/** The core invoke — works in Tauri (via Conduit for 2.4x faster IPC), Web REST, and WASM bridge modes. */
 export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   if (isTauri()) {
-    const core = await import('@tauri-apps/api/core')
+    // Use Conduit plugin for faster IPC (2.4x faster than standard invoke)
+    const conduit = await import('tauri-plugin-conduit')
     try {
-      return await core.invoke<T>(cmd, args)
+      return await conduit.invoke<T>(cmd, args)
     } catch (rustError) {
       // For mega login, fall back to WASM bridge if the Rust backend fails
       // (e.g. 2FA not supported by megalib, or API incompatibility)

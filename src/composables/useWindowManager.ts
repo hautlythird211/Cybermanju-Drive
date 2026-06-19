@@ -23,6 +23,9 @@ import SystemMonitor from '@/components/SystemMonitor.vue'
 import TaskManager from '@/components/TaskManager.vue'
 import Terminal from '@/components/Terminal.vue'
 import WebBrowserPanel from '@/components/WebBrowserPanel.vue'
+import BookWriter from '@/components/BookWriter.vue'
+import NotesPanel from '@/components/NotesPanel.vue'
+import PluginCreator from '@/components/PluginCreator.vue'
 
 export interface WindowState {
   id: string
@@ -84,6 +87,9 @@ const defaultSizes: SizeMap = {
   terminal: { width: 480, height: 360 },
   history: { width: 440, height: 380 },
   browser: { width: 640, height: 480 },
+  book: { width: 680, height: 500 },
+  notes: { width: 520, height: 420 },
+  plugins: { width: 600, height: 480 },
 }
 
 const inlinePanels: PanelType[] = [
@@ -114,6 +120,9 @@ const panelComponentMap: Record<string, Component> = {
   terminal: Terminal,
   accounts: AccountsPanel,
   browser: WebBrowserPanel,
+  book: BookWriter,
+  notes: NotesPanel,
+  plugins: PluginCreator,
 }
 
 function getComponent(panelType: PanelType): Component | null {

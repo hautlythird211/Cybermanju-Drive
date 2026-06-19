@@ -1,5 +1,5 @@
 export type ViewMode = 'grid' | 'list' | 'masonry'
-export type PanelType = 'landing' | 'files' | 'preview' | 'encryption' | 'compression' | 'collections' | 'faces' | 'map' | 'code' | 'search' | 'style' | 'accounts' | 'loose-groups' | 'sync' | 'webdash' | 'users' | 'dashboard' | 'settings' | 'trash' | 'activity' | 'favorites' | 'recent' | 'storage' | 'history' | 'import' | 'transfer' | 'permissions' | 'system-monitor' | 'task-manager' | 'terminal' | 'duplicates' | 'browser'
+export type PanelType = 'landing' | 'files' | 'preview' | 'encryption' | 'compression' | 'collections' | 'faces' | 'map' | 'code' | 'search' | 'style' | 'accounts' | 'loose-groups' | 'sync' | 'webdash' | 'users' | 'dashboard' | 'settings' | 'trash' | 'activity' | 'favorites' | 'recent' | 'storage' | 'history' | 'import' | 'transfer' | 'permissions' | 'system-monitor' | 'task-manager' | 'terminal' | 'duplicates' | 'browser' | 'book' | 'notes' | 'plugins'
 export type SidebarSection = 'tree' | 'locations' | 'collections' | 'people' | 'styles' | 'loose' | 'users' | 'sync' | 'dashboard' | 'landing' | 'tools'
 
 export interface ModuleInfo {
@@ -430,6 +430,9 @@ export const MODULE_METADATA: Record<PanelType, ModuleInfo> = {
   terminal: { id: 'terminal', label: 'TERMINAL', icon: 'mdi:console', color: '#28c840', gradient: 'linear-gradient(180deg, #0a0a0a 0%, #000d00 50%, #0a0a0a 100%)', description: 'Full-featured terminal emulator', requiresAuth: true },
   duplicates: { id: 'duplicates', label: 'DUPLICATES', icon: 'mdi:content-copy', color: '#ff5f57', gradient: 'linear-gradient(180deg, #0a0a0a 0%, #0d0000 50%, #0a0a0a 100%)', description: 'Find and manage duplicate files by BLAKE3 hash', requiresAuth: true },
   browser: { id: 'browser', label: 'WEB', icon: 'mdi:web', color: '#b388ff', gradient: 'linear-gradient(135deg, #0a000d 0%, #100520 30%, #0d0015 60%, #0a000d 100%)', description: 'Futuristic web browser with DuckDuckGo search engine', requiresAuth: true },
+  book: { id: 'book', label: 'BOOK', icon: 'mdi:book-open-outline', color: '#ffd700', gradient: 'linear-gradient(180deg, #0a0a0a 0%, #0d0800 50%, #0a0a0a 100%)', description: 'Book writing app with chapters and direct creation', requiresAuth: true },
+  notes: { id: 'notes', label: 'NOTES', icon: 'mdi:note-text-outline', color: '#5af0ff', gradient: 'linear-gradient(180deg, #0a0a0a 0%, #000d0d 50%, #0a0a0a 100%)', description: 'Quick notes with clipboard integration', requiresAuth: true },
+  plugins: { id: 'plugins', label: 'PLUGINS', icon: 'mdi:puzzle-outline', color: '#28c840', gradient: 'linear-gradient(180deg, #0a0a0a 0%, #000d00 50%, #0a0a0a 100%)', description: 'Visual plugin builder for Cybermanju OS workspace', requiresAuth: true },
 }
 
 export const SYNC_BACKEND_INFO: Record<SyncBackendType, { name: string; description: string; color: string; icon: string }> = {

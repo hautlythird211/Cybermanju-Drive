@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { invoke } from '@/composables/useTauri'
 import { Icon } from '@iconify/vue'
 
@@ -9,11 +9,18 @@ interface SearchResult {
   snippet: string
 }
 
+const STORAGE_KEYS = {
+  BOOKMARKS: 'cybermanju_web_bookmarks',
+  HISTORY: 'cybermanju_web_history',
+} as const
+
 interface BrowserTab {
   id: string
   title: string
   url: string
   loading: boolean
+  history: string[]
+  historyIndex: number
 }
 
 const currentUrl = ref('')
@@ -23,17 +30,24 @@ const isLoading = ref(false)
 const activeView = ref<'search' | 'page' | 'start'>('start')
 const mode = ref<'web' | 'local' | 'hybrid'>('web')
 
+function loadPersisted<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? JSON.parse(raw) : fallback
+  } catch { return fallback }
+}
+
 const tabs = ref<BrowserTab[]>([
-  { id: 'tab-0', title: 'New Tab', url: 'about:start', loading: false }
+  { id: 'tab-0', title: 'New Tab', url: 'about:start', loading: false, history: [], historyIndex: -1 }
 ])
 const activeTabId = ref('tab-0')
 
 const activeTab = computed(() => tabs.value.find(t => t.id === activeTabId.value))
 const pageContent = ref('')
-const historyList = ref<{ url: string; title: string; timestamp: number }[]>([])
+const historyList = ref<{ url: string; title: string; timestamp: number }[]>(loadPersisted(STORAGE_KEYS.HISTORY, []))
 const showHistory = ref(false)
 const showBookmarks = ref(false)
-const bookmarks = ref<{ url: string; title: string }[]>([])
+const bookmarks = ref<{ url: string; title: string }[]>(loadPersisted(STORAGE_KEYS.BOOKMARKS, []))
 
 const theme = ref<'cyber' | 'psych' | 'vintage'>('cyber')
 const fontScale = ref(1)
@@ -61,7 +75,7 @@ function closeTab(id: string) {
 
 function newTab() {
   const id = `tab-${Date.now()}`
-  tabs.value.push({ id, title: 'New Tab', url: 'about:start', loading: false })
+  tabs.value.push({ id, title: 'New Tab', url: 'about:start', loading: false, history: [], historyIndex: -1 })
   activeTabId.value = id
   activeView.value = 'start'
   currentUrl.value = ''
@@ -77,6 +91,11 @@ function goToUrl(url: string) {
   currentUrl.value = finalUrl
   const tab = tabs.value.find(t => t.id === activeTabId.value)
   if (tab) {
+    if (tab.historyIndex < tab.history.length - 1) {
+      tab.history = tab.history.slice(0, tab.historyIndex + 1)
+    }
+    tab.history.push(finalUrl)
+    tab.historyIndex = tab.history.length - 1
     tab.url = finalUrl
     tab.title = finalUrl
     tab.loading = true
@@ -93,8 +112,14 @@ function doSearch(query: string) {
 
   const tab = tabs.value.find(t => t.id === activeTabId.value)
   if (tab) {
+    const searchUrl = `search:${query}`
+    if (tab.historyIndex < tab.history.length - 1) {
+      tab.history = tab.history.slice(0, tab.historyIndex + 1)
+    }
+    tab.history.push(searchUrl)
+    tab.historyIndex = tab.history.length - 1
     tab.title = `${query} - Search`
-    tab.url = `search:${query}`
+    tab.url = searchUrl
   }
 
   if (mode.value === 'local') {
@@ -206,11 +231,43 @@ function isBookmarked(url: string): boolean {
 }
 
 function goBack() {
-  // TODO: implement proper navigation history per tab
+  const tab = tabs.value.find(t => t.id === activeTabId.value)
+  if (tab && tab.historyIndex > 0) {
+    tab.historyIndex--
+    const url = tab.history[tab.historyIndex]
+    currentUrl.value = url
+    tab.url = url
+    tab.loading = true
+    if (url.startsWith('search:')) {
+      const q = url.slice(7)
+      searchQuery.value = q
+      activeView.value = 'search'
+      doSearch(q)
+    } else {
+      activeView.value = 'page'
+      loadPage(url)
+    }
+  }
 }
 
 function goForward() {
-  // TODO: implement proper navigation history per tab
+  const tab = tabs.value.find(t => t.id === activeTabId.value)
+  if (tab && tab.historyIndex < tab.history.length - 1) {
+    tab.historyIndex++
+    const url = tab.history[tab.historyIndex]
+    currentUrl.value = url
+    tab.url = url
+    tab.loading = true
+    if (url.startsWith('search:')) {
+      const q = url.slice(7)
+      searchQuery.value = q
+      activeView.value = 'search'
+      doSearch(q)
+    } else {
+      activeView.value = 'page'
+      loadPage(url)
+    }
+  }
 }
 
 function refreshPage() {
@@ -228,6 +285,52 @@ function handleKeydown(e: KeyboardEvent) {
       doSearch(val)
     }
   }
+}
+
+function persistBookmarks() {
+  localStorage.setItem(STORAGE_KEYS.BOOKMARKS, JSON.stringify(bookmarks.value))
+}
+
+function persistHistory() {
+  localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(historyList.value.slice(0, 100)))
+}
+
+watch(bookmarks, persistBookmarks, { deep: true })
+watch(historyList, persistHistory, { deep: true })
+
+function exportBookmarks() {
+  const data = JSON.stringify(bookmarks.value, null, 2)
+  const blob = new Blob([data], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `cybermanju-bookmarks-${Date.now()}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+function importBookmarks() {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.json'
+  input.onchange = async () => {
+    const file = input.files?.[0]
+    if (!file) return
+    try {
+      const text = await file.text()
+      const parsed = JSON.parse(text)
+      if (Array.isArray(parsed)) {
+        bookmarks.value = parsed.filter(b => b.url && b.title)
+      }
+    } catch (e) {
+      console.error('Failed to import bookmarks:', e)
+    }
+  }
+  input.click()
+}
+
+function clearHistory() {
+  historyList.value = []
 }
 
 onMounted(() => {
@@ -319,7 +422,10 @@ const themeStyles = computed(() => {
       <div v-if="showHistory" class="side-panel">
         <div class="side-panel-header">
           <span>HISTORY</span>
-          <button class="tool-btn" @click="showHistory = false">×</button>
+          <div class="side-header-actions">
+            <button class="tool-btn" @click.stop="clearHistory" title="Clear History">🗑</button>
+            <button class="tool-btn" @click="showHistory = false">×</button>
+          </div>
         </div>
         <div v-for="h in historyList.slice(0, 30)" :key="h.timestamp" class="side-item" @click="goToUrl(h.url)">
           <span class="side-item-title truncate">{{ h.title }}</span>
@@ -331,7 +437,11 @@ const themeStyles = computed(() => {
       <div v-if="showBookmarks" class="side-panel">
         <div class="side-panel-header">
           <span>BOOKMARKS</span>
-          <button class="tool-btn" @click="showBookmarks = false">×</button>
+          <div class="side-header-actions">
+            <button class="tool-btn" @click.stop="exportBookmarks" title="Export Bookmarks">↓</button>
+            <button class="tool-btn" @click.stop="importBookmarks" title="Import Bookmarks">↑</button>
+            <button class="tool-btn" @click="showBookmarks = false">×</button>
+          </div>
         </div>
         <div v-for="bm in bookmarks" :key="bm.url" class="side-item">
           <div class="side-item-content" @click="goToUrl(bm.url)">
@@ -569,6 +679,11 @@ const themeStyles = computed(() => {
   font-weight: 700;
   color: var(--accent);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.side-header-actions {
+  display: flex;
+  gap: 2px;
 }
 
 .side-item {
