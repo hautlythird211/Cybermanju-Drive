@@ -19,8 +19,34 @@ const dismissing = ref(false)
 const bootError = ref(false)
 const usernameInput = ref('')
 const inputRef = ref<HTMLInputElement | null>(null)
+const bootPhase = ref<'post' | 'kernel' | 'done'>('post')
 
-/* --- Storage providers (integrated in login) --- */
+/* --- Gaussian psychedelic spots --- */
+const spots = Array.from({ length: 18 }, (_, i) => ({
+  id: i,
+  x: Math.random() * 100,
+  y: Math.random() * 100,
+  size: 120 + Math.random() * 280,
+  hue: Math.random() * 360,
+  delay: Math.random() * 4,
+  duration: 6 + Math.random() * 8,
+  drift: -30 + Math.random() * 60,
+}))
+
+/* --- Bizarre geometric figures --- */
+const figures = Array.from({ length: 8 }, (_, i) => ({
+  id: i,
+  type: ['eye', 'triangle', 'spiral', 'diamond', 'cross', 'ring', 'hexagon', 'star'][i],
+  x: 5 + Math.random() * 90,
+  y: 5 + Math.random() * 90,
+  size: 20 + Math.random() * 60,
+  rotation: Math.random() * 360,
+  hue: Math.random() * 360,
+  delay: Math.random() * 3,
+  duration: 4 + Math.random() * 6,
+}))
+
+/* --- Storage providers --- */
 const PROVIDER_META = [
   { id: 'google', label: 'Google (Drive + Photos)', icon: 'logos:google-icon', color: '#4285F4' },
   { id: 'github', label: 'GitHub', icon: 'logos:github-icon', color: '#333' },
@@ -42,7 +68,6 @@ const providerError = ref('')
 const showClientIdForm = ref<string | null>(null)
 const clientIdInput = ref('')
 
-// Mega.nz login modal
 const showMegaModal = ref(false)
 const megaEmail = ref('')
 const megaPassword = ref('')
@@ -51,7 +76,7 @@ const mega2FACode = ref('')
 const megaVerifying = ref(false)
 const megaVerifyError = ref('')
 
-let timer: ReturnType<typeof setInterval> | null = null
+let timer: ReturnType<typeof setTimeout> | null = null
 let glitchTimer: ReturnType<typeof setInterval> | null = null
 let bootTimeout: ReturnType<typeof setTimeout> | null = null
 
@@ -71,7 +96,8 @@ interface SysInfo {
   uptime_seconds: number
 }
 
-function buildBootLines(s: SysInfo | null): Array<{ msg: string; delay: number; pct: number }> {
+/* ─── Merged boot sequence: POST → KERNEL → LOGIN ─── */
+function buildMergedBootLines(s: SysInfo | null): Array<{ msg: string; delay: number; pct: number }> {
   const cpu = s?.cpu_brand || 'Unknown CPU'
   const mem = s?.total_memory_mb || 0
   const cores = s?.cpu_cores || 1
@@ -81,59 +107,81 @@ function buildBootLines(s: SysInfo | null): Array<{ msg: string; delay: number; 
   const arch = s?.os_arch || 'unknown'
   const hostname = s?.hostname || 'localhost'
   const disk = s?.total_disk_gb || 0
+  const now = new Date()
+  const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
+  const memChannels = Math.max(2, Math.ceil(cores / 4))
+  const memPerChannel = Math.round(mem / memChannels)
 
   return [
-    { msg: `[BOOT] Cybermanju Drive Kernel v4.2.0-RELEASE (${arch})`, delay: 80, pct: 1 },
-    { msg: `[BOOT] CPU: ${cpu}, ${cores}C/${threads}T`, delay: 60, pct: 3 },
-    { msg: `[BOOT] MEM: ${mem}MB POST-QUANTUM CRYPTO RAM (ECC)`, delay: 70, pct: 5 },
-    { msg: '[BIOS] CMOS checksum OK — system battery nominal', delay: 90, pct: 7 },
-    { msg: '[BIOS] ACPI: IRQ routing table loaded', delay: 50, pct: 8 },
-    { msg: `[BIOS] PCI: Enumeration complete — devices on bus`, delay: 65, pct: 10 },
-    { msg: '[BIOS] SATA: devices detected', delay: 55, pct: 12 },
-    { msg: '[KERN] Initializing memory protection — NX, ASLR, SMEP', delay: 70, pct: 14 },
-    { msg: '[KERN] CRYPTO: ChaCha20-Poly1305 hardware acceleration ENABLED', delay: 60, pct: 16 },
-    { msg: '[KERN] CRYPTO: Kyber-1024 key encapsulation module loaded', delay: 75, pct: 18 },
-    { msg: '[KERN] CRYPTO: Dilithium-5 signature verification online', delay: 65, pct: 20 },
-    { msg: '[KERN] VFS: Mounting root filesystem (ext4, encrypted)', delay: 80, pct: 23 },
-    { msg: '[KERN] VFS: /dev/sda1 — LUKS2 (Argon2id) unlocked', delay: 70, pct: 25 },
-    { msg: '[KERN] VFS: /dev/sdb1 — XFS, journal replay OK', delay: 55, pct: 27 },
-    { msg: `[KERN] NET: eth0 — link UP`, delay: 60, pct: 29 },
-    { msg: '[KERN] NET: wlan0 — scan complete', delay: 65, pct: 31 },
-    { msg: '[KERN] NET: IPv6 stack ready — SLAAC configured', delay: 50, pct: 33 },
-    { msg: '[KERN] USB: OHCI controller #1 at 0xFE800000 (irq 16)', delay: 55, pct: 35 },
-    { msg: '[KERN] USB: hubs, devices enumerated', delay: 50, pct: 37 },
-    { msg: '[KERN] ACPI: Thermal zone monitoring active', delay: 45, pct: 39 },
-    { msg: '[KERN] DRM: efifb — display active', delay: 60, pct: 41 },
-    { msg: '[KERN] DRM: fbcon — font set to "Terminus" 8x16', delay: 55, pct: 43 },
-    { msg: '[KERN] SND: Audio controller detected', delay: 50, pct: 45 },
-    { msg: '[KERN] SND: ALSA device list loaded', delay: 50, pct: 47 },
-    { msg: '[KERN] RNG: crng init done — entropy pool seeded', delay: 60, pct: 49 },
-    { msg: '[KERN] RTC: system clock synced to hardware (UTC)', delay: 45, pct: 51 },
-    { msg: '[INIT] Starting init daemon (PID 1): openrc-0.52', delay: 55, pct: 53 },
-    { msg: '[INIT] Mounting pseudo-filesystems: proc, sysfs, tmpfs, devpts', delay: 60, pct: 55 },
-    { msg: `[INIT] Activating swap: encrypted`, delay: 50, pct: 57 },
-    { msg: '[INIT] Loading kernel modules: cryptodev, ipsec, wireguard', delay: 55, pct: 59 },
-    { msg: '[INIT] Starting udev: device manager online', delay: 45, pct: 61 },
-    { msg: '[INIT] Starting syslog-ng: logging daemon active', delay: 50, pct: 63 },
-    { msg: '[INIT] Starting cronie: periodic scheduler loaded', delay: 45, pct: 65 },
-    { msg: '[INIT] Starting sshd: OpenSSH_9.4 (port 2222)', delay: 55, pct: 67 },
-    { msg: '[INIT] Starting nginx: HTTPS reverse proxy online', delay: 50, pct: 69 },
-    { msg: '[INIT] Starting postgresql: database cluster ready', delay: 60, pct: 71 },
-    { msg: '[INIT] Starting redis: cache layer initialized', delay: 45, pct: 73 },
-    { msg: '[DAEMON] cybermanju-syncd — sync orchestrator starting...', delay: 55, pct: 75 },
-    { msg: '[DAEMON] cybermanju-syncd — 6 backends registered', delay: 50, pct: 77 },
-    { msg: '[DAEMON] cybermanju-cryptd — quantum-safe tunnel established', delay: 60, pct: 79 },
-    { msg: '[DAEMON] cybermanju-watchd — file watcher active (inotify)', delay: 45, pct: 81 },
-    { msg: '[DAEMON] cybermanju-indexd — full-text index rebuilt', delay: 55, pct: 83 },
-    { msg: '[DAEMON] cybermanju-faced — facial recognition model loaded', delay: 65, pct: 85 },
-    { msg: '[DAEMON] cybermanju-geod — geotag index initialized', delay: 50, pct: 87 },
-    { msg: '[SHELL] Starting Cybermanju Drive Session Manager (SDM)', delay: 55, pct: 89 },
-    { msg: '[SHELL] SDM: policykit authority acquired', delay: 45, pct: 91 },
-    { msg: '[SHELL] SDM: D-Bus session bus listening', delay: 50, pct: 93 },
-    { msg: `[SHELL] SDM: ${os} ${kernel} (${arch})`, delay: 60, pct: 95 },
-    { msg: `[SHELL] SDM: ${hostname} — desktop environment ready`, delay: 55, pct: 97 },
-    { msg: `[SHELL] SDM: ${disk > 0 ? `Disk ${disk.toFixed(0)}GB mounted` : 'Storage mounted'} — startup sequence complete.`, delay: 80, pct: 99 },
-    { msg: '[SHELL] Welcome to Cybermanju Drive. initializing UI...', delay: 120, pct: 100 },
+    /* ═══ PHASE 1: BIOS POST ═══ */
+    { msg: `\x1b[36mCYBERMANJU UEFI BIOS v2.4.1\x1b[0m (Build ${dateStr})`, delay: 400, pct: 1 },
+    { msg: `CPU: ${cpu} — ${cores}C/${threads}T [PASS]`, delay: 200, pct: 2 },
+    { msg: `CPU Features: AES-NI, SHA-NI, AVX2, AVX-512, VAES, VPCLMULQDQ`, delay: 180, pct: 3 },
+    { msg: `MEM: Testing ${mem}MB DDR5...`, delay: 200, pct: 4 },
+    ...Array.from({ length: memChannels }, (_, i) => ({
+      msg: `MEM: Channel ${String.fromCharCode(65 + i)}: ${memPerChannel}MB [OK]`,
+      delay: 120,
+      pct: 4 + (i + 1),
+    })),
+    { msg: `MEM: POST-QUANTUM CRYPTO ZONES: ${Math.max(4, Math.floor(cores / 2))} GUARD REGIONS [ACTIVE]`, delay: 250, pct: 9 },
+    { msg: `PCH: Chipset — DMI 4.0 x8 [DETECTED]`, delay: 180, pct: 10 },
+    { msg: `PCI: Bus enumeration... devices found [COMPLETE]`, delay: 200, pct: 11 },
+    { msg: `USB: XHCI Controller at 0xFE800000 (irq 16)`, delay: 150, pct: 12 },
+    { msg: `USB: hubs, devices enumerated [OK]`, delay: 150, pct: 13 },
+    { msg: `NET: Network interface [DETECTED]`, delay: 180, pct: 14 },
+    { msg: `NET: Wireless adapter [DETECTED]`, delay: 180, pct: 15 },
+    { msg: `SND: Audio Controller [INITIALIZED]`, delay: 150, pct: 16 },
+    { msg: `TPM: 2.0 Security Module [ACTIVE]`, delay: 180, pct: 17 },
+    { msg: `RTC: System Clock — ${dateStr} UTC [SYNCED]`, delay: 150, pct: 18 },
+    { msg: `ACPI: DSDT loaded [PARSED]`, delay: 180, pct: 19 },
+    { msg: `SYS: CMOS checksum OK [NOMINAL]`, delay: 180, pct: 20 },
+    { msg: `\x1b[32mPOST complete\x1b[0m — transitioning to kernel...`, delay: 300, pct: 21 },
+
+    /* ═══ PHASE 2: KERNEL BOOT ═══ */
+    { msg: `[BOOT] Cybermanju Drive Kernel v4.2.0-RELEASE (${arch})`, delay: 70, pct: 23 },
+    { msg: `[BOOT] CPU: ${cpu}, ${cores}C/${threads}T`, delay: 55, pct: 25 },
+    { msg: `[BOOT] MEM: ${mem}MB POST-QUANTUM CRYPTO RAM (ECC)`, delay: 60, pct: 27 },
+    { msg: '[BIOS] ACPI: IRQ routing table loaded', delay: 50, pct: 28 },
+    { msg: '[KERN] Initializing memory protection — NX, ASLR, SMEP', delay: 65, pct: 30 },
+    { msg: '[KERN] CRYPTO: ChaCha20-Poly1305 hardware acceleration ENABLED', delay: 55, pct: 32 },
+    { msg: '[KERN] CRYPTO: Kyber-1024 key encapsulation module loaded', delay: 70, pct: 34 },
+    { msg: '[KERN] CRYPTO: Dilithium-5 signature verification online', delay: 60, pct: 36 },
+    { msg: '[KERN] VFS: Mounting root filesystem (ext4, encrypted)', delay: 75, pct: 38 },
+    { msg: '[KERN] VFS: /dev/sda1 — LUKS2 (Argon2id) unlocked', delay: 65, pct: 40 },
+    { msg: '[KERN] VFS: /dev/sdb1 — XFS, journal replay OK', delay: 50, pct: 41 },
+    { msg: `[KERN] NET: eth0 — link UP`, delay: 55, pct: 43 },
+    { msg: '[KERN] NET: wlan0 — scan complete', delay: 60, pct: 45 },
+    { msg: '[KERN] NET: IPv6 stack ready — SLAAC configured', delay: 45, pct: 46 },
+    { msg: '[KERN] USB: OHCI controller #1 at 0xFE800000 (irq 16)', delay: 50, pct: 48 },
+    { msg: '[KERN] USB: hubs, devices enumerated', delay: 45, pct: 49 },
+    { msg: '[KERN] DRM: efifb — display active', delay: 55, pct: 51 },
+    { msg: '[KERN] SND: Audio controller detected', delay: 45, pct: 52 },
+    { msg: '[KERN] SND: ALSA device list loaded', delay: 45, pct: 54 },
+    { msg: '[KERN] RNG: crng init done — entropy pool seeded', delay: 55, pct: 56 },
+    { msg: '[KERN] RTC: system clock synced to hardware (UTC)', delay: 40, pct: 57 },
+    { msg: '[INIT] Starting init daemon (PID 1): openrc-0.52', delay: 50, pct: 59 },
+    { msg: '[INIT] Mounting pseudo-filesystems: proc, sysfs, tmpfs, devpts', delay: 55, pct: 61 },
+    { msg: '[INIT] Loading kernel modules: cryptodev, ipsec, wireguard', delay: 50, pct: 62 },
+    { msg: '[INIT] Starting udev: device manager online', delay: 40, pct: 64 },
+    { msg: '[INIT] Starting syslog-ng: logging daemon active', delay: 45, pct: 66 },
+    { msg: '[INIT] Starting sshd: OpenSSH_9.4 (port 2222)', delay: 50, pct: 67 },
+    { msg: '[INIT] Starting nginx: HTTPS reverse proxy online', delay: 45, pct: 69 },
+    { msg: '[INIT] Starting postgresql: database cluster ready', delay: 55, pct: 71 },
+    { msg: '[INIT] Starting redis: cache layer initialized', delay: 40, pct: 72 },
+    { msg: '[DAEMON] cybermanju-syncd — sync orchestrator starting...', delay: 50, pct: 74 },
+    { msg: '[DAEMON] cybermanju-syncd — 6 backends registered', delay: 45, pct: 76 },
+    { msg: '[DAEMON] cybermanju-cryptd — quantum-safe tunnel established', delay: 55, pct: 78 },
+    { msg: '[DAEMON] cybermanju-watchd — file watcher active (inotify)', delay: 40, pct: 79 },
+    { msg: '[DAEMON] cybermanju-indexd — full-text index rebuilt', delay: 50, pct: 81 },
+    { msg: '[DAEMON] cybermanju-faced — facial recognition model loaded', delay: 60, pct: 83 },
+    { msg: '[DAEMON] cybermanju-geod — geotag index initialized', delay: 45, pct: 85 },
+    { msg: '[SHELL] Starting Cybermanju Drive Session Manager (SDM)', delay: 50, pct: 87 },
+    { msg: '[SHELL] SDM: policykit authority acquired', delay: 40, pct: 89 },
+    { msg: '[SHELL] SDM: D-Bus session bus listening', delay: 45, pct: 91 },
+    { msg: `[SHELL] SDM: ${os} ${kernel} (${arch})`, delay: 55, pct: 93 },
+    { msg: `[SHELL] SDM: ${hostname} — desktop environment ready`, delay: 50, pct: 95 },
+    { msg: `[SHELL] ${disk > 0 ? `Disk ${disk.toFixed(0)}GB mounted` : 'Storage mounted'} — startup sequence complete.`, delay: 70, pct: 98 },
+    { msg: '\x1b[36m[LOGIN]\x1b[0m Cybermanju Drive — system ready. awaiting authentication...', delay: 100, pct: 100 },
   ]
 }
 
@@ -146,12 +194,8 @@ function addBootLine(line: string) {
 function triggerGlitch() {
   showGlitch.value = true
   crtFlicker.value = true
-  setTimeout(() => {
-    showGlitch.value = false
-  }, 150 + Math.random() * 300)
-  setTimeout(() => {
-    crtFlicker.value = false
-  }, 30 + Math.random() * 60)
+  setTimeout(() => { showGlitch.value = false }, 150 + Math.random() * 300)
+  setTimeout(() => { crtFlicker.value = false }, 30 + Math.random() * 60)
 }
 
 async function runBoot() {
@@ -161,37 +205,36 @@ async function runBoot() {
     sysInfo = await invoke<SysInfo>('get_system_info')
   } catch {}
 
-  const bootLines = buildBootLines(sysInfo)
+  const bootLines = buildMergedBootLines(sysInfo)
 
   for (const entry of bootLines) {
-    await new Promise(r => setTimeout(r, entry.delay + Math.random() * 40))
+    await new Promise(r => setTimeout(r, entry.delay + Math.random() * 30))
     addBootLine(entry.msg)
     progress.value = entry.pct
 
-    if (Math.random() < 0.15) triggerGlitch()
+    if (Math.random() < 0.12) triggerGlitch()
 
     if (entry.msg.includes('RNG') || entry.msg.includes('dilithium')) {
       addBootLine('  \x1b[33mWARN\x1b[0m: entropy level marginal — using hybrid seed')
     }
-    if (entry.msg.includes('NVMe')) {
-      addBootLine('  \x1b[31mERR\x1b[0m: NVMe nvme2: link training retry (3/3), OK')
-    }
-    if (entry.msg.includes('eth0') || entry.msg.includes('NET:')) {
+    if (entry.msg.includes('NET:') && Math.random() < 0.5) {
       addBootLine('  \x1b[33mWARN\x1b[0m: interface rx buffer adjusted (4096 -> 8192)')
     }
-
-    if (Math.random() < 0.08) {
-      await new Promise(r => setTimeout(r, 200 + Math.random() * 400))
+    if (Math.random() < 0.06) {
+      await new Promise(r => setTimeout(r, 150 + Math.random() * 300))
       triggerGlitch()
       addBootLine(`  \x1b[31mPANIC\x1b[0m: ... recovering via watchdog ... OK`)
     }
+
+    if (entry.pct >= 21 && bootPhase.value === 'post') {
+      bootPhase.value = 'kernel'
+    }
   }
 
-  await new Promise(r => setTimeout(r, 500))
+  await new Promise(r => setTimeout(r, 400))
   triggerGlitch()
-
-  await new Promise(r => setTimeout(r, 600))
-  addBootLine('[LOGIN] Cybermanju Drive — system ready. awaiting authentication...')
+  await new Promise(r => setTimeout(r, 500))
+  bootPhase.value = 'done'
   ready.value = true
 }
 
@@ -211,54 +254,37 @@ function handleUsernameKeydown(e: KeyboardEvent) {
 
 /* --- Storage provider connection --- */
 async function connectProvider(pid: string) {
-  if (pid === 'mega') {
-    openMegaModal()
-    return
-  }
+  if (pid === 'mega') { openMegaModal(); return }
   if (connectingProvider.value) return
   providerError.value = ''
 
   const oauthKey = PROVIDER_TO_OAUTH[pid]
   if (!oauthKey) return
 
-  console.log(`[OAuth][UI] connectProvider(${pid}) → oauth key: ${oauthKey}`)
-
   connectingProvider.value = pid
   try {
     const { oauth } = await import('@/wasm')
     const data = await import('@/wasm/data')
-
-    console.log(`[OAuth][UI] Reloading client IDs from env...`)
     oauth.loadClientIdsFromEnv()
 
     const clientId = oauth.getProviderClientId(oauthKey)
-    console.log(`[OAuth][UI] Client ID for ${oauthKey}: ${clientId ? `${clientId.slice(0, 6)}...${clientId.slice(-3)}` : '(EMPTY)'}`)
-
     if (!clientId) {
-      console.warn(`[OAuth][UI] No client ID for ${pid} — showing manual input form`)
       showClientIdForm.value = pid
       connectingProvider.value = null
       return
     }
 
-    console.log(`[OAuth][UI] Checking existing stored token for ${oauthKey}...`)
     const existingToken = await oauth.loadTokenFromStorage(oauthKey)
     let token = existingToken ? await oauth.getValidToken(existingToken) : null
     if (token) {
-      console.log(`[OAuth][UI] Using existing valid token for ${oauthKey} ✓`)
       await oauth.saveTokenToStorage(token)
     } else {
-      console.log(`[OAuth][UI] No valid token — launching popup auth for ${oauthKey}...`)
       token = await oauth.authenticateWithPopup(oauthKey)
-      console.log(`[OAuth][UI] Popup auth completed for ${oauthKey} ✓`)
       await oauth.saveTokenToStorage(token)
     }
 
-    console.log(`[OAuth][UI] Upserting OAuth account for ${oauthKey}...`)
     await data.upsertOAuthAccount(oauthKey, token)
-
     if (pid === 'google') {
-      console.log(`[OAuth][UI] Also upserting googlePhotos account...`)
       await data.upsertOAuthAccount('googlePhotos' as OAuthProvider, token)
     }
 
@@ -266,10 +292,8 @@ async function connectProvider(pid: string) {
     if (!connectedProviders.value.includes(pid)) {
       connectedProviders.value.push(pid)
     }
-    console.log(`[OAuth][UI] ${pid} connected successfully ✓`)
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
-    console.error(`[OAuth][UI] Error connecting ${pid}:`, msg)
     if (msg.includes('Client ID not configured')) {
       showClientIdForm.value = pid
     } else if (msg.includes('Popup blocked')) {
@@ -296,7 +320,6 @@ async function saveClientId() {
 
   const { oauth } = await import('@/wasm')
   oauth.setProviderClientId(oauthKey, clientIdInput.value.trim())
-
   if (pid === 'google') {
     oauth.setProviderClientId('googlePhotos' as OAuthProvider, clientIdInput.value.trim())
   }
@@ -336,30 +359,18 @@ async function verifyAndConnectMega() {
     const token = `${megaEmail.value.trim()}|${megaPassword.value}`
 
     const testConfig: any = {
-      id: '',
-      backendType: 'mega',
-      enabled: true,
-      name: label,
-      basePath: '/',
-      token,
-      secondFactorCode: mega2FACode.value.trim() || undefined,
-      autoSync: false,
-      compressBeforeUpload: false,
-      createPreviews: false,
-      deleteRawAfterSync: false,
-      maxConcurrentUploads: 1,
+      id: '', backendType: 'mega', enabled: true, name: label,
+      basePath: '/', token, secondFactorCode: mega2FACode.value.trim() || undefined,
+      autoSync: false, compressBeforeUpload: false, createPreviews: false,
+      deleteRawAfterSync: false, maxConcurrentUploads: 1,
     }
 
     await store.testSyncConnection(testConfig)
 
     const { saveTokenToStorage } = await import('@/wasm/oauth')
     await saveTokenToStorage({
-      accessToken: token,
-      refreshToken: null,
-      expiresAt: null,
-      tokenType: 'mega',
-      scope: null,
-      provider: 'mega' as any,
+      accessToken: token, refreshToken: null, expiresAt: null,
+      tokenType: 'mega', scope: null, provider: 'mega' as any,
     })
 
     const data = await import('@/wasm/data')
@@ -382,7 +393,7 @@ onMounted(() => {
   usernameInput.value = localStorage.getItem('cybermanju_username') || ''
 
   glitchTimer = setInterval(() => {
-    if (Math.random() < 0.05) triggerGlitch()
+    if (Math.random() < 0.04) triggerGlitch()
     crtFlicker.value = Math.random() < 0.003
   }, 1000)
 
@@ -400,7 +411,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (timer) clearInterval(timer)
+  if (timer) clearTimeout(timer)
   if (glitchTimer) clearInterval(glitchTimer)
   if (bootTimeout) clearTimeout(bootTimeout)
 })
@@ -408,20 +419,106 @@ onUnmounted(() => {
 
 <template>
   <div class="boot-screen" :class="{ 'glitch-active': showGlitch, 'crt-flicker': crtFlicker, ready, dismissing }">
+    <!-- ═══ Gaussian psychedelic spots ═══ -->
+    <div class="gaussian-layer">
+      <div
+        v-for="spot in spots"
+        :key="spot.id"
+        class="gaussian-spot"
+        :style="{
+          left: spot.x + '%',
+          top: spot.y + '%',
+          width: spot.size + 'px',
+          height: spot.size + 'px',
+          '--hue': spot.hue,
+          '--drift': spot.drift + 'px',
+          animationDelay: spot.delay + 's',
+          animationDuration: spot.duration + 's',
+        }"
+      />
+    </div>
+
+    <!-- ═══ Bizarre floating figures ═══ -->
+    <div class="figures-layer">
+      <svg v-for="fig in figures" :key="fig.id" class="bizarre-figure"
+        :style="{
+          left: fig.x + '%',
+          top: fig.y + '%',
+          width: fig.size + 'px',
+          height: fig.size + 'px',
+          '--hue': fig.hue,
+          animationDelay: fig.delay + 's',
+          animationDuration: fig.duration + 's',
+        }"
+        viewBox="0 0 100 100"
+      >
+        <!-- Eye -->
+        <template v-if="fig.type === 'eye'">
+          <ellipse cx="50" cy="50" rx="45" ry="25" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"/>
+          <circle cx="50" cy="50" r="12" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+          <circle cx="50" cy="50" r="4" fill="currentColor" opacity="0.6"/>
+        </template>
+        <!-- Triangle -->
+        <template v-else-if="fig.type === 'triangle'">
+          <polygon points="50,5 95,90 5,90" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>
+          <polygon points="50,25 78,78 22,78" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.25"/>
+        </template>
+        <!-- Spiral -->
+        <template v-else-if="fig.type === 'spiral'">
+          <path d="M50,50 Q55,30 70,35 Q85,40 80,55 Q75,70 60,65 Q45,60 50,50 Q55,40 65,45" fill="none" stroke="currentColor" stroke-width="1" opacity="0.35"/>
+        </template>
+        <!-- Diamond -->
+        <template v-else-if="fig.type === 'diamond'">
+          <polygon points="50,5 95,50 50,95 5,50" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.35"/>
+          <polygon points="50,20 80,50 50,80 20,50" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.2"/>
+        </template>
+        <!-- Cross -->
+        <template v-else-if="fig.type === 'cross'">
+          <line x1="50" y1="10" x2="50" y2="90" stroke="currentColor" stroke-width="1.2" opacity="0.3"/>
+          <line x1="10" y1="50" x2="90" y2="50" stroke="currentColor" stroke-width="1.2" opacity="0.3"/>
+          <line x1="22" y1="22" x2="78" y2="78" stroke="currentColor" stroke-width="0.8" opacity="0.2"/>
+          <line x1="78" y1="22" x2="22" y2="78" stroke="currentColor" stroke-width="0.8" opacity="0.2"/>
+        </template>
+        <!-- Ring -->
+        <template v-else-if="fig.type === 'ring'">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.3"/>
+          <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.2"/>
+          <circle cx="50" cy="50" r="18" fill="none" stroke="currentColor" stroke-width="0.6" opacity="0.15"/>
+        </template>
+        <!-- Hexagon -->
+        <template v-else-if="fig.type === 'hexagon'">
+          <polygon points="50,5 90,27.5 90,72.5 50,95 10,72.5 10,27.5" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.3"/>
+          <polygon points="50,20 75,35 75,65 50,80 25,65 25,35" fill="none" stroke="currentColor" stroke-width="0.8" opacity="0.2"/>
+        </template>
+        <!-- Star -->
+        <template v-else-if="fig.type === 'star'">
+          <polygon points="50,5 61,35 95,35 68,57 79,90 50,70 21,90 32,57 5,35 39,35" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3"/>
+        </template>
+      </svg>
+    </div>
+
+    <!-- ═══ CRT effects ═══ -->
     <div class="crt-scanlines"></div>
     <div class="crt-vignette"></div>
     <div class="glitch-slice" v-for="n in 5" :key="n" :style="{ top: `${10 + Math.random() * 80}%`, height: `${2 + Math.random() * 6}px`, animationDelay: `${Math.random() * 2}s` }"></div>
     <div class="static-overlay" :style="{ opacity: Math.random() * 0.04 }"></div>
 
+    <!-- ═══ Boot terminal ═══ -->
     <div class="boot-terminal">
       <div class="boot-terminal-header">
         <span class="boot-title">CYBERMANJU DRIVE — INIT SEQUENCE</span>
         <span class="boot-version">v4.2.0</span>
       </div>
       <div class="boot-terminal-text">
-        <div v-for="(line, i) in bootLogs" :key="i" class="boot-line" :class="{ 'error-line': line.includes('ERR'), 'warn-line': line.includes('WARN'), 'panic-line': line.includes('PANIC') }">
+        <div v-for="(line, i) in bootLogs" :key="i" class="boot-line" :class="{
+          'error-line': line.includes('ERR'),
+          'warn-line': line.includes('WARN'),
+          'panic-line': line.includes('PANIC'),
+          'phase-post': bootPhase === 'post' && i < 22,
+          'phase-kernel': bootPhase === 'kernel' && i >= 22,
+        }">
           <span class="line-arrow">></span>
-          <span class="line-text" v-html='line.replace(/\x1b\[33m/g, "<span class=\"warn\">").replace(/\x1b\[31m/g, "<span class=\"err\">").replace(/\x1b\[0m/g, "</span>")'></span>
+          <span class="line-text" v-html='line.replace(/\x1b\[33m/g, "<span class=\"warn\">").replace(/\x1b\[31m/g, "<span class=\"err\">").replace(/\x1b\[36m/g, "<span class=\"cyan\">").replace(/\x1b\[32m/g, "<span class=\"green\">").replace(/\x1b\[0m/g, "</span>")'></span>
         </div>
         <div v-if="progress < 100" class="boot-line boot-cursor">
           <span class="line-arrow">></span>
@@ -434,16 +531,19 @@ onUnmounted(() => {
       </div>
       <div class="boot-hints">
         <span v-if="bootError" class="boot-error-hint">BOOT ERROR — CHECK LOGS</span>
-        <span v-else-if="progress < 30">INITIALIZING HARDWARE...</span>
-        <span v-else-if="progress < 60">LOADING KERNEL MODULES...</span>
-        <span v-else-if="progress < 85">STARTING DAEMONS...</span>
-        <span v-else-if="progress < 100">FINALIZING...</span>
+        <span v-else-if="progress < 21">BIOS POST — HARDWARE DETECTION...</span>
+        <span v-else-if="progress < 40">KERNEL — LOADING CRYPTO MODULES...</span>
+        <span v-else-if="progress < 65">KERNEL — STARTING SERVICES...</span>
+        <span v-else-if="progress < 85">DAEMONS — INITIALIZING SUBSYSTEMS...</span>
+        <span v-else-if="progress < 100">FINALIZING BOOT...</span>
         <span v-else class="login-hint">SYSTEM READY — ENTER YOUR NAME</span>
       </div>
       <div v-if="bootError" class="boot-emergency">
         <button class="emergency-btn" @click.stop="submitLogin">[ FORCE BOOT ]</button>
       </div>
     </div>
+
+    <!-- ═══ Login overlay ═══ -->
     <div v-if="ready" class="login-overlay" tabindex="0" autofocus>
       <div class="login-backdrop"></div>
       <div class="login-container">
@@ -514,6 +614,7 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <!-- ═══ Mega.nz modal ═══ -->
     <div v-if="showMegaModal" class="mega-modal-overlay" @click.self="closeMegaModal">
       <div class="mega-modal">
         <div class="mega-modal-header">
@@ -523,24 +624,11 @@ onUnmounted(() => {
         <div class="mega-modal-body">
           <div class="form-row">
             <label>EMAIL</label>
-            <input
-              v-model="megaEmail"
-              class="bw-input"
-              placeholder="Mega.nz account email"
-              autocomplete="email"
-              @keyup.enter="verifyAndConnectMega"
-            />
+            <input v-model="megaEmail" class="bw-input" placeholder="Mega.nz account email" autocomplete="email" @keyup.enter="verifyAndConnectMega" />
           </div>
           <div class="form-row">
             <label>PASSWORD</label>
-            <input
-              v-model="megaPassword"
-              class="bw-input"
-              type="password"
-              placeholder="Mega.nz password"
-              autocomplete="current-password"
-              @keyup.enter="verifyAndConnectMega"
-            />
+            <input v-model="megaPassword" class="bw-input" type="password" placeholder="Mega.nz password" autocomplete="current-password" @keyup.enter="verifyAndConnectMega" />
           </div>
           <div class="form-row">
             <label>LABEL (OPTIONAL)</label>
@@ -548,15 +636,7 @@ onUnmounted(() => {
           </div>
           <div class="form-row">
             <label>2FA CODE (OPTIONAL)</label>
-            <input
-              v-model="mega2FACode"
-              class="bw-input"
-              placeholder="Six-digit authenticator code"
-              autocomplete="one-time-code"
-              inputmode="numeric"
-              maxlength="6"
-              @keyup.enter="verifyAndConnectMega"
-            />
+            <input v-model="mega2FACode" class="bw-input" placeholder="Six-digit authenticator code" autocomplete="one-time-code" inputmode="numeric" maxlength="6" @keyup.enter="verifyAndConnectMega" />
           </div>
           <div v-if="megaVerifyError" class="mega-modal-error">{{ megaVerifyError }}</div>
           <div v-if="megaVerifying" class="mega-modal-verifying">
@@ -566,11 +646,7 @@ onUnmounted(() => {
         </div>
         <div class="mega-modal-footer">
           <button class="bw-btn" :disabled="megaVerifying" @click="closeMegaModal">CANCEL</button>
-          <button
-            class="bw-btn bw-btn-inverse"
-            :disabled="megaVerifying || !megaEmail.trim() || !megaPassword.trim()"
-            @click="verifyAndConnectMega"
-          >
+          <button class="bw-btn bw-btn-inverse" :disabled="megaVerifying || !megaEmail.trim() || !megaPassword.trim()" @click="verifyAndConnectMega">
             {{ megaVerifying ? 'VERIFYING...' : 'VERIFY & CONNECT' }}
           </button>
         </div>
@@ -580,6 +656,63 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* ═══════════════════════════════════════════════════════
+   PSYCHEDELIC GAUSSIAN SPOTS
+   ═══════════════════════════════════════════════════════ */
+@keyframes spot-drift {
+  0% { transform: translate(0, 0) scale(1); opacity: 0; }
+  15% { opacity: 0.5; }
+  50% { transform: translate(var(--drift), calc(var(--drift) * -0.6)) scale(1.3); opacity: 0.35; }
+  85% { opacity: 0.5; }
+  100% { transform: translate(calc(var(--drift) * -0.5), var(--drift)) scale(0.9); opacity: 0; }
+}
+
+.gaussian-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.gaussian-spot {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, hsla(var(--hue), 80%, 55%, 0.25) 0%, hsla(var(--hue), 70%, 45%, 0.08) 40%, transparent 70%);
+  filter: blur(40px);
+  animation: spot-drift linear infinite;
+  mix-blend-mode: screen;
+}
+
+/* ═══════════════════════════════════════════════════════
+   BIZARRE FLOATING FIGURES
+   ═══════════════════════════════════════════════════════ */
+@keyframes figure-float {
+  0% { transform: translate(0, 0) rotate(0deg) scale(0.6); opacity: 0; }
+  20% { opacity: 0.5; }
+  50% { transform: translate(15px, -20px) rotate(180deg) scale(1.1); opacity: 0.35; }
+  80% { opacity: 0.5; }
+  100% { transform: translate(-10px, 15px) rotate(360deg) scale(0.7); opacity: 0; }
+}
+
+.figures-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bizarre-figure {
+  position: absolute;
+  color: hsla(var(--hue), 70%, 65%, 0.5);
+  animation: figure-float ease-in-out infinite;
+  filter: blur(0.5px);
+}
+
+/* ═══════════════════════════════════════════════════════
+   CRT + GLITCH EFFECTS
+   ═══════════════════════════════════════════════════════ */
 @keyframes scanlines {
   0% { transform: translateY(0); }
   100% { transform: translateY(4px); }
@@ -637,18 +770,14 @@ onUnmounted(() => {
   100% { text-shadow: 2px 0 #ff0000, -2px 0 #00ffff; }
 }
 
-@keyframes screen-tear {
-  0% { clip-path: inset(0); }
-  50% { clip-path: inset(25% 0 50% 0); }
-  51% { clip-path: inset(60% 0 10% 0); }
-  100% { clip-path: inset(0); }
-}
-
+/* ═══════════════════════════════════════════════════════
+   BOOT SCREEN
+   ═══════════════════════════════════════════════════════ */
 .boot-screen {
   position: fixed;
   inset: 0;
   z-index: 99999;
-  background: #050505;
+  background: #030308;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -688,7 +817,7 @@ onUnmounted(() => {
 .crt-vignette {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.6) 100%);
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.7) 100%);
   pointer-events: none;
   z-index: 2;
 }
@@ -717,16 +846,23 @@ onUnmounted(() => {
   mix-blend-mode: screen;
 }
 
+/* ═══════════════════════════════════════════════════════
+   TERMINAL
+   ═══════════════════════════════════════════════════════ */
 .boot-terminal {
   position: relative;
   z-index: 10;
   width: 720px;
   max-width: 94vw;
-  border: 1px solid #1a1a1a;
+  border: 1px solid #1a1a2e;
   border-radius: 8px;
-  background: rgba(5, 5, 5, 0.95);
-  box-shadow: 0 0 80px rgba(0, 255, 65, 0.04), 0 0 160px rgba(0, 255, 65, 0.02);
+  background: rgba(3, 3, 8, 0.92);
+  box-shadow:
+    0 0 80px rgba(0, 255, 65, 0.04),
+    0 0 160px rgba(0, 255, 65, 0.02),
+    inset 0 0 60px rgba(0, 200, 255, 0.01);
   overflow: hidden;
+  backdrop-filter: blur(8px);
 }
 
 .boot-terminal-header {
@@ -734,8 +870,8 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 10px 16px;
-  background: #0a0a0a;
-  border-bottom: 1px solid #1a1a1a;
+  background: rgba(5, 5, 15, 0.9);
+  border-bottom: 1px solid #1a1a2e;
 }
 
 .boot-title {
@@ -743,12 +879,12 @@ onUnmounted(() => {
   font-weight: 800;
   color: #00ff41;
   letter-spacing: 2px;
-  text-shadow: 0 0 8px rgba(0, 255, 65, 0.15);
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.2), 0 0 20px rgba(0, 255, 65, 0.05);
 }
 
 .boot-version {
   font-size: 9px;
-  color: #444;
+  color: #445;
   letter-spacing: 1px;
 }
 
@@ -757,24 +893,17 @@ onUnmounted(() => {
   max-height: 50vh;
   overflow-y: auto;
   padding: 12px 16px;
-  background: #050505;
+  background: rgba(3, 3, 8, 0.6);
 }
 
-.boot-terminal-text::-webkit-scrollbar {
-  width: 4px;
-}
-.boot-terminal-text::-webkit-scrollbar-track {
-  background: transparent;
-}
-.boot-terminal-text::-webkit-scrollbar-thumb {
-  background: #1a1a1a;
-  border-radius: 2px;
-}
+.boot-terminal-text::-webkit-scrollbar { width: 4px; }
+.boot-terminal-text::-webkit-scrollbar-track { background: transparent; }
+.boot-terminal-text::-webkit-scrollbar-thumb { background: #1a1a2e; border-radius: 2px; }
 
 .boot-line {
   font-size: 11px;
   line-height: 1.5;
-  color: #ccc;
+  color: #aab;
   font-weight: 500;
   white-space: pre-wrap;
   word-break: break-all;
@@ -786,35 +915,19 @@ onUnmounted(() => {
   opacity: 0.6;
 }
 
-.line-text {
-  color: #ccc;
-}
+.line-text { color: #aab; }
+.error-line .line-text { color: #ff5f57; }
+.warn-line .line-text { color: #febc2e; }
+.panic-line .line-text { color: #ff0000; animation: rgb-shift 0.5s ease-in-out; }
+.warn { color: #febc2e; }
+.err { color: #ff5f57; }
+.cyan { color: #00e5ff; }
+.green { color: #00ff41; }
 
-.error-line .line-text {
-  color: #ff5f57;
-}
+.phase-post .line-text { color: #667; }
+.phase-kernel .line-text { color: #aab; }
 
-.warn-line .line-text {
-  color: #febc2e;
-}
-
-.panic-line .line-text {
-  color: #ff0000;
-  animation: rgb-shift 0.5s ease-in-out;
-}
-
-.warn {
-  color: #febc2e;
-}
-
-.err {
-  color: #ff5f57;
-}
-
-.boot-cursor {
-  margin-top: 2px;
-}
-
+.boot-cursor { margin-top: 2px; }
 .cursor-blink {
   color: #00ff41;
   font-weight: 700;
@@ -824,7 +937,7 @@ onUnmounted(() => {
 .boot-progress-track {
   position: relative;
   height: 2px;
-  background: #0a0a0a;
+  background: rgba(10, 10, 20, 0.8);
   margin: 0 16px 12px;
   border-radius: 1px;
   overflow: hidden;
@@ -832,12 +945,12 @@ onUnmounted(() => {
 
 .boot-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #00ff41, #00ff88, #00ff41);
+  background: linear-gradient(90deg, #00ff41, #00e5ff, #00ff41);
   background-size: 200% 100%;
   animation: hue-rotate 2s linear infinite;
   transition: width 0.15s ease-out;
   border-radius: 1px;
-  box-shadow: 0 0 12px rgba(0, 255, 65, 0.3);
+  box-shadow: 0 0 12px rgba(0, 255, 65, 0.3), 0 0 24px rgba(0, 229, 255, 0.15);
 }
 
 .boot-progress-label {
@@ -855,7 +968,7 @@ onUnmounted(() => {
   text-align: center;
   padding: 0 16px 14px;
   font-size: 9px;
-  color: #444;
+  color: #445;
   letter-spacing: 2px;
   font-weight: 600;
 }
@@ -895,6 +1008,9 @@ onUnmounted(() => {
   text-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
 }
 
+/* ═══════════════════════════════════════════════════════
+   LOGIN OVERLAY
+   ═══════════════════════════════════════════════════════ */
 .login-overlay {
   position: absolute;
   inset: 0;
@@ -903,7 +1019,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   font-family: 'Courier New', 'Fira Code', monospace;
-  background: #050505;
+  background: rgba(3, 3, 8, 0.97);
   outline: none;
 }
 
@@ -912,7 +1028,8 @@ onUnmounted(() => {
   inset: 0;
   background:
     radial-gradient(ellipse at 20% 50%, rgba(0, 255, 65, 0.03) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 50%, rgba(0, 255, 65, 0.02) 0%, transparent 60%);
+    radial-gradient(ellipse at 80% 50%, rgba(0, 229, 255, 0.02) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 20%, rgba(138, 43, 226, 0.015) 0%, transparent 50%);
   pointer-events: none;
 }
 
@@ -950,7 +1067,7 @@ onUnmounted(() => {
 
 .login-brand-sub {
   font-size: 9px;
-  color: #555;
+  color: #556;
   letter-spacing: 1px;
 }
 
@@ -962,7 +1079,7 @@ onUnmounted(() => {
 
 .section-label {
   font-size: 9px;
-  color: #555;
+  color: #556;
   letter-spacing: 2px;
   font-weight: 700;
 }
@@ -975,26 +1092,26 @@ onUnmounted(() => {
 
 .username-input {
   flex: 1;
-  background: #0a0a0a;
-  border: 1px solid #1a1a1a;
+  background: rgba(8, 8, 20, 0.8);
+  border: 1px solid #1a1a2e;
   border-radius: 6px;
   color: #00ff41;
   font-family: 'Courier New', monospace;
   font-size: 14px;
   padding: 10px 14px;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
   text-transform: uppercase;
   letter-spacing: 2px;
 }
 
 .username-input:focus {
   border-color: #00ff41;
-  box-shadow: 0 0 12px rgba(0, 255, 65, 0.1);
+  box-shadow: 0 0 12px rgba(0, 255, 65, 0.1), 0 0 24px rgba(0, 255, 65, 0.03);
 }
 
 .username-input::placeholder {
-  color: #333;
+  color: #334;
   letter-spacing: 1px;
 }
 
@@ -1035,12 +1152,12 @@ onUnmounted(() => {
   content: '';
   flex: 1;
   height: 1px;
-  background: #1a1a1a;
+  background: #1a1a2e;
 }
 
 .login-divider span {
   font-size: 8px;
-  color: #444;
+  color: #445;
   letter-spacing: 1px;
   white-space: nowrap;
 }
@@ -1057,16 +1174,16 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   padding: 12px 8px;
-  border: 1px solid #1a1a1a;
+  border: 1px solid #1a1a2e;
   border-radius: 8px;
-  background: #0d0d0d;
+  background: rgba(8, 8, 20, 0.6);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .provider-card:hover {
-  border-color: #333;
-  background: #111;
+  border-color: #334;
+  background: rgba(15, 15, 30, 0.8);
 }
 
 .provider-card.connected {
@@ -1084,28 +1201,15 @@ onUnmounted(() => {
 .provider-name {
   font-size: 9px;
   font-weight: 700;
-  color: #ccc;
+  color: #bbc;
   letter-spacing: 1px;
   text-align: center;
 }
 
-.provider-status {
-  font-size: 8px;
-  letter-spacing: 1px;
-}
-
-.status-ok {
-  color: #00ff41;
-  font-weight: 700;
-}
-
-.status-busy {
-  color: #febc2e;
-}
-
-.status-off {
-  color: #555;
-}
+.provider-status { font-size: 8px; letter-spacing: 1px; }
+.status-ok { color: #00ff41; font-weight: 700; }
+.status-busy { color: #febc2e; }
+.status-off { color: #556; }
 
 .client-id-form {
   display: flex;
@@ -1114,7 +1218,7 @@ onUnmounted(() => {
   padding: 10px 12px;
   border: 1px solid #febc2e;
   border-radius: 6px;
-  background: #0d0d0d;
+  background: rgba(8, 8, 20, 0.8);
 }
 
 .client-id-form label {
@@ -1124,16 +1228,13 @@ onUnmounted(() => {
   font-weight: 700;
 }
 
-.client-id-row {
-  display: flex;
-  gap: 6px;
-}
+.client-id-row { display: flex; gap: 6px; }
 
 .bw-btn-cancel {
   background: transparent;
-  border: 1px solid #333;
+  border: 1px solid #334;
   border-radius: 4px;
-  color: #888;
+  color: #889;
   font-family: 'Courier New', monospace;
   font-size: 10px;
   font-weight: 700;
@@ -1142,10 +1243,7 @@ onUnmounted(() => {
   letter-spacing: 1px;
 }
 
-.bw-btn-cancel:hover {
-  border-color: #555;
-  color: #e0e0e0;
-}
+.bw-btn-cancel:hover { border-color: #556; color: #dde; }
 
 .provider-error {
   font-size: 10px;
@@ -1160,25 +1258,23 @@ onUnmounted(() => {
 
 .bw-input {
   flex: 1;
-  background: #111;
-  border: 1px solid #2a2a2a;
+  background: rgba(10, 10, 25, 0.8);
+  border: 1px solid #2a2a3e;
   border-radius: 4px;
-  color: #e0e0e0;
+  color: #dde;
   font-family: 'Courier New', monospace;
   font-size: 11px;
   padding: 6px 10px;
   outline: none;
 }
 
-.bw-input:focus {
-  border-color: #00ff41;
-}
+.bw-input:focus { border-color: #00ff41; }
 
 .bw-btn {
   background: transparent;
-  border: 1px solid #333;
+  border: 1px solid #334;
   border-radius: 4px;
-  color: #888;
+  color: #889;
   font-family: 'Courier New', monospace;
   font-size: 10px;
   font-weight: 700;
@@ -1188,10 +1284,7 @@ onUnmounted(() => {
   transition: all 0.15s;
 }
 
-.bw-btn:hover {
-  border-color: #555;
-  color: #e0e0e0;
-}
+.bw-btn:hover { border-color: #556; color: #dde; }
 
 .bw-btn-inverse {
   border-color: #00ff41;
@@ -1207,9 +1300,7 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
-.boot-screen.ready {
-  cursor: default;
-}
+.boot-screen.ready { cursor: default; }
 
 .boot-screen.dismissing {
   animation: glitch-skew 0.2s ease-in-out, rgb-shift 0.15s ease-in-out;
@@ -1217,23 +1308,9 @@ onUnmounted(() => {
   transition: opacity 0.3s ease-out;
 }
 
-@media (max-width: 640px) {
-  .boot-terminal {
-    border-radius: 0;
-    max-width: 100vw;
-    border-left: none;
-    border-right: none;
-  }
-
-  .boot-terminal-text {
-    height: 240px;
-  }
-
-  .boot-title {
-    font-size: 9px;
-  }
-}
-
+/* ═══════════════════════════════════════════════════════
+   MEGA MODAL
+   ═══════════════════════════════════════════════════════ */
 .mega-modal-overlay {
   position: fixed;
   inset: 0;
@@ -1247,7 +1324,7 @@ onUnmounted(() => {
 .mega-modal {
   width: 380px;
   max-width: 92vw;
-  background: #0a0a0a;
+  background: rgba(8, 8, 20, 0.95);
   border: 1px solid #D9272E;
   border-radius: 12px;
   box-shadow: 0 0 60px rgba(217, 39, 46, 0.08);
@@ -1261,9 +1338,9 @@ onUnmounted(() => {
   padding: 16px 20px 12px;
   font-size: 13px;
   font-weight: 800;
-  color: #e0e0e0;
+  color: #dde;
   letter-spacing: 1px;
-  border-bottom: 1px solid #1a1a1a;
+  border-bottom: 1px solid #1a1a2e;
 }
 
 .mega-modal-body {
@@ -1298,6 +1375,18 @@ onUnmounted(() => {
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 20px 16px;
-  border-top: 1px solid #1a1a1a;
+  border-top: 1px solid #1a1a2e;
+}
+
+@media (max-width: 640px) {
+  .boot-terminal {
+    border-radius: 0;
+    max-width: 100vw;
+    border-left: none;
+    border-right: none;
+  }
+
+  .boot-terminal-text { height: 240px; }
+  .boot-title { font-size: 9px; }
 }
 </style>

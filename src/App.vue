@@ -15,7 +15,6 @@ import { kvGet } from '@/wasm/storage'
 import DesktopShell from '@/components/DesktopShell.vue'
 import LandingPage from '@/components/LandingPage.vue'
 import BootScreen from '@/components/BootScreen.vue'
-import PostScreen from '@/components/PostScreen.vue'
 
 import CanvasEngine from '@/components/CanvasEngine.vue'
 import NotificationStack from '@/components/NotificationStack.vue'
@@ -517,7 +516,7 @@ import { useLogin } from '@/composables/useLogin'
 
 const { restoreSession } = useLogin()
 
-const bootPhase = ref<'post' | 'kernel' | 'desktop'>('post')
+const bootPhase = ref<'boot' | 'desktop'>('boot')
 const showTransparencyReport = ref(false)
 
 onMounted(async () => {
@@ -527,11 +526,7 @@ onMounted(async () => {
   restoreSession()
 })
 
-function onPostComplete() {
-  bootPhase.value = 'kernel'
-}
-
-function onKernelBootComplete() {
+function onBootComplete() {
   bootPhase.value = 'desktop'
   showTransparencyReport.value = true
 }
@@ -544,8 +539,7 @@ function handleLandingLaunch() {
 
 <template>
   <div class="cybermanju-shell">
-    <PostScreen v-if="bootPhase === 'post'" @complete="onPostComplete" />
-    <BootScreen v-else-if="bootPhase === 'kernel'" @complete="onKernelBootComplete" />
+    <BootScreen v-if="bootPhase === 'boot'" @complete="onBootComplete" />
     <LandingPage
       v-else-if="bootPhase === 'desktop' && store.currentPanel === 'landing'"
       :key="'landing'"

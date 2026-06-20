@@ -677,7 +677,10 @@ jobs:
             COMMITS=$(git log --oneline --no-decorate -50 2>/dev/null || true)
           fi
 
-          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.version }}"
+          VERSION="${TAG#v}"
+          REPO="${{ github.repository }}"
+          RELEASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
 
           cat > release_body.md << EOF
           # Cybermanju Drive
@@ -690,25 +693,25 @@ jobs:
 
           | Platform | File | Description |
           |----------|------|-------------|
-          | **Windows** | [cybermanju-drive_${VERSION}_x64-setup.exe](./cybermanju-drive_${VERSION}_x64-setup.exe) | NSIS installer (recommended) |
-          | **Windows** | [cybermanju-drive_${VERSION}_x64.msi](./cybermanju-drive_${VERSION}_x64.msi) | MSI installer (enterprise/GPO) |
-          | **macOS** | [cybermanju-drive_${VERSION}_aarch64.dmg](./cybermanju-drive_${VERSION}_aarch64.dmg) | DMG for Apple Silicon (M1/M2/M3/M4) |
-          | **Linux (Debian/Ubuntu)** | [cybermanju-drive_${VERSION}_amd64.deb](./cybermanju-drive_${VERSION}_amd64.deb) | Debian/Ubuntu package |
-          | **Linux (Fedora/RHEL)** | [cybermanju-drive-${VERSION}-1.x86_64.rpm](./cybermanju-drive-${VERSION}-1.x86_64.rpm) | RPM package |
-          | **Linux (Universal)** | [cybermanju-drive_${VERSION}_amd64.AppImage](./cybermanju-drive_${VERSION}_amd64.AppImage) | Run anywhere — no install needed |
-          | **Linux (Flatpak)** | [cybermanju-drive.flatpak](./cybermanju-drive.flatpak) | Sandboxed — Flathub-compatible |
+          | **Windows** | [cybermanju-drive_${VERSION}_x64-setup.exe](${RELEASE_URL}/cybermanju-drive_${VERSION}_x64-setup.exe) | NSIS installer (recommended) |
+          | **Windows** | [cybermanju-drive_${VERSION}_x64.msi](${RELEASE_URL}/cybermanju-drive_${VERSION}_x64.msi) | MSI installer (enterprise/GPO) |
+          | **macOS** | [cybermanju-drive_${VERSION}_aarch64.dmg](${RELEASE_URL}/cybermanju-drive_${VERSION}_aarch64.dmg) | DMG for Apple Silicon (M1/M2/M3/M4) |
+          | **Linux (Debian/Ubuntu)** | [cybermanju-drive_${VERSION}_amd64.deb](${RELEASE_URL}/cybermanju-drive_${VERSION}_amd64.deb) | Debian/Ubuntu package |
+          | **Linux (Fedora/RHEL)** | [cybermanju-drive-${VERSION}-1.x86_64.rpm](${RELEASE_URL}/cybermanju-drive-${VERSION}-1.x86_64.rpm) | RPM package |
+          | **Linux (Universal)** | [cybermanju-drive_${VERSION}_amd64.AppImage](${RELEASE_URL}/cybermanju-drive_${VERSION}_amd64.AppImage) | Run anywhere — no install needed |
+          | **Linux (Flatpak)** | [cybermanju-drive.flatpak](${RELEASE_URL}/cybermanju-drive.flatpak) | Sandboxed — Flathub-compatible |
 
           ### 📱 Mobile
 
           | Platform | File | Description |
           |----------|------|-------------|
-          | **Android** | [cybermanju-drive.apk](./cybermanju-drive.apk) | APK for Android 10+ (arm64) |
+          | **Android** | [cybermanju-drive.apk](${RELEASE_URL}/cybermanju-drive.apk) | APK for Android 10+ (arm64) |
 
           ### 🌐 Web & Containers
 
           | Platform | File | Description |
           |----------|------|-------------|
-          | **Web (WASM)** | [dist-wasm.zip](./dist-wasm.zip) | Static site — deploy anywhere |
+          | **Web (WASM)** | [dist-wasm.zip](${RELEASE_URL}/dist-wasm.zip) | Static site — deploy anywhere |
           | **Docker** | \`docker pull cybermanju-drive:latest\` | Pre-built container image |
 
           EOF
