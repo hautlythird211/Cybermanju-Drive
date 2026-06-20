@@ -1,21 +1,21 @@
 mod util;
 
-pub mod local;
 pub mod github;
 pub mod gitlab;
 pub mod google_drive;
 pub mod google_photos;
-pub mod telegram;
+pub mod local;
 pub mod mega;
+pub mod telegram;
 pub mod transfer;
 
-pub use local::LocalBackend;
 pub use github::GitHubBackend;
 pub use gitlab::GitLabBackend;
 pub use google_drive::GoogleDriveBackend;
 pub use google_photos::GooglePhotosBackend;
-pub use telegram::TelegramBackend;
+pub use local::LocalBackend;
 pub use mega::MegaBackend;
+pub use telegram::TelegramBackend;
 pub use transfer::transfer_files;
 
 use cybermanju_types::sync::{StorageBackend, SyncBackendType};
@@ -48,7 +48,9 @@ pub fn create_backend(
                 .and_then(|v| v.as_str())
                 .unwrap_or("main");
             let base_url = config.get("base_url").and_then(|v| v.as_str());
-            Ok(Box::new(GitLabBackend::new(token, project, branch, base_url)))
+            Ok(Box::new(GitLabBackend::new(
+                token, project, branch, base_url,
+            )))
         }
         SyncBackendType::GoogleDrive => {
             let folder = config.get("folder_id").and_then(|v| v.as_str());
@@ -70,7 +72,8 @@ pub fn create_backend(
                 .get("password")
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
-            MegaBackend::new_with_email_password(token, password).map(|b| Box::new(b) as Box<dyn StorageBackend>)
+            MegaBackend::new_with_email_password(token, password)
+                .map(|b| Box::new(b) as Box<dyn StorageBackend>)
         }
     }
 }

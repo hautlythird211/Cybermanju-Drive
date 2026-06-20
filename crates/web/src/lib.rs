@@ -1,13 +1,13 @@
-pub mod search;
 pub mod browser;
 pub mod render;
+pub mod search;
 
 #[cfg(target_arch = "wasm32")]
 pub mod wasm;
 
-pub use search::SearchEngine;
-pub use browser::{BrowserManager, Tab, HistoryEntry, Bookmark};
+pub use browser::{Bookmark, BrowserManager, HistoryEntry, Tab};
 pub use render::HtmlRenderer;
+pub use search::SearchEngine;
 
 use serde::{Deserialize, Serialize};
 

@@ -3,6 +3,6 @@
 // Tauri-specific additions here.
 
 pub use cybermanju_types::sync::{
-    RemoteFile, StorageBackend, SyncBackendType, SyncConfig, SyncFile, SyncProgress,
-    SyncResult, SyncStatus,
+    RemoteFile, StorageBackend, SyncBackendType, SyncConfig, SyncFile, SyncProgress, SyncResult,
+    SyncStatus,
 };

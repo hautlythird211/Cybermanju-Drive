@@ -56,45 +56,7 @@ export interface TileRect {
   height: number
 }
 
-type SizeMap = { [K in PanelType]?: { width: number; height: number } } & {
-  permissions?: { width: number; height: number }
-}
-const defaultSizes: SizeMap = {
-  files: { width: 620, height: 440 },
-  search: { width: 440, height: 380 },
-  collections: { width: 380, height: 340 },
-  faces: { width: 420, height: 360 },
-  map: { width: 520, height: 400 },
-  code: { width: 480, height: 400 },
-  users: { width: 400, height: 360 },
-  sync: { width: 440, height: 360 },
-  settings: { width: 440, height: 420 },
-  trash: { width: 400, height: 340 },
-  activity: { width: 400, height: 340 },
-  favorites: { width: 360, height: 300 },
-  recent: { width: 360, height: 300 },
-  accounts: { width: 380, height: 340 },
-  'loose-groups': { width: 360, height: 320 },
-  style: { width: 360, height: 300 },
-  storage: { width: 440, height: 380 },
-  dashboard: { width: 460, height: 380 },
-  webdash: { width: 480, height: 400 },
-  encryption: { width: 380, height: 340 },
-  compression: { width: 380, height: 340 },
-  permissions: { width: 360, height: 320 },
-  preview: { width: 380, height: 420 },
-  import: { width: 480, height: 400 },
-  transfer: { width: 420, height: 460 },
-  'system-monitor': { width: 520, height: 400 },
-  'task-manager': { width: 540, height: 420 },
-  terminal: { width: 480, height: 360 },
-  history: { width: 440, height: 380 },
-  browser: { width: 640, height: 480 },
-  book: { width: 680, height: 500 },
-  notes: { width: 520, height: 420 },
-  plugins: { width: 600, height: 480 },
-  'art-maker': { width: 520, height: 560 },
-}
+
 
 const inlinePanels: PanelType[] = [
   'search', 'trash', 'activity', 'favorites', 'recent',
@@ -144,7 +106,6 @@ const windowFocusHistory = ref<string[]>([])
 const currentScreen = ref({ x: 0, y: 0 })
 const lastContainerSize = ref({ width: 1200, height: 800 })
 
-const TILE_GAP = 6
 const MAX_Z_INDEX = 9999
 
 export function useWindowManager() {
@@ -177,17 +138,27 @@ export function useWindowManager() {
     return { x: cx + 1, y: cy }
   }
 
-  function getTileRect(screenX: number, screenY: number, slot: number, containerWidth: number, containerHeight: number): TileRect {
+  function getTileRect(
+    screenX: number, screenY: number, slot: number,
+    containerWidth: number, containerHeight: number,
+    windowCount: number
+  ): TileRect {
+    if (windowCount <= 1) {
+      return { x: 0, y: 0, width: containerWidth, height: containerHeight }
+    }
+    if (windowCount === 2) {
+      const w = containerWidth / 2
+      return { x: slot * w, y: 0, width: w, height: containerHeight }
+    }
+    if (windowCount === 3) {
+      const w = containerWidth / 3
+      return { x: slot * w, y: 0, width: w, height: containerHeight }
+    }
+    const halfW = containerWidth / 2
+    const halfH = containerHeight / 2
     const col = slot % 2
     const row = Math.floor(slot / 2)
-    const halfW = (containerWidth - TILE_GAP * 3) / 2
-    const halfH = (containerHeight - TILE_GAP * 3) / 2
-    return {
-      x: TILE_GAP + col * (halfW + TILE_GAP),
-      y: TILE_GAP + row * (halfH + TILE_GAP),
-      width: halfW,
-      height: halfH,
-    }
+    return { x: col * halfW, y: row * halfH, width: halfW, height: halfH }
   }
 
   function getWindowsForScreen(sx: number, sy: number): WindowState[] {
@@ -229,7 +200,6 @@ export function useWindowManager() {
     }
 
     const meta = MODULE_METADATA[panelType] || { label: panelType.toUpperCase(), icon: '[*]' }
-    const size = defaultSizes[panelType] || { width: 520, height: 440 }
     const id = `win-${++windowCounter}`
     const comp = getComponent(panelType)
 
@@ -243,7 +213,8 @@ export function useWindowManager() {
       resolvedProps.panelType = panelType
     }
 
-    const tile = getTileRect(screen.x, screen.y, tileSlot, lastContainerSize.value.width, lastContainerSize.value.height)
+    const countOnScreen = getWindowsForScreen(screen.x, screen.y).length + 1
+    const tile = getTileRect(screen.x, screen.y, tileSlot, lastContainerSize.value.width, lastContainerSize.value.height, countOnScreen)
 
     const win: WindowState = {
       id,
@@ -252,11 +223,11 @@ export function useWindowManager() {
       icon: meta.icon,
       x: tile.x,
       y: tile.y,
-      width: Math.min(size.width, tile.width),
-      height: Math.min(size.height, tile.height),
+      width: tile.width,
+      height: tile.height,
       minimized: false,
       maximized: false,
-      previousBounds: { x: tile.x, y: tile.y, width: Math.min(size.width, tile.width), height: Math.min(size.height, tile.height) },
+      previousBounds: { x: tile.x, y: tile.y, width: tile.width, height: tile.height },
       zIndex: nextZIndex.value++,
       component: comp,
       props: Object.keys(resolvedProps).length > 0 ? resolvedProps : undefined,

@@ -50,9 +50,6 @@ pub fn transfer_files(
         let _ = fs::remove_file(&local);
     }
 
-    progress(
-        1.0,
-        &format!("transferred {} files", total),
-    );
+    progress(1.0, &format!("transferred {} files", total));
     Ok(total)
 }

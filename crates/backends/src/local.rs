@@ -10,13 +10,19 @@ pub struct LocalBackend {
 
 impl LocalBackend {
     pub fn new(base_path: &str) -> Self {
-        Self { base_path: base_path.to_string() }
+        Self {
+            base_path: base_path.to_string(),
+        }
     }
 }
 
 impl StorageBackend for LocalBackend {
-    fn name(&self) -> &str { "Local Storage" }
-    fn backend_type(&self) -> SyncBackendType { SyncBackendType::Local }
+    fn name(&self) -> &str {
+        "Local Storage"
+    }
+    fn backend_type(&self) -> SyncBackendType {
+        SyncBackendType::Local
+    }
 
     fn upload_file(&self, local_path: &str, remote_path: &str) -> Result<String, String> {
         let dest = safe_join(&self.base_path, remote_path)?;
@@ -30,8 +36,11 @@ impl StorageBackend for LocalBackend {
     fn download_file(&self, remote_path: &str, local_path: &str) -> Result<(), String> {
         let src = safe_join(&self.base_path, remote_path)?;
         if Path::new(&src).is_symlink() {
-            let link_target = fs::read_link(&src).map_err(|e| format!("Cannot read symlink: {}", e))?;
-            let base = Path::new(&self.base_path).canonicalize().map_err(|e| e.to_string())?;
+            let link_target =
+                fs::read_link(&src).map_err(|e| format!("Cannot read symlink: {}", e))?;
+            let base = Path::new(&self.base_path)
+                .canonicalize()
+                .map_err(|e| e.to_string())?;
             if !base.join(&link_target).starts_with(&base) {
                 return Err("Symlink target outside base path".to_string());
             }
@@ -56,14 +65,20 @@ impl StorageBackend for LocalBackend {
         if !Path::new(&dir).exists() || !Path::new(&dir).is_dir() {
             return Ok(Vec::new());
         }
-        let base = Path::new(&self.base_path).canonicalize().map_err(|e| e.to_string())?;
+        let base = Path::new(&self.base_path)
+            .canonicalize()
+            .map_err(|e| e.to_string())?;
         let mut files = Vec::new();
         for entry in fs::read_dir(&dir).map_err(|e| format!("Failed to read directory: {}", e))? {
             let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
             let path = entry.path();
             if path.is_file() {
                 let meta = entry.metadata().ok();
-                let rel = path.strip_prefix(&base).unwrap_or(&path).to_string_lossy().to_string();
+                let rel = path
+                    .strip_prefix(&base)
+                    .unwrap_or(&path)
+                    .to_string_lossy()
+                    .to_string();
                 files.push(RemoteFile {
                     name: entry.file_name().to_string_lossy().to_string(),
                     path: rel,

@@ -96,11 +96,16 @@ impl HtmlDocument {
     fn extract_links_from_node(node: &HtmlNode, base_url: &str, links: &mut Vec<(String, String)>) {
         if let NodeType::Element(tag) = &node.node_type {
             if tag == "a" {
-                let href = node.attributes.iter().find(|(k, _)| k == "href").map(|(_, v)| v.clone());
+                let href = node
+                    .attributes
+                    .iter()
+                    .find(|(k, _)| k == "href")
+                    .map(|(_, v)| v.clone());
                 let text = Self::extract_text_from_node(node);
                 if let Some(url) = href {
                     if !url.is_empty() && !url.starts_with('#') && !url.starts_with("javascript:") {
-                        let full_url = if url.starts_with("http://") || url.starts_with("https://") {
+                        let full_url = if url.starts_with("http://") || url.starts_with("https://")
+                        {
                             url
                         } else if url.starts_with("//") {
                             format!("https:{}", url)

@@ -121,7 +121,6 @@ let neuralPacketHue: Float64Array = new Float64Array(0)
 const NEURAL_PACKET_COUNT = 60
 
 // Matrix rain column data
-let rainColumns: Float64Array = new Float64Array(0)
 let rainHeads: Float64Array = new Float64Array(0)
 let rainTrails: Float64Array = new Float64Array(0)
 let rainHue: Float64Array = new Float64Array(0)
@@ -287,14 +286,13 @@ function drawMoireGrid() {
       const ly = sinA * proj
       if (lx < -layerSpacing || lx > w + layerSpacing || ly < -layerSpacing || ly > h + layerSpacing) continue
 
-      const hue = (baseHue + hueOff + line * 2 + t * 0.2) % 360
-      const alpha = 0.08 + (fastSin(line * 0.25 + l + t * 0.02) * 0.5 + 0.5) * 0.35
       const perpX = -sinA * 9999
       const perpY = cosA * 9999
       ctx.moveTo(lx - perpX, ly - perpY)
       ctx.lineTo(lx + perpX, ly + perpY)
     }
-    ctx.strokeStyle = `hsla(${hueOff|0},45,50,0.15)`
+    const lHue = (baseHue + hueOff) % 360
+    ctx.strokeStyle = `hsla(${lHue|0},45,50,0.15)`
     ctx.lineWidth = 0.6
     ctx.stroke()
   }
@@ -446,7 +444,6 @@ function drawNeuralNetwork() {
 
   ctx.lineWidth = 0.3
 
-  ctx.beginPath()
   for (let i = 0; i < nodeCount; i++) {
     for (let j = i + 1; j < nodeCount; j++) {
       const dx = networkX[i] - networkX[j]
@@ -456,6 +453,7 @@ function drawNeuralNetwork() {
         const d = Math.sqrt(d2)
         const alpha = (1 - d / maxDist) * 0.12
         const hue = ((baseHue + (networkX[i] + networkX[j]) * 0.1) % 360 + 360) % 360
+        ctx.beginPath()
         ctx.moveTo(networkX[i], networkY[i])
         ctx.lineTo(networkX[j], networkY[j])
         ctx.strokeStyle = `hsla(${hue|0},50,45,${alpha})`
@@ -985,14 +983,13 @@ function drawVintageOverlay() {
 function initRain() {
   const colWidth = 16
   const colCount = Math.ceil(w / colWidth)
-  rainColumns = new Float64Array(colCount)
   rainHeads = new Float64Array(colCount)
   rainTrails = new Float64Array(colCount)
   rainHue = new Float64Array(colCount)
   rainSpeed = new Float64Array(colCount)
   for (let i = 0; i < colCount; i++) {
-    rainColumns[i] = Math.random() * h * -1
-    rainHeads[i] = rainColumns[i]
+    const start = Math.random() * h * -1
+    rainHeads[i] = start
     rainTrails[i] = 8 + Math.random() * 20
     rainHue[i] = hash(i * 7) * 360
     rainSpeed[i] = 0.6 + hash(i * 11) * 1.2
@@ -1043,7 +1040,6 @@ function drawMatrixRain() {
 }
 
 // ── 16. FRACTAL TREE (spread decreases with depth, leaf endpoints, higher alpha) ──
-let treePhase = 0
 function drawFractalTree() {
   if (!ctx) return
   const cx = mouseActive ? mouseX : w * 0.5

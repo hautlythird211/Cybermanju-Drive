@@ -1,5 +1,5 @@
-use crate::WebResult;
 use super::{SearchEngine, SearchError, SearchQuery, SearchResponse, SearchSourceType};
+use crate::WebResult;
 use scraper::{Html, Selector};
 
 pub struct DuckDuckGoEngine {
@@ -24,7 +24,10 @@ impl DuckDuckGoEngine {
     }
 
     async fn search_lite(&self, query: &str) -> Result<SearchResponse, SearchError> {
-        let url = format!("https://lite.duckduckgo.com/lite/?q={}", url::form_urlencoded::byte_serialize(query.as_bytes()));
+        let url = format!(
+            "https://lite.duckduckgo.com/lite/?q={}",
+            url::form_urlencoded::byte_serialize(query.as_bytes())
+        );
         let resp = self.client.get(&url).send().await?;
         let body = resp.text().await?;
         self.parse_lite_results(&body, query)
@@ -32,10 +35,14 @@ impl DuckDuckGoEngine {
 
     fn parse_lite_results(&self, html: &str, query: &str) -> Result<SearchResponse, SearchError> {
         let document = Html::parse_document(html);
-        let table_sel = Selector::parse("table.result").map_err(|e| SearchError::Parse(e.to_string()))?;
-        let link_sel = Selector::parse("a.result-link").map_err(|e| SearchError::Parse(e.to_string()))?;
-        let snippet_sel = Selector::parse("td.result-snippet").map_err(|e| SearchError::Parse(e.to_string()))?;
-        let url_sel = Selector::parse("a.result-url").map_err(|e| SearchError::Parse(e.to_string()))?;
+        let table_sel =
+            Selector::parse("table.result").map_err(|e| SearchError::Parse(e.to_string()))?;
+        let link_sel =
+            Selector::parse("a.result-link").map_err(|e| SearchError::Parse(e.to_string()))?;
+        let snippet_sel =
+            Selector::parse("td.result-snippet").map_err(|e| SearchError::Parse(e.to_string()))?;
+        let url_sel =
+            Selector::parse("a.result-url").map_err(|e| SearchError::Parse(e.to_string()))?;
 
         let mut results = Vec::new();
 
@@ -68,7 +75,11 @@ impl DuckDuckGoEngine {
                 .unwrap_or_default();
 
             if !title.is_empty() {
-                results.push(WebResult { title, url, snippet });
+                results.push(WebResult {
+                    title,
+                    url,
+                    snippet,
+                });
             }
 
             if results.len() >= 20 {

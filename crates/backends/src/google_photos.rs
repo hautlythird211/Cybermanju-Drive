@@ -18,8 +18,12 @@ impl GooglePhotosBackend {
 }
 
 impl StorageBackend for GooglePhotosBackend {
-    fn name(&self) -> &str { "Google Photos" }
-    fn backend_type(&self) -> SyncBackendType { SyncBackendType::GooglePhotos }
+    fn name(&self) -> &str {
+        "Google Photos"
+    }
+    fn backend_type(&self) -> SyncBackendType {
+        SyncBackendType::GooglePhotos
+    }
 
     fn upload_file(&self, local_path: &str, _remote_path: &str) -> Result<String, String> {
         let data = fs::read(local_path).map_err(|e| format!("read: {}", e))?;
@@ -32,7 +36,11 @@ impl StorageBackend for GooglePhotosBackend {
             .body(data)
             .send()
             .map_err(|e| format!("upload token: {}", e))?;
-        let token = up.text().map_err(|e| format!("token body: {}", e))?.trim().to_string();
+        let token = up
+            .text()
+            .map_err(|e| format!("token body: {}", e))?
+            .trim()
+            .to_string();
         let mut body = serde_json::json!({ "newMediaItems": [{ "simpleMediaItem": { "uploadToken": token } }] });
         if let Some(ref a) = self.album_id {
             body["albumId"] = serde_json::json!(a);
@@ -47,12 +55,18 @@ impl StorageBackend for GooglePhotosBackend {
             return Err(format!("Photos create: HTTP {}", cr.status()));
         }
         let v: serde_json::Value = cr.json().map_err(|e| format!("parse: {}", e))?;
-        Ok(v["newMediaItemResults"][0]["mediaItem"]["baseUrl"].as_str().unwrap_or("").into())
+        Ok(v["newMediaItemResults"][0]["mediaItem"]["baseUrl"]
+            .as_str()
+            .unwrap_or("")
+            .into())
     }
 
     fn download_file(&self, remote_path: &str, local_path: &str) -> Result<(), String> {
         let client = http_client()?;
-        let meta_url = format!("https://photoslibrary.googleapis.com/v1/mediaItems/{}", remote_path);
+        let meta_url = format!(
+            "https://photoslibrary.googleapis.com/v1/mediaItems/{}",
+            remote_path
+        );
         let meta_resp = client
             .get(&meta_url)
             .header("Authorization", format!("Bearer {}", self.token))
@@ -82,7 +96,10 @@ impl StorageBackend for GooglePhotosBackend {
     fn delete_file(&self, remote_path: &str) -> Result<(), String> {
         let client = http_client()?;
         let resp = client
-            .delete(&format!("https://photoslibrary.googleapis.com/v1/mediaItems/{}", remote_path))
+            .delete(&format!(
+                "https://photoslibrary.googleapis.com/v1/mediaItems/{}",
+                remote_path
+            ))
             .header("Authorization", format!("Bearer {}", self.token))
             .send()
             .map_err(|e| format!("delete: {}", e))?;
@@ -110,7 +127,10 @@ impl StorageBackend for GooglePhotosBackend {
                 name: i["filename"].as_str().unwrap_or("?").into(),
                 path: i["id"].as_str().unwrap_or("?").into(),
                 size_bytes: 0,
-                modified_at: i["mediaMetadata"]["creationTime"].as_str().unwrap_or("").into(),
+                modified_at: i["mediaMetadata"]["creationTime"]
+                    .as_str()
+                    .unwrap_or("")
+                    .into(),
                 url: i["baseUrl"].as_str().unwrap_or("").into(),
             })
             .collect())
@@ -119,7 +139,10 @@ impl StorageBackend for GooglePhotosBackend {
     fn get_file_url(&self, remote_path: &str) -> Result<String, String> {
         let client = http_client()?;
         let resp = client
-            .get(&format!("https://photoslibrary.googleapis.com/v1/mediaItems/{}", remote_path))
+            .get(&format!(
+                "https://photoslibrary.googleapis.com/v1/mediaItems/{}",
+                remote_path
+            ))
             .header("Authorization", format!("Bearer {}", self.token))
             .send()
             .map_err(|e| format!("request: {}", e))?;

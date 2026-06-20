@@ -153,19 +153,58 @@ impl LayoutEngine {
     fn style_for_tag(&self, tag: &str) -> StyleProps {
         let mut style = StyleProps::default();
         match tag {
-            "h1" => { style.font_size = 28.0; style.font_weight = 700; style.margin_bottom = 16.0; style.color = "#5af0ff".to_string(); }
-            "h2" => { style.font_size = 22.0; style.font_weight = 600; style.margin_bottom = 12.0; style.color = "#5af0ff".to_string(); }
-            "h3" => { style.font_size = 18.0; style.font_weight = 600; style.margin_bottom = 10.0; }
-            "a" => { style.color = "#b388ff".to_string(); style.display = "inline".to_string(); style.margin_bottom = 0.0; }
-            "img" => { style.display = "inline".to_string(); style.margin_bottom = 0.0; }
-            "p" => { style.margin_bottom = 12.0; }
+            "h1" => {
+                style.font_size = 28.0;
+                style.font_weight = 700;
+                style.margin_bottom = 16.0;
+                style.color = "#5af0ff".to_string();
+            }
+            "h2" => {
+                style.font_size = 22.0;
+                style.font_weight = 600;
+                style.margin_bottom = 12.0;
+                style.color = "#5af0ff".to_string();
+            }
+            "h3" => {
+                style.font_size = 18.0;
+                style.font_weight = 600;
+                style.margin_bottom = 10.0;
+            }
+            "a" => {
+                style.color = "#b388ff".to_string();
+                style.display = "inline".to_string();
+                style.margin_bottom = 0.0;
+            }
+            "img" => {
+                style.display = "inline".to_string();
+                style.margin_bottom = 0.0;
+            }
+            "p" => {
+                style.margin_bottom = 12.0;
+            }
             "div" => {}
-            "span" => { style.display = "inline".to_string(); style.margin_bottom = 0.0; }
-            "pre" => { style.font_size = 12.0; style.background = "rgba(0,255,65,0.05)".to_string(); }
-            "code" => { style.font_size = 12.0; style.background = "rgba(0,255,65,0.05)".to_string(); }
-            "blockquote" => { style.margin_left = 16.0; style.color = "#3a86ff".to_string(); }
-            "li" => { style.margin_bottom = 4.0; }
-            "ul" | "ol" => { style.margin_left = 24.0; }
+            "span" => {
+                style.display = "inline".to_string();
+                style.margin_bottom = 0.0;
+            }
+            "pre" => {
+                style.font_size = 12.0;
+                style.background = "rgba(0,255,65,0.05)".to_string();
+            }
+            "code" => {
+                style.font_size = 12.0;
+                style.background = "rgba(0,255,65,0.05)".to_string();
+            }
+            "blockquote" => {
+                style.margin_left = 16.0;
+                style.color = "#3a86ff".to_string();
+            }
+            "li" => {
+                style.margin_bottom = 4.0;
+            }
+            "ul" | "ol" => {
+                style.margin_left = 24.0;
+            }
             _ => {}
         }
         style

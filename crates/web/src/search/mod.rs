@@ -15,7 +15,11 @@ pub struct SearchQuery {
 
 impl SearchQuery {
     pub fn new(query: &str) -> Self {
-        Self { query: query.to_string(), limit: None, offset: None }
+        Self {
+            query: query.to_string(),
+            limit: None,
+            offset: None,
+        }
     }
 
     pub fn with_limit(mut self, limit: usize) -> Self {

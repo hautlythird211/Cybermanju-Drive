@@ -10,7 +10,9 @@ pub struct HtmlRenderer {
 
 impl HtmlRenderer {
     pub fn new() -> Self {
-        Self { layout: LayoutEngine::new() }
+        Self {
+            layout: LayoutEngine::new(),
+        }
     }
 
     pub fn render(&self, html: &str, width: u32) -> HtmlDocument {

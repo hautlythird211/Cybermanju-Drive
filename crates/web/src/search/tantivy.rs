@@ -1,5 +1,5 @@
-use crate::WebResult;
 use super::{SearchEngine, SearchError, SearchQuery, SearchResponse, SearchSourceType};
+use crate::WebResult;
 use cybermanju_search::SearchIndex;
 use std::sync::RwLock;
 
@@ -31,14 +31,19 @@ impl SearchEngine for TantivyEngine {
         let query_str = query.query.clone();
         let limit = query.limit.unwrap_or(20);
 
-        let index = self.index.read().map_err(|e| SearchError::Internal(e.to_string()))?;
+        let index = self
+            .index
+            .read()
+            .map_err(|e| SearchError::Internal(e.to_string()))?;
         let request = cybermanju_search::SearchRequest {
             query: query_str.clone(),
             limit: Some(limit),
             offset: query.offset,
         };
 
-        let results = index.search(&request).map_err(|e| SearchError::Internal(e.to_string()))?;
+        let results = index
+            .search(&request)
+            .map_err(|e| SearchError::Internal(e.to_string()))?;
 
         let web_results: Vec<WebResult> = results
             .into_iter()

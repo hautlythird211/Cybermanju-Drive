@@ -1,8 +1,8 @@
-use wasm_bindgen::prelude::*;
-use crate::search::{duckduckgo::DuckDuckGoEngine, SearchEngine, SearchQuery};
-use crate::render::HtmlRenderer;
 use crate::browser::BrowserManager;
+use crate::render::HtmlRenderer;
+use crate::search::{duckduckgo::DuckDuckGoEngine, SearchEngine, SearchQuery};
 use crate::WebResult;
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub struct WasmSearch {
@@ -13,12 +13,18 @@ pub struct WasmSearch {
 impl WasmSearch {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        Self { engine: DuckDuckGoEngine::new() }
+        Self {
+            engine: DuckDuckGoEngine::new(),
+        }
     }
 
     pub async fn search(&self, query: &str) -> Result<JsValue, JsValue> {
         let q = SearchQuery::new(query);
-        let result = self.engine.search(&q).await.map_err(|e| JsValue::from_str(&e.to_string()))?;
+        let result = self
+            .engine
+            .search(&q)
+            .await
+            .map_err(|e| JsValue::from_str(&e.to_string()))?;
         Ok(serde_wasm_bindgen::to_value(&result).map_err(|e| JsValue::from_str(&e.to_string()))?)
     }
 }
@@ -32,7 +38,9 @@ pub struct WasmBrowser {
 impl WasmBrowser {
     #[wasm_bindgen(constructor)]
     pub fn new() -> Self {
-        Self { inner: BrowserManager::new() }
+        Self {
+            inner: BrowserManager::new(),
+        }
     }
 
     pub fn open_tab(&mut self, url: &str) -> String {
@@ -64,7 +72,8 @@ impl WasmBrowser {
     }
 
     pub fn active_tab_json(&self) -> String {
-        self.inner.active_tab()
+        self.inner
+            .active_tab()
             .map(|t| serde_json::to_string(t).unwrap_or_default())
             .unwrap_or_default()
     }

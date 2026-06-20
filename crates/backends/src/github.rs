@@ -29,8 +29,12 @@ impl GitHubBackend {
 }
 
 impl StorageBackend for GitHubBackend {
-    fn name(&self) -> &str { "GitHub" }
-    fn backend_type(&self) -> SyncBackendType { SyncBackendType::GitHub }
+    fn name(&self) -> &str {
+        "GitHub"
+    }
+    fn backend_type(&self) -> SyncBackendType {
+        SyncBackendType::GitHub
+    }
 
     fn upload_file(&self, local_path: &str, remote_path: &str) -> Result<String, String> {
         let (owner, repo) = self.parse_repo()?;
@@ -42,7 +46,10 @@ impl StorageBackend for GitHubBackend {
             "branch": self.branch,
         });
         let client = http_client()?;
-        let url = format!("https://api.github.com/repos/{}/{}/contents/{}", owner, repo, remote_path);
+        let url = format!(
+            "https://api.github.com/repos/{}/{}/contents/{}",
+            owner, repo, remote_path
+        );
         let resp = client
             .put(&url)
             .header("Authorization", format!("token {}", self.token))
@@ -55,13 +62,17 @@ impl StorageBackend for GitHubBackend {
         if !(200..300).contains(&status) {
             return Err(format!("GitHub upload ({}): {}", status, body_text));
         }
-        let v: serde_json::Value = serde_json::from_str(&body_text).map_err(|e| format!("parse: {}", e))?;
+        let v: serde_json::Value =
+            serde_json::from_str(&body_text).map_err(|e| format!("parse: {}", e))?;
         Ok(v["content"]["download_url"].as_str().unwrap_or("").into())
     }
 
     fn download_file(&self, remote_path: &str, local_path: &str) -> Result<(), String> {
         let (owner, repo) = self.parse_repo()?;
-        let url = format!("https://api.github.com/repos/{}/{}/contents/{}", owner, repo, remote_path);
+        let url = format!(
+            "https://api.github.com/repos/{}/{}/contents/{}",
+            owner, repo, remote_path
+        );
         let client = http_client()?;
         let resp = client
             .get(&url)
@@ -75,7 +86,9 @@ impl StorageBackend for GitHubBackend {
         let v: serde_json::Value = resp.json().map_err(|e| format!("parse: {}", e))?;
         let content = v["content"].as_str().ok_or("no content")?;
         let clean: String = content.chars().filter(|c| *c != '\n').collect();
-        let data = base64::engine::general_purpose::STANDARD.decode(&clean).map_err(|e| format!("b64: {}", e))?;
+        let data = base64::engine::general_purpose::STANDARD
+            .decode(&clean)
+            .map_err(|e| format!("b64: {}", e))?;
         if let Some(p) = Path::new(local_path).parent() {
             fs::create_dir_all(p).map_err(|e| format!("mkdir: {}", e))?;
         }
@@ -85,7 +98,10 @@ impl StorageBackend for GitHubBackend {
 
     fn delete_file(&self, remote_path: &str) -> Result<(), String> {
         let (owner, repo) = self.parse_repo()?;
-        let url = format!("https://api.github.com/repos/{}/{}/contents/{}", owner, repo, remote_path);
+        let url = format!(
+            "https://api.github.com/repos/{}/{}/contents/{}",
+            owner, repo, remote_path
+        );
         let client = http_client()?;
         let get = client
             .get(&url)
@@ -118,7 +134,10 @@ impl StorageBackend for GitHubBackend {
 
     fn list_files(&self, prefix: &str) -> Result<Vec<RemoteFile>, String> {
         let (owner, repo) = self.parse_repo()?;
-        let url = format!("https://api.github.com/repos/{}/{}/contents/{}", owner, repo, prefix);
+        let url = format!(
+            "https://api.github.com/repos/{}/{}/contents/{}",
+            owner, repo, prefix
+        );
         let client = http_client()?;
         let resp = client
             .get(&url)
@@ -139,7 +158,11 @@ impl StorageBackend for GitHubBackend {
                 name: item["name"].as_str().unwrap_or("?").into(),
                 path: item["path"].as_str().unwrap_or("?").into(),
                 size_bytes: item["size"].as_u64().unwrap_or(0),
-                modified_at: item.get("updated_at").and_then(|v| v.as_str()).unwrap_or("").into(),
+                modified_at: item
+                    .get("updated_at")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .into(),
                 url: item["download_url"].as_str().unwrap_or("").into(),
             });
         }
@@ -148,7 +171,10 @@ impl StorageBackend for GitHubBackend {
 
     fn get_file_url(&self, remote_path: &str) -> Result<String, String> {
         let (owner, repo) = self.parse_repo()?;
-        Ok(format!("https://raw.githubusercontent.com/{}/{}/{}/{}", owner, repo, self.branch, remote_path))
+        Ok(format!(
+            "https://raw.githubusercontent.com/{}/{}/{}/{}",
+            owner, repo, self.branch, remote_path
+        ))
     }
 
     fn test_connection(&self) -> Result<bool, String> {

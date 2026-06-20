@@ -22,7 +22,11 @@ impl BrowserManager {
             settings: BrowserSettings::default(),
             tab_counter: 0,
             history_map: HashMap::new(),
-            bookmark_folders: vec!["Root".to_string(), "Search".to_string(), "Social".to_string()],
+            bookmark_folders: vec![
+                "Root".to_string(),
+                "Search".to_string(),
+                "Social".to_string(),
+            ],
         }
     }
 
@@ -50,7 +54,9 @@ impl BrowserManager {
     }
 
     pub fn active_tab(&self) -> Option<&Tab> {
-        self.active_tab_id.as_ref().and_then(|id| self.tabs.iter().find(|t| t.id == *id))
+        self.active_tab_id
+            .as_ref()
+            .and_then(|id| self.tabs.iter().find(|t| t.id == *id))
     }
 
     pub fn active_tab_mut(&mut self) -> Option<&mut Tab> {
@@ -90,7 +96,10 @@ impl BrowserManager {
     }
 
     pub fn get_bookmarks(&self, folder: &str) -> Vec<&Bookmark> {
-        self.bookmarks.iter().filter(|b| b.folder == folder).collect()
+        self.bookmarks
+            .iter()
+            .filter(|b| b.folder == folder)
+            .collect()
     }
 
     pub fn get_folders(&self) -> &[String] {
