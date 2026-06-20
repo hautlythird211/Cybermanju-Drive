@@ -133,10 +133,11 @@ impl StorageBackend for CodebergBackend {
         );
         Ok(raw_url)
     }
-
     fn download_file(&self, remote_path: &str, local_path: &str) -> Result<(), String> {
+        // Use the /media/ endpoint which auto-detects LFS pointer files and resolves them
+        // (available on Forgejo, the platform Codeberg runs)
         let url = format!(
-            "https://codeberg.org/api/v1/repos/{}/raw/{}?ref={}",
+            "https://codeberg.org/api/v1/repos/{}/media/{}?ref={}",
             self.repo, remote_path, self.branch
         );
         let client = http_client()?;
@@ -146,7 +147,28 @@ impl StorageBackend for CodebergBackend {
             .send()
             .map_err(|e| format!("request: {}", e))?;
         if !resp.status().is_success() {
-            return Err(format!("Codeberg download: HTTP {}", resp.status()));
+            // Fallback to raw endpoint if /media/ is not available
+            let fallback_url = format!(
+                "https://codeberg.org/api/v1/repos/{}/raw/{}?ref={}",
+                self.repo, remote_path, self.branch
+            );
+            let fallback_resp = client
+                .get(&fallback_url)
+                .header("Authorization", format!("token {}", self.token))
+                .send()
+                .map_err(|e| format!("request: {}", e))?;
+            if !fallback_resp.status().is_success() {
+                return Err(format!(
+                    "Codeberg download: HTTP {}",
+                    fallback_resp.status()
+                ));
+            }
+            let fb = fallback_resp.bytes().map_err(|e| format!("body: {}", e))?;
+            if let Some(p) = Path::new(local_path).parent() {
+                fs::create_dir_all(p).map_err(|e| format!("mkdir: {}", e))?;
+            }
+            fs::write(local_path, &fb).map_err(|e| format!("write: {}", e))?;
+            return Ok(());
         }
         let bytes = resp.bytes().map_err(|e| format!("body: {}", e))?;
         if let Some(p) = Path::new(local_path).parent() {
@@ -155,7 +177,6 @@ impl StorageBackend for CodebergBackend {
         fs::write(local_path, &bytes).map_err(|e| format!("write: {}", e))?;
         Ok(())
     }
-
     fn delete_file(&self, remote_path: &str) -> Result<(), String> {
         // Forgejo/Gitea delete via DELETE /repos/{owner}/{repo}/contents/{path}
         let url = self.contents_url(remote_path);

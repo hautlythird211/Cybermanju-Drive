@@ -1,4 +1,4 @@
-use crate::git_lfs::GitLfsClient;
+use crate::git_lfs::{GitLfsClient, LfsPlatform};
 use crate::repo_layout::RepoLayoutManager;
 use crate::util::http_client;
 use base64::Engine;
@@ -8,16 +8,17 @@ use std::path::Path;
 
 /// LFS threshold: files >= 1MB use Git LFS
 const LFS_SIZE_THRESHOLD: u64 = 1_048_576;
+/// GitHub Contents API cannot handle files > 100 MB
+const CONTENTS_API_MAX: u64 = 100 * 1_048_576;
+/// GitHub Releases API supports up to 2 GiB per asset
+const RELEASES_API_MAX: u64 = 2 * 1_073_741_824;
 
 pub struct GitHubBackend {
     token: String,
     repo: String,
     branch: String,
-    /// Whether to use Git LFS for large files
     use_lfs: bool,
-    /// Repo layout (flat, sharded, split)
     layout: RepoLayout,
-    /// Separate LFS blob repo (for split layout)
     lfs_repo: Option<String>,
 }
 
@@ -56,7 +57,6 @@ impl GitHubBackend {
         Ok((parts[0].to_string(), parts[1].to_string()))
     }
 
-    /// Build the layout manager for computing remote paths.
     fn layout_mgr(&self) -> RepoLayoutManager {
         RepoLayoutManager::new(
             self.layout.clone(),
@@ -66,29 +66,29 @@ impl GitHubBackend {
         )
     }
 
-    /// Decide if a file should use LFS based on size and config.
     fn should_use_lfs(&self, size: u64) -> bool {
-        self.use_lfs && size >= LFS_SIZE_THRESHOLD
+        self.use_lfs && size >= LFS_SIZE_THRESHOLD && size <= RELEASES_API_MAX
     }
 
-    /// Upload a file via the standard Contents API (for small files).
-    fn upload_via_contents_api(&self, data: &[u8], remote_path: &str) -> Result<String, String> {
+    /// Upload via Contents API (for files < 100 MB).
+    fn upload_via_contents_api(&self, data: &[u8], path: &str) -> Result<String, String> {
         let (owner, repo) = self.parse_repo()?;
         let b64 = base64::engine::general_purpose::STANDARD.encode(data);
         let body = serde_json::json!({
-            "message": format!("Upload: {}", remote_path),
+            "message": format!("Upload: {}", path),
             "content": b64,
             "branch": self.branch,
         });
         let client = http_client()?;
         let url = format!(
             "https://api.github.com/repos/{}/{}/contents/{}",
-            owner, repo, remote_path
+            owner, repo, path
         );
         let resp = client
             .put(&url)
-            .header("Authorization", format!("token {}", self.token))
+            .header("Authorization", format!("Bearer {}", self.token))
             .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
             .json(&body)
             .send()
             .map_err(|e| format!("request: {}", e))?;
@@ -100,6 +100,83 @@ impl GitHubBackend {
         let v: serde_json::Value =
             serde_json::from_str(&body_text).map_err(|e| format!("parse: {}", e))?;
         Ok(v["content"]["download_url"].as_str().unwrap_or("").into())
+    }
+
+    /// Upload via GitHub Releases API (fallback for files > 100 MB).
+    /// Creates a release tagged with the file path and uploads as a release asset.
+    fn upload_via_releases_api(&self, data: &[u8], path: &str) -> Result<String, String> {
+        let (owner, repo) = self.parse_repo()?;
+        let client = http_client()?;
+        let tag = format!("cybermanju-blob/{}", path.replace('/', "-"));
+
+        // 1. Create a release
+        let release_body = serde_json::json!({
+            "tag_name": tag,
+            "name": format!("Blob: {}", path),
+            "body": format!("Cybermanju Drive encrypted/compressed blob: {}", path),
+            "draft": false,
+            "prerelease": false,
+        });
+
+        let release_resp = client
+            .post(&format!(
+                "https://api.github.com/repos/{}/{}/releases",
+                owner, repo
+            ))
+            .header("Authorization", format!("Bearer {}", self.token))
+            .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
+            .json(&release_body)
+            .send()
+            .map_err(|e| format!("create release: {}", e))?;
+
+        if !release_resp.status().is_success() {
+            let status = release_resp.status();
+            let body = release_resp.text().unwrap_or_default();
+            return Err(format!("GitHub release creation ({}): {}", status, body));
+        }
+
+        let release_json: serde_json::Value = release_resp
+            .json()
+            .map_err(|e| format!("parse release: {}", e))?;
+
+        let upload_url_tpl = release_json["upload_url"]
+            .as_str()
+            .ok_or("no upload_url")?
+            .to_string();
+
+        // 2. Replace template variables in upload_url
+        // upload_url looks like: https://uploads.github.com/.../releases/123/assets{?name,label}
+        let upload_url = upload_url_tpl.replace("{?name,label}", "");
+        let file_name = Path::new(path)
+            .file_name()
+            .map(|n| n.to_string_lossy())
+            .unwrap_or_else(|| std::borrow::Cow::Borrowed("blob"));
+
+        // 3. Upload the asset
+        let asset_resp = client
+            .post(&format!("{}?name={}", upload_url, file_name))
+            .header("Authorization", format!("Bearer {}", self.token))
+            .header("Accept", "application/vnd.github+json")
+            .header("Content-Type", "application/octet-stream")
+            .body(data.to_vec())
+            .send()
+            .map_err(|e| format!("upload asset: {}", e))?;
+
+        if !asset_resp.status().is_success() {
+            let status = asset_resp.status();
+            let body = asset_resp.text().unwrap_or_default();
+            return Err(format!("GitHub asset upload ({}): {}", status, body));
+        }
+
+        let asset_json: serde_json::Value = asset_resp
+            .json()
+            .map_err(|e| format!("parse asset: {}", e))?;
+
+        Ok(asset_json["browser_download_url"]
+            .as_str()
+            .unwrap_or("")
+            .into())
     }
 }
 
@@ -115,27 +192,32 @@ impl StorageBackend for GitHubBackend {
         let data = fs::read(local_path).map_err(|e| format!("read: {}", e))?;
         let file_size = data.len() as u64;
 
-        // Compute layout-aware remote path
         let layout_mgr = self.layout_mgr();
         let hash = GitLfsClient::compute_oid(&data);
         let effective_path =
             layout_mgr.compute_remote_path(remote_path, Some(&hash), file_size > 1024);
 
+        // Strategy: LFS > Contents API > Releases API
         if self.should_use_lfs(file_size) {
-            // Upload via Git LFS
-            let lfs = GitLfsClient::new("https://github.com", &self.token, &self.repo);
-            let oid = lfs.upload_via_lfs(local_path, true, None)?;
-
-            // Create LFS pointer file and upload it via Contents API
+            let lfs = GitLfsClient::new(
+                "https://github.com",
+                &self.repo,
+                &self.token,
+                LfsPlatform::GitHub,
+            );
+            let oid = lfs.upload_via_lfs(local_path)?;
             let pointer = GitLfsClient::create_pointer(&oid, file_size);
             let pointer_content = pointer.to_string();
-
-            // Upload the pointer file to the remote path
-            self.upload_via_contents_api(pointer_content.as_bytes(), &effective_path)
-        } else {
-            // Direct upload via Contents API
-            self.upload_via_contents_api(&data, &effective_path)
+            return self.upload_via_contents_api(pointer_content.as_bytes(), &effective_path);
         }
+
+        if file_size <= CONTENTS_API_MAX {
+            return self.upload_via_contents_api(&data, &effective_path);
+        }
+
+        // Fallback to Releases API for files that are too large for Contents API
+        // and LFS is unavailable or disabled
+        self.upload_via_releases_api(&data, &effective_path)
     }
 
     fn download_file(&self, remote_path: &str, local_path: &str) -> Result<(), String> {
@@ -147,8 +229,9 @@ impl StorageBackend for GitHubBackend {
         let client = http_client()?;
         let resp = client
             .get(&url)
-            .header("Authorization", format!("token {}", self.token))
+            .header("Authorization", format!("Bearer {}", self.token))
             .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
             .send()
             .map_err(|e| format!("request: {}", e))?;
         if !resp.status().is_success() {
@@ -162,13 +245,17 @@ impl StorageBackend for GitHubBackend {
             .map_err(|e| format!("b64: {}", e))?;
 
         // Check if it's an LFS pointer file
-        if self.use_lfs && GitLfsClient::is_lfs_pointer(data.as_slice()) {
+        if self.use_lfs && GitLfsClient::is_lfs_pointer(&data) {
             let pointer_str = String::from_utf8_lossy(&data);
             let pointer = cybermanju_types::sync::LfsPointer::from_string(&pointer_str)?;
 
-            // Download the actual content via LFS
-            let lfs = GitLfsClient::new("https://github.com", &self.token, &self.repo);
-            return lfs.download_via_lfs(&pointer.oid, pointer.size, local_path, true, None);
+            let lfs = GitLfsClient::new(
+                "https://github.com",
+                &self.repo,
+                &self.token,
+                LfsPlatform::GitHub,
+            );
+            return lfs.download_via_lfs(&pointer.oid, pointer.size, local_path);
         }
 
         if let Some(p) = Path::new(local_path).parent() {
@@ -187,7 +274,7 @@ impl StorageBackend for GitHubBackend {
         let client = http_client()?;
         let get = client
             .get(&url)
-            .header("Authorization", format!("token {}", self.token))
+            .header("Authorization", format!("Bearer {}", self.token))
             .header("Accept", "application/vnd.github+json")
             .send()
             .map_err(|e| format!("get: {}", e))?;
@@ -203,7 +290,7 @@ impl StorageBackend for GitHubBackend {
         });
         let del = client
             .delete(&url)
-            .header("Authorization", format!("token {}", self.token))
+            .header("Authorization", format!("Bearer {}", self.token))
             .header("Accept", "application/vnd.github+json")
             .json(&body)
             .send()
@@ -223,7 +310,7 @@ impl StorageBackend for GitHubBackend {
         let client = http_client()?;
         let resp = client
             .get(&url)
-            .header("Authorization", format!("token {}", self.token))
+            .header("Authorization", format!("Bearer {}", self.token))
             .header("Accept", "application/vnd.github+json")
             .send()
             .map_err(|e| format!("request: {}", e))?;
@@ -263,8 +350,9 @@ impl StorageBackend for GitHubBackend {
         let client = http_client()?;
         let resp = client
             .get("https://api.github.com/user")
-            .header("Authorization", format!("token {}", self.token))
+            .header("Authorization", format!("Bearer {}", self.token))
             .header("Accept", "application/vnd.github+json")
+            .header("X-GitHub-Api-Version", "2022-11-28")
             .send()
             .map_err(|e| format!("request: {}", e))?;
         Ok(resp.status().is_success())

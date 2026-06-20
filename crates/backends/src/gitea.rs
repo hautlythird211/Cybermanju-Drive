@@ -6,7 +6,9 @@ use std::path::Path;
 
 /// Generic Gitea/Forgejo storage backend.
 /// Supports any Gitea or Forgejo instance via configurable base_url.
-/// Uses Gitea API v1 (same as Forgejo, similar to Codeberg).
+/// Uses Gitea API v1 (same as Forgejo, used by Codeberg).
+///
+/// API docs: https://codeberg.org/api/swagger
 pub struct GiteaBackend {
     token: String,
     repo: String,
@@ -27,10 +29,6 @@ impl GiteaBackend {
         }
     }
 
-    fn api_url(&self, ep: &str) -> String {
-        format!("{}/api/v1/repos/{}/{}", self.base_url, self.repo, ep)
-    }
-
     fn contents_url(&self, path: &str) -> String {
         format!(
             "{}/api/v1/repos/{}/contents/{}",
@@ -38,12 +36,18 @@ impl GiteaBackend {
         )
     }
 
-    fn parse_repo(&self) -> Result<(String, String), String> {
-        let parts: Vec<&str> = self.repo.trim_start_matches('/').splitn(2, '/').collect();
-        if parts.len() != 2 || parts[0].is_empty() || parts[1].is_empty() {
-            return Err(format!("Invalid repo '{}', need owner/repo", self.repo));
-        }
-        Ok((parts[0].to_string(), parts[1].to_string()))
+    /// Extended contents API — returns richer metadata including LFS info.
+    fn contents_ext_url(&self, path: &str) -> String {
+        format!(
+            "{}/api/v1/repos/{}/contents-ext/{}?includes=file_content,lfs_metadata,commit_metadata",
+            self.base_url, self.repo, path
+        )
+    }
+
+    /// Batch modify multiple files in one API call.
+    /// Gitea/Forgejo uniquely supports this — GitHub and GitLab do not.
+    fn batch_url(&self) -> String {
+        format!("{}/api/v1/repos/{}/contents", self.base_url, self.repo)
     }
 }
 
@@ -62,7 +66,9 @@ impl StorageBackend for GiteaBackend {
         let url = self.contents_url(remote_path);
         let client = http_client()?;
 
-        // Check if file exists
+        // Gitea: POST = create (if file doesn't exist), PUT = update (requires sha)
+        // However, PUT without SHA also acts as create (dual behavior).
+        // We use: check existence → POST for new, PUT for existing with SHA
         let check = client
             .get(&url)
             .header("Authorization", format!("token {}", self.token))
@@ -95,16 +101,12 @@ impl StorageBackend for GiteaBackend {
                 String::new()
             };
 
-            let update_body = if !sha.is_empty() {
-                serde_json::json!({
-                    "message": format!("Upload: {}", remote_path),
-                    "content": b64,
-                    "sha": sha,
-                    "branch": self.branch,
-                })
-            } else {
-                body.clone()
-            };
+            let update_body = serde_json::json!({
+                "message": format!("Upload: {}", remote_path),
+                "content": b64,
+                "branch": self.branch,
+                "sha": sha,
+            });
 
             client
                 .put(&url)
@@ -133,8 +135,9 @@ impl StorageBackend for GiteaBackend {
     }
 
     fn download_file(&self, remote_path: &str, local_path: &str) -> Result<(), String> {
+        // Use the /media/ endpoint which auto-detects LFS pointers and resolves them
         let url = format!(
-            "{}/api/v1/repos/{}/raw/{}?ref={}",
+            "{}/api/v1/repos/{}/media/{}?ref={}",
             self.base_url, self.repo, remote_path, self.branch
         );
         let client = http_client()?;

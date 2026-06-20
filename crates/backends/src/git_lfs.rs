@@ -7,40 +7,104 @@ use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::Path;
 
+/// Identifies which git platform the LFS client is interacting with.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum LfsPlatform {
+    GitHub,
+    GitLab,
+    Gitea, // Also Codeberg (Forgejo)
+}
+
+impl LfsPlatform {
+    pub fn from_backend_type(s: &str) -> Self {
+        match s {
+            "github" => Self::GitHub,
+            "gitlab" => Self::GitLab,
+            "codeberg" | "gitea" => Self::Gitea,
+            _ => Self::GitHub,
+        }
+    }
+}
+
 /// Git LFS client for interacting with LFS-enabled git remotes.
+/// Follows the Git LFS Batch API v1 spec:
+/// https://github.com/git-lfs/git-lfs/blob/main/docs/api/batch.md
 pub struct GitLfsClient {
-    /// Base URL of the LFS API (e.g. "https://github.com" or "https://gitlab.com")
-    lfs_url: String,
+    /// Git remote URL (e.g. "https://github.com/owner/repo")
+    git_url: String,
     /// Auth token (Personal Access Token or OAuth token)
     token: String,
-    /// Repository identifier (owner/repo or project ID)
-    repo_id: String,
-    /// Whether to use LFS batch API via git remote (fallback to HTTP)
-    use_batch_api: bool,
+    /// Platform type for platform-specific auth/URL logic
+    platform: LfsPlatform,
 }
 
 impl GitLfsClient {
-    pub fn new(lfs_url: &str, token: &str, repo_id: &str) -> Self {
+    /// Create a new LFS client.
+    ///
+    /// `platform_url` is the base URL of the git platform (e.g. "https://github.com")
+    /// `repo_path` is the repository path (e.g. "owner/repo" or URL-encoded project ID)
+    /// `token` is the authentication token
+    /// `platform` identifies the platform for correct URL construction and auth
+    pub fn new(platform_url: &str, repo_path: &str, token: &str, platform: LfsPlatform) -> Self {
+        let base = platform_url.trim_end_matches('/');
+
+        // Build the git remote URL (used to derive the LFS batch API endpoint)
+        let git_url = match platform {
+            LfsPlatform::GitHub => {
+                // GitHub LFS endpoint: https://github.com/{owner}/{repo}.git/info/lfs/objects/batch
+                format!("https://github.com/{}", repo_path.trim_start_matches('/'))
+            }
+            LfsPlatform::GitLab => {
+                // GitLab LFS endpoint: https://gitlab.com/{project_path}.git/info/lfs/objects/batch
+                format!("{}/{}", base, repo_path.trim_start_matches('/'))
+            }
+            LfsPlatform::Gitea => {
+                // Gitea/Forgejo LFS endpoint: https://instance/{owner}/{repo}.git/info/lfs/objects/batch
+                format!("{}/{}", base, repo_path.trim_start_matches('/'))
+            }
+        };
+
         Self {
-            lfs_url: lfs_url.trim_end_matches('/').to_string(),
+            git_url,
             token: token.to_string(),
-            repo_id: repo_id.to_string(),
-            use_batch_api: true,
+            platform,
         }
     }
 
-    /// GitHub LFS endpoint: POST /repos/{owner}/{repo}/git/lfs/batch
-    fn github_lfs_batch_url(&self) -> String {
-        format!("https://github.com/{}/git/lfs/batch", self.repo_id)
+    /// Build the standard LFS batch API endpoint.
+    /// Standard: {git_url}.git/info/lfs/objects/batch
+    fn batch_url(&self) -> String {
+        format!("{}.git/info/lfs/objects/batch", self.git_url)
     }
 
-    /// Generic GitLab/Codeberg/Gitea LFS endpoint: POST /{namespace/project}.git/info/lfs/batch
-    fn gitlab_lfs_batch_url(&self, base_url: &str) -> String {
-        format!(
-            "{}/{}/info/lfs/batch",
-            base_url.trim_end_matches('/'),
-            self.repo_id
-        )
+    /// Build the auth header value for LFS batch requests.
+    /// Different platforms use different auth mechanisms.
+    fn lfs_auth_header(&self) -> (String, String) {
+        match self.platform {
+            LfsPlatform::GitHub => {
+                // GitHub LFS accepts Bearer tokens or Basic auth with token as password
+                (
+                    String::from("Authorization"),
+                    format!("Bearer {}", self.token),
+                )
+            }
+            LfsPlatform::GitLab => {
+                // GitLab LFS uses HTTP Basic auth with:
+                //   username: anything (often "user" or empty)
+                //   password: personal access token
+                let basic = base64::engine::general_purpose::STANDARD
+                    .encode(format!("user:{}", self.token));
+                (String::from("Authorization"), format!("Basic {}", basic))
+            }
+            LfsPlatform::Gitea => {
+                // Gitea/Forgejo LFS uses HTTP Basic auth with:
+                //   username: access token (or empty)
+                //   password: (empty) — or token used as password
+                let basic =
+                    base64::engine::general_purpose::STANDARD.encode(format!("{}:", self.token));
+                (String::from("Authorization"), format!("Basic {}", basic))
+            }
+        }
     }
 
     /// Compute SHA-256 hex digest of file contents (LFS OID).
@@ -66,22 +130,14 @@ impl GitLfsClient {
 
     /// Upload a file via Git LFS batch API.
     /// Returns the LFS OID (SHA-256) of the uploaded content.
-    pub fn upload_via_lfs(
-        &self,
-        local_path: &str,
-        use_github: bool,
-        gitlab_base_url: Option<&str>,
-    ) -> Result<String, String> {
+    pub fn upload_via_lfs(&self, local_path: &str) -> Result<String, String> {
         let data = fs::read(local_path).map_err(|e| format!("read file for LFS: {}", e))?;
         let oid = Self::compute_oid(&data);
         let size = data.len() as u64;
 
         // 1. Send batch request to get upload URL
-        let batch_url = if use_github {
-            self.github_lfs_batch_url()
-        } else {
-            self.gitlab_lfs_batch_url(gitlab_base_url.unwrap_or("https://gitlab.com"))
-        };
+        let batch_url = self.batch_url();
+        let (auth_name, auth_val) = self.lfs_auth_header();
 
         let batch_req = LfsBatchRequest {
             operation: "upload".to_string(),
@@ -97,7 +153,7 @@ impl GitLfsClient {
         let client = http_client()?;
         let resp = client
             .post(&batch_url)
-            .header("Authorization", format!("Bearer {}", self.token))
+            .header(&auth_name, &auth_val)
             .header("Accept", "application/vnd.git-lfs+json")
             .header("Content-Type", "application/vnd.git-lfs+json")
             .json(&batch_req)
@@ -131,7 +187,7 @@ impl GitLfsClient {
             return Ok(oid);
         }
 
-        // 5. Upload to the action URL
+        // 5. Upload to the action URL using headers from the batch response
         let upload = obj
             .actions
             .as_ref()
@@ -170,19 +226,9 @@ impl GitLfsClient {
     }
 
     /// Download a file via Git LFS batch API.
-    pub fn download_via_lfs(
-        &self,
-        oid: &str,
-        size: u64,
-        local_path: &str,
-        use_github: bool,
-        gitlab_base_url: Option<&str>,
-    ) -> Result<(), String> {
-        let batch_url = if use_github {
-            self.github_lfs_batch_url()
-        } else {
-            self.gitlab_lfs_batch_url(gitlab_base_url.unwrap_or("https://gitlab.com"))
-        };
+    pub fn download_via_lfs(&self, oid: &str, size: u64, local_path: &str) -> Result<(), String> {
+        let batch_url = self.batch_url();
+        let (auth_name, auth_val) = self.lfs_auth_header();
 
         let batch_req = LfsBatchRequest {
             operation: "download".to_string(),
@@ -198,7 +244,7 @@ impl GitLfsClient {
         let client = http_client()?;
         let resp = client
             .post(&batch_url)
-            .header("Authorization", format!("Bearer {}", self.token))
+            .header(&auth_name, &auth_val)
             .header("Accept", "application/vnd.git-lfs+json")
             .header("Content-Type", "application/vnd.git-lfs+json")
             .json(&batch_req)
@@ -281,6 +327,11 @@ impl GitLfsClient {
         Ok(())
     }
 
+    /// Check if bytes are an LFS pointer file (starts with "version ").
+    pub fn is_lfs_pointer(data: &[u8]) -> bool {
+        data.starts_with(b"version ")
+    }
+
     /// Generate `.gitattributes` content for tracking encrypted/compressed files via LFS.
     pub fn generate_gitattributes() -> String {
         r#"# Cybermanju Drive — Git LFS tracking rules
@@ -308,30 +359,7 @@ impl GitLfsClient {
 
 # Blob storage directory
 .blobs/** filter=lfs diff=lfs merge=lfs -text
-
-# Media files
-*.mp4 filter=lfs diff=lfs merge=lfs -text
-*.mov filter=lfs diff=lfs merge=lfs -text
-*.avi filter=lfs diff=lfs merge=lfs -text
-*.mkv filter=lfs diff=lfs merge=lfs -text
-*.zip filter=lfs diff=lfs merge=lfs -text
-*.tar.gz filter=lfs diff=lfs merge=lfs -text
-*.7z filter=lfs diff=lfs merge=lfs -text
-*.rar filter=lfs diff=lfs merge=lfs -text
-*.iso filter=lfs diff=lfs merge=lfs -text
-*.bin filter=lfs diff=lfs merge=lfs -text
 "#
         .to_string()
-    }
-
-    /// Build the remote LFS URL for a given git provider.
-    pub fn build_lfs_url(backend_type: &str, repo: &str, base_url: Option<&str>) -> String {
-        match backend_type {
-            "github" => format!("https://github.com/{}", repo),
-            "gitlab" => format!("{}/{}", base_url.unwrap_or("https://gitlab.com"), repo),
-            "codeberg" => format!("https://codeberg.org/{}", repo),
-            "gitea" => format!("{}/{}", base_url.unwrap_or("https://try.gitea.io"), repo),
-            _ => format!("https://github.com/{}", repo),
-        }
     }
 }

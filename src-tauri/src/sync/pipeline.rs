@@ -209,14 +209,26 @@ impl SyncPipeline {
                 layout_mgr.ensure_gitattributes("github", token, "https://api.github.com")?;
             }
             SyncBackendType::GitLab => {
-                let base = self.config.base_path.as_deref().unwrap_or("https://gitlab.com");
+                let base = self
+                    .config
+                    .base_path
+                    .as_deref()
+                    .unwrap_or("https://gitlab.com");
                 layout_mgr.ensure_gitattributes("gitlab", token, &format!("{}/api/v4", base))?;
             }
             SyncBackendType::Codeberg => {
-                layout_mgr.ensure_gitattributes("codeberg", token, "https://codeberg.org/api/v1")?;
+                layout_mgr.ensure_gitattributes(
+                    "codeberg",
+                    token,
+                    "https://codeberg.org/api/v1",
+                )?;
             }
             SyncBackendType::Gitea => {
-                let base = self.config.base_path.as_deref().unwrap_or("https://try.gitea.io");
+                let base = self
+                    .config
+                    .base_path
+                    .as_deref()
+                    .unwrap_or("https://try.gitea.io");
                 layout_mgr.ensure_gitattributes("gitea", token, &format!("{}/api/v1", base))?;
             }
             _ => {}

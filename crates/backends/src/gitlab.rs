@@ -1,4 +1,4 @@
-use crate::git_lfs::GitLfsClient;
+use crate::git_lfs::{GitLfsClient, LfsPlatform};
 use crate::util::http_client;
 use base64::Engine;
 use cybermanju_types::sync::{RemoteFile, StorageBackend, SyncBackendType};
@@ -62,8 +62,13 @@ impl StorageBackend for GitLabBackend {
 
         // Use Git LFS for large files
         if self.should_use_lfs(file_size) {
-            let lfs = GitLfsClient::new(&self.base_url, &self.token, &self.project_id);
-            let oid = lfs.upload_via_lfs(local_path, false, Some(&self.base_url))?;
+            let lfs = GitLfsClient::new(
+                &self.base_url,
+                &self.project_id,
+                &self.token,
+                LfsPlatform::GitLab,
+            );
+            let oid = lfs.upload_via_lfs(local_path)?;
             let pointer = GitLfsClient::create_pointer(&oid, file_size);
             let pointer_content = pointer.to_string();
             return self.upload_content(pointer_content.as_bytes(), remote_path);
@@ -119,11 +124,14 @@ impl StorageBackend for GitLabBackend {
 
     fn download_file(&self, remote_path: &str, local_path: &str) -> Result<(), String> {
         let encoded = encode(remote_path);
+        // Use lfs=true parameter so GitLab resolves LFS pointers to actual content
+        let lfs_param = if self.use_lfs { "&lfs=true" } else { "" };
         let url = format!(
-            "{}/repository/files/{}/raw?ref={}",
+            "{}/repository/files/{}/raw?ref={}{}",
             self.api_url("repository"),
             encoded,
-            encode(&self.branch)
+            encode(&self.branch),
+            lfs_param
         );
         let client = http_client()?;
         let resp = client
@@ -136,18 +144,18 @@ impl StorageBackend for GitLabBackend {
         }
         let bytes = resp.bytes().map_err(|e| format!("body: {}", e))?;
 
-        // Check if it's an LFS pointer file
+        // Still check for LFS pointer in case lfs=true didn't resolve it
+        // (e.g. server doesn't support the parameter)
         if self.use_lfs && GitLfsClient::is_lfs_pointer(&bytes) {
             let pointer_str = String::from_utf8_lossy(&bytes);
             let pointer = cybermanju_types::sync::LfsPointer::from_string(&pointer_str)?;
-            let lfs = GitLfsClient::new(&self.base_url, &self.token, &self.project_id);
-            return lfs.download_via_lfs(
-                &pointer.oid,
-                pointer.size,
-                local_path,
-                false,
-                Some(&self.base_url),
+            let lfs = GitLfsClient::new(
+                &self.base_url,
+                &self.project_id,
+                &self.token,
+                LfsPlatform::GitLab,
             );
+            return lfs.download_via_lfs(&pointer.oid, pointer.size, local_path);
         }
 
         if let Some(p) = Path::new(local_path).parent() {
