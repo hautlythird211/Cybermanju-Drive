@@ -20,6 +20,7 @@ const bootError = ref(false)
 const usernameInput = ref('')
 const inputRef = ref<HTMLInputElement | null>(null)
 const bootPhase = ref<'post' | 'kernel' | 'done'>('post')
+const skipRequested = ref(false)
 
 /* --- Gaussian psychedelic spots --- */
 const spots = Array.from({ length: 18 }, (_, i) => ({
@@ -208,6 +209,10 @@ async function runBoot() {
   const bootLines = buildMergedBootLines(sysInfo)
 
   for (const entry of bootLines) {
+    if (skipRequested.value) {
+      progress.value = 100
+      break
+    }
     await new Promise(r => setTimeout(r, entry.delay + Math.random() * 30))
     addBootLine(entry.msg)
     progress.value = entry.pct
@@ -389,8 +394,16 @@ async function verifyAndConnectMega() {
   }
 }
 
+function handleSkipKey(e: KeyboardEvent) {
+  if (e.code === 'Space' && !ready.value && !dismissing.value && !skipRequested.value) {
+    e.preventDefault()
+    skipRequested.value = true
+  }
+}
+
 onMounted(() => {
   usernameInput.value = localStorage.getItem('cybermanju_username') || ''
+  window.addEventListener('keydown', handleSkipKey)
 
   glitchTimer = setInterval(() => {
     if (Math.random() < 0.04) triggerGlitch()
@@ -411,6 +424,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  window.removeEventListener('keydown', handleSkipKey)
   if (timer) clearTimeout(timer)
   if (glitchTimer) clearInterval(glitchTimer)
   if (bootTimeout) clearTimeout(bootTimeout)
@@ -528,6 +542,12 @@ onUnmounted(() => {
       <div class="boot-progress-track">
         <div class="boot-progress-fill" :style="{ width: progress + '%' }"></div>
         <div class="boot-progress-label">{{ progress }}%</div>
+      </div>
+      <div v-if="!ready && !skipRequested" class="boot-skip-hint">
+        <span class="skip-text">SPACE to skip</span>
+      </div>
+      <div v-else-if="skipRequested && !ready" class="boot-skip-hint">
+        <span class="skip-text skip-active">Skipping...</span>
       </div>
       <div class="boot-hints">
         <span v-if="bootError" class="boot-error-hint">BOOT ERROR — CHECK LOGS</span>
@@ -962,6 +982,30 @@ onUnmounted(() => {
   font-weight: 700;
   letter-spacing: 1px;
   text-shadow: 0 0 6px rgba(0, 255, 65, 0.2);
+}
+
+.boot-skip-hint {
+  text-align: center;
+  padding: 0 16px 6px;
+}
+
+.skip-text {
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.3);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  animation: skip-pulse 2s ease-in-out infinite;
+}
+
+.skip-active {
+  color: rgba(0, 255, 65, 0.6);
+  animation: none;
+}
+
+@keyframes skip-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
 }
 
 .boot-hints {

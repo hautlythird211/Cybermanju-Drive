@@ -307,7 +307,7 @@ onUnmounted(() => {
 }
 
 .desktop-wallpaper {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
@@ -460,7 +460,7 @@ onUnmounted(() => {
 }
 
 .desktop-dock {
-  position: fixed;
+  position: absolute;
   bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
@@ -469,7 +469,7 @@ onUnmounted(() => {
 
 /* ── Ambient background ── */
 .desktop-ambient {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 0;
   overflow: hidden;
