@@ -1,4 +1,5 @@
 use crate::util::http_client;
+use base64::Engine;
 use cybermanju_types::sync::RepoLayout;
 use sha2::{Digest, Sha256};
 use std::path::Path;
@@ -53,12 +54,7 @@ impl RepoLayoutManager {
                 });
                 if is_blob {
                     // blobs/{first 2 hex chars}/{next 2 hex chars}/{hash}.cyb3
-                    format!(
-                        ".blobs/{}/{}/{}.cyb3",
-                        &hash[..2],
-                        &hash[2..4],
-                        hash
-                    )
+                    format!(".blobs/{}/{}/{}.cyb3", &hash[..2], &hash[2..4], hash)
                 } else {
                     // Metadata files are still flat under meta/
                     format!("meta/{}", logical_path)
@@ -73,12 +69,7 @@ impl RepoLayoutManager {
                         h.update(logical_path.as_bytes());
                         &format!("{:x}", h.finalize())
                     });
-                    format!(
-                        "{}/{}/{}.cyb3",
-                        &hash[..2],
-                        &hash[2..4],
-                        hash
-                    )
+                    format!("{}/{}/{}.cyb3", &hash[..2], &hash[2..4], hash)
                 } else {
                     format!(".cybermanju/{}", logical_path)
                 }
@@ -89,9 +80,7 @@ impl RepoLayoutManager {
     /// Determine which repo (main or blob) a path belongs to in split layout.
     pub fn get_repo_for_path(&self, remote_path: &str, is_blob: bool) -> &str {
         if self.layout == RepoLayout::Split && is_blob {
-            self.blob_repo
-                .as_deref()
-                .unwrap_or(&self.main_repo)
+            self.blob_repo.as_deref().unwrap_or(&self.main_repo)
         } else {
             &self.main_repo
         }
@@ -176,10 +165,7 @@ impl RepoLayoutManager {
 
                 let body = serde_json::json!({
                     "message": "chore: add Cybermanju Drive LFS tracking rules",
-                    "content": base64::Engine::encode(
-                        &base64::engine::general_purpose::STANDARD,
-                        attrs_content.as_bytes(),
-                    ),
+                    "content": base64::engine::general_purpose::STANDARD.encode(attrs_content.as_bytes()),
                     "branch": self.branch,
                 });
 
@@ -219,12 +205,13 @@ impl RepoLayoutManager {
                     "commit_message": "chore: add Cybermanju Drive LFS tracking rules",
                 });
 
-                let check = client
-                    .head(&url)
-                    .header("PRIVATE-TOKEN", token)
-                    .send();
+                let check = client.head(&url).header("PRIVATE-TOKEN", token).send();
 
-                if check.ok().map(|r| r.status().as_u16() == 404).unwrap_or(true) {
+                if check
+                    .ok()
+                    .map(|r| r.status().as_u16() == 404)
+                    .unwrap_or(true)
+                {
                     let resp = client
                         .post(&url)
                         .header("PRIVATE-TOKEN", token)

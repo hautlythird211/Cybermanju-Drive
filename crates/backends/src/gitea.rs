@@ -32,7 +32,10 @@ impl GiteaBackend {
     }
 
     fn contents_url(&self, path: &str) -> String {
-        format!("{}/api/v1/repos/{}/contents/{}", self.base_url, self.repo, path)
+        format!(
+            "{}/api/v1/repos/{}/contents/{}",
+            self.base_url, self.repo, path
+        )
     }
 
     fn parse_repo(&self) -> Result<(String, String), String> {
@@ -86,8 +89,7 @@ impl StorageBackend for GiteaBackend {
                 .map_err(|e| format!("get existing: {}", e))?;
 
             let sha = if get_resp.status().is_success() {
-                let v: serde_json::Value =
-                    get_resp.json().map_err(|e| format!("parse: {}", e))?;
+                let v: serde_json::Value = get_resp.json().map_err(|e| format!("parse: {}", e))?;
                 v["sha"].as_str().unwrap_or("").to_string()
             } else {
                 String::new()
@@ -133,10 +135,7 @@ impl StorageBackend for GiteaBackend {
     fn download_file(&self, remote_path: &str, local_path: &str) -> Result<(), String> {
         let url = format!(
             "{}/api/v1/repos/{}/raw/{}?ref={}",
-            self.base_url,
-            self.repo,
-            remote_path,
-            self.branch
+            self.base_url, self.repo, remote_path, self.branch
         );
         let client = http_client()?;
         let resp = client

@@ -1,3 +1,4 @@
+use crate::git_lfs::GitLfsClient;
 use crate::util::http_client;
 use base64::Engine;
 use cybermanju_types::sync::{RemoteFile, StorageBackend, SyncBackendType};
@@ -5,11 +6,15 @@ use std::fs;
 use std::path::Path;
 use urlencoding::encode;
 
+/// LFS threshold for GitLab (files >= 1MB use LFS)
+const LFS_SIZE_THRESHOLD: u64 = 1_048_576;
+
 pub struct GitLabBackend {
     token: String,
     project_id: String,
     branch: String,
     base_url: String,
+    use_lfs: bool,
 }
 
 impl GitLabBackend {
@@ -22,7 +27,13 @@ impl GitLabBackend {
                 .unwrap_or("https://gitlab.com")
                 .trim_end_matches('/')
                 .to_string(),
+            use_lfs: false,
         }
+    }
+
+    pub fn with_lfs(mut self, use_lfs: bool) -> Self {
+        self.use_lfs = use_lfs;
+        self
     }
 
     fn api_url(&self, ep: &str) -> String {
@@ -30,6 +41,10 @@ impl GitLabBackend {
             "{}/api/v4/projects/{}/{}",
             self.base_url, self.project_id, ep
         )
+    }
+
+    fn should_use_lfs(&self, size: u64) -> bool {
+        self.use_lfs && size >= LFS_SIZE_THRESHOLD
     }
 }
 
@@ -43,7 +58,23 @@ impl StorageBackend for GitLabBackend {
 
     fn upload_file(&self, local_path: &str, remote_path: &str) -> Result<String, String> {
         let data = fs::read(local_path).map_err(|e| format!("read: {}", e))?;
-        let b64 = base64::engine::general_purpose::STANDARD.encode(&data);
+        let file_size = data.len() as u64;
+
+        // Use Git LFS for large files
+        if self.should_use_lfs(file_size) {
+            let lfs = GitLfsClient::new(&self.base_url, &self.token, &self.project_id);
+            let oid = lfs.upload_via_lfs(local_path, false, Some(&self.base_url))?;
+            let pointer = GitLfsClient::create_pointer(&oid, file_size);
+            let pointer_content = pointer.to_string();
+            return self.upload_content(pointer_content.as_bytes(), remote_path);
+        }
+
+        self.upload_content(&data, remote_path)
+    }
+
+    /// Internal helper: upload raw content via GitLab Repository Files API.
+    fn upload_content(&self, data: &[u8], remote_path: &str) -> Result<String, String> {
+        let b64 = base64::engine::general_purpose::STANDARD.encode(data);
         let encoded = encode(remote_path);
         let url = format!(
             "{}/repository/files/{}",
@@ -104,6 +135,21 @@ impl StorageBackend for GitLabBackend {
             return Err(format!("GitLab download: HTTP {}", resp.status()));
         }
         let bytes = resp.bytes().map_err(|e| format!("body: {}", e))?;
+
+        // Check if it's an LFS pointer file
+        if self.use_lfs && GitLfsClient::is_lfs_pointer(&bytes) {
+            let pointer_str = String::from_utf8_lossy(&bytes);
+            let pointer = cybermanju_types::sync::LfsPointer::from_string(&pointer_str)?;
+            let lfs = GitLfsClient::new(&self.base_url, &self.token, &self.project_id);
+            return lfs.download_via_lfs(
+                &pointer.oid,
+                pointer.size,
+                local_path,
+                false,
+                Some(&self.base_url),
+            );
+        }
+
         if let Some(p) = Path::new(local_path).parent() {
             fs::create_dir_all(p).map_err(|e| format!("mkdir: {}", e))?;
         }

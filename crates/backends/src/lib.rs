@@ -38,7 +38,7 @@ pub fn create_backend(
     let layout = config
         .get("repo_layout")
         .and_then(|v| v.as_str())
-        .map(RepoLayout::parse_str)
+        .map(RepoLayout::from_str)
         .unwrap_or(RepoLayout::Flat);
     let lfs_repo = config
         .get("lfs_repo")
@@ -73,9 +73,9 @@ pub fn create_backend(
                 .and_then(|v| v.as_str())
                 .unwrap_or("main");
             let base_url = config.get("base_url").and_then(|v| v.as_str());
-            Ok(Box::new(GitLabBackend::new(
-                token, project, branch, base_url,
-            )))
+            Ok(Box::new(
+                GitLabBackend::new(token, project, branch, base_url).with_lfs(use_lfs),
+            ))
         }
         SyncBackendType::Codeberg => {
             let repo = config

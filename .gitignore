@@ -36,6 +36,16 @@ tool-results/
 # Download artifacts
 download/
 
+# Cybermanju Drive blobs (encrypted/compressed content files)
+*.cyb3
+*.enc
+*.enc.meta.json
+.previews/
+.blobs/
+
+# Portable database
+*.cybermanju
+
 # Temp
 *.b64
 download-app/

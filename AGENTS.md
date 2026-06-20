@@ -17,7 +17,7 @@ cybermanju-drive/
 │   ├── portable-db/                 # .cybermanju compressed/encrypted portable DB
 │   ├── web/                         # Browser engine, DuckDuckGo search, HTML renderer
 │   ├── faces/                       # Face detection & clustering (4 algorithms)
-│   ├── backends/                    # Storage backends: Local, GitHub, GitLab, GDrive, GPhotos, Telegram, Mega
+│   ├── backends/                    # Storage backends: Local, GitHub, GitLab, Codeberg, Gitea, GDrive, GPhotos, Telegram, Mega + Git LFS client + repo layout manager
 │   ├── cli/                         # CLI/TUI app (clap + ratatui)
 │   ├── drive-wasm/                  # WASM bridge (crypto, compression, virtual drive, sync)
 │   └── tests/                       # Integration tests
@@ -69,7 +69,7 @@ Each command module in `src-tauri/src/commands/` delegates to the corresponding 
 - `commands/compression.rs` → `cybermanju-compression` (TripleCompressor)
 - `commands/search.rs` → `cybermanju-search` (SearchIndex)
 - `commands/faces.rs` → `cybermanju-faces` (clustering)
-- `commands/sync.rs` → `cybermanju-backends` (StorageBackend impls)
+- `commands/sync.rs` → `cybermanju-backends` (StorageBackend impls incl. GitHub/GitLab/Codeberg/Gitea, Git LFS, repo layout)
 - `commands/portable_db.rs` → `cybermanju-portable-db` (PortableDatabase)
 
 ## Build & Test Commands
@@ -114,6 +114,12 @@ docker build -t cybermanju-drive:latest .
 | `crates/crypto/src/pqc.rs` | PQC engine implementation |
 | `crates/db/src/database.rs` | Database schema and operations |
 | `crates/portable-db/src/lib.rs` | Portable database format |
+| `crates/backends/src/github.rs` | GitHub + Git LFS backend |
+| `crates/backends/src/gitlab.rs` | GitLab + Git LFS backend |
+| `crates/backends/src/codeberg.rs` | Codeberg (Forgejo) backend |
+| `crates/backends/src/gitea.rs` | Gitea/Forgejo self-hosted backend |
+| `crates/backends/src/git_lfs.rs` | Git LFS batch API client |
+| `crates/backends/src/repo_layout.rs` | .cybermanju repo structure manager |
 
 ## Code Style
 - Rust: 2021 edition, serde camelCase rename for all API types

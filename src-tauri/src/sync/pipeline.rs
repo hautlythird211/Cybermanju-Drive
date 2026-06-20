@@ -14,7 +14,9 @@ use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
+use cybermanju_backends::repo_layout::RepoLayoutManager;
 use cybermanju_portable_db::PortableDatabase;
+use cybermanju_types::sync::RepoLayout;
 
 // ===========================================================================
 // SyncPipeline
@@ -152,11 +154,75 @@ impl SyncPipeline {
 
         let backend = create_backend(&self.config)?;
 
+        // Initialize .gitattributes for git-based backends to ensure LFS is configured
+        self.init_repo_layout(state)?;
+
         if self.config.max_concurrent_uploads > 1 {
             self.sync_all_parallel(&file_ids, backend.as_ref(), state)
         } else {
             self.sync_all_sequential(&file_ids, backend.as_ref(), state)
         }
+    }
+
+    /// Initialize the remote repository layout: ensure .gitattributes exists
+    /// with proper LFS tracking rules for git-based backends.
+    fn init_repo_layout(&self, _state: &AppState) -> Result<(), String> {
+        let is_git_backend = matches!(
+            self.config.backend_type,
+            SyncBackendType::GitHub
+                | SyncBackendType::GitLab
+                | SyncBackendType::Codeberg
+                | SyncBackendType::Gitea
+        );
+
+        if !is_git_backend {
+            return Ok(());
+        }
+
+        let repo_name = self.config.repo_name.as_deref().unwrap_or("");
+        if repo_name.is_empty() {
+            return Ok(()); // No repo configured yet
+        }
+
+        let layout = self
+            .config
+            .repo_layout
+            .as_deref()
+            .map(RepoLayout::from_str)
+            .unwrap_or(RepoLayout::Flat);
+
+        let layout_mgr = RepoLayoutManager::new(
+            layout,
+            repo_name,
+            self.config.lfs_repo.clone(),
+            self.config.branch.as_deref().unwrap_or("main"),
+        );
+
+        let token = self.config.token.as_deref().unwrap_or("");
+        if token.is_empty() {
+            warn!("No token configured for git backend, skipping .gitattributes init");
+            return Ok(());
+        }
+
+        match self.config.backend_type {
+            SyncBackendType::GitHub => {
+                layout_mgr.ensure_gitattributes("github", token, "https://api.github.com")?;
+            }
+            SyncBackendType::GitLab => {
+                let base = self.config.base_path.as_deref().unwrap_or("https://gitlab.com");
+                layout_mgr.ensure_gitattributes("gitlab", token, &format!("{}/api/v4", base))?;
+            }
+            SyncBackendType::Codeberg => {
+                layout_mgr.ensure_gitattributes("codeberg", token, "https://codeberg.org/api/v1")?;
+            }
+            SyncBackendType::Gitea => {
+                let base = self.config.base_path.as_deref().unwrap_or("https://try.gitea.io");
+                layout_mgr.ensure_gitattributes("gitea", token, &format!("{}/api/v1", base))?;
+            }
+            _ => {}
+        }
+
+        Ok(())
     }
 
     /// Sequential sync — one file at a time (fallback).

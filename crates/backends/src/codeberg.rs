@@ -40,7 +40,10 @@ impl CodebergBackend {
     /// Forgejo/Gitea file API uses a different endpoint than GitLab.
     /// Content endpoint: GET /repos/{owner}/{repo}/contents/{path}
     fn contents_url(&self, path: &str) -> String {
-        format!("https://codeberg.org/api/v1/repos/{}/contents/{}", self.repo, path)
+        format!(
+            "https://codeberg.org/api/v1/repos/{}/contents/{}",
+            self.repo, path
+        )
     }
 }
 
@@ -87,8 +90,7 @@ impl StorageBackend for CodebergBackend {
                 .map_err(|e| format!("get existing file: {}", e))?;
 
             let sha = if get_resp.status().is_success() {
-                let v: serde_json::Value =
-                    get_resp.json().map_err(|e| format!("parse: {}", e))?;
+                let v: serde_json::Value = get_resp.json().map_err(|e| format!("parse: {}", e))?;
                 v["sha"].as_str().unwrap_or("").to_string()
             } else {
                 String::new()
@@ -127,9 +129,7 @@ impl StorageBackend for CodebergBackend {
 
         let raw_url = format!(
             "https://codeberg.org/api/v1/repos/{}/raw/{}?ref={}",
-            self.repo,
-            remote_path,
-            self.branch
+            self.repo, remote_path, self.branch
         );
         Ok(raw_url)
     }
@@ -137,9 +137,7 @@ impl StorageBackend for CodebergBackend {
     fn download_file(&self, remote_path: &str, local_path: &str) -> Result<(), String> {
         let url = format!(
             "https://codeberg.org/api/v1/repos/{}/raw/{}?ref={}",
-            self.repo,
-            remote_path,
-            self.branch
+            self.repo, remote_path, self.branch
         );
         let client = http_client()?;
         let resp = client

@@ -564,6 +564,26 @@ async function tryWasmInvoke<T>(cmd: string, args?: Record<string, unknown>): Pr
             return await sync.testMegaConnection(parts[0], parts[1], secondFactorCode) as unknown as T
           }
         }
+        // Test git provider connections via their API
+        if (config?.backendType === 'github' && config?.token) {
+          const resp = await fetch('https://api.github.com/user', {
+            headers: { Authorization: `Bearer ${config.token}` }
+          })
+          return resp.ok as unknown as T
+        }
+        if (config?.backendType === 'codeberg' && config?.token) {
+          const resp = await fetch('https://codeberg.org/api/v1/user', {
+            headers: { Authorization: `token ${config.token}` }
+          })
+          return resp.ok as unknown as T
+        }
+        if (config?.backendType === 'gitea' && config?.token) {
+          const baseUrl = (config?.basePath as string) || 'https://try.gitea.io'
+          const resp = await fetch(`${baseUrl}/api/v1/user`, {
+            headers: { Authorization: `token ${config.token}` }
+          })
+          return resp.ok as unknown as T
+        }
         return true as unknown as T
       }
 

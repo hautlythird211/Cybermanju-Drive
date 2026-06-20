@@ -72,11 +72,7 @@ impl GitHubBackend {
     }
 
     /// Upload a file via the standard Contents API (for small files).
-    fn upload_via_contents_api(
-        &self,
-        data: &[u8],
-        remote_path: &str,
-    ) -> Result<String, String> {
+    fn upload_via_contents_api(&self, data: &[u8], remote_path: &str) -> Result<String, String> {
         let (owner, repo) = self.parse_repo()?;
         let b64 = base64::engine::general_purpose::STANDARD.encode(data);
         let body = serde_json::json!({
@@ -122,7 +118,8 @@ impl StorageBackend for GitHubBackend {
         // Compute layout-aware remote path
         let layout_mgr = self.layout_mgr();
         let hash = GitLfsClient::compute_oid(&data);
-        let effective_path = layout_mgr.compute_remote_path(remote_path, Some(&hash), file_size > 1024);
+        let effective_path =
+            layout_mgr.compute_remote_path(remote_path, Some(&hash), file_size > 1024);
 
         if self.should_use_lfs(file_size) {
             // Upload via Git LFS

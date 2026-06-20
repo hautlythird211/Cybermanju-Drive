@@ -365,6 +365,12 @@ export async function listRemoteFiles(
       return listGoogleDriveFiles(token, prefix)
     } else if (_config.backendType === 'github') {
       return listGitHubFiles(token, prefix)
+    } else if (_config.backendType === 'gitlab') {
+      return listGitLabFiles(token, prefix)
+    } else if (_config.backendType === 'codeberg') {
+      return listCodebergFiles(token, prefix)
+    } else if (_config.backendType === 'gitea') {
+      return listGiteaFiles(token, prefix)
     }
 
     return []
@@ -411,6 +417,73 @@ async function listGitHubFiles(
     sizeBytes: f.size || 0,
     modifiedAt: new Date().toISOString(),
     url: f.html_url || '',
+  }))
+}
+
+async function listGitLabFiles(
+  token: OAuthToken,
+  prefix: string
+): Promise<RemoteFileInfo[]> {
+  const projectId = encodeURIComponent(prefix)
+  const response = await fetch(
+    `https://gitlab.com/api/v4/projects/${projectId}/repository/tree?per_page=100`,
+    { headers: { Authorization: `Bearer ${token.accessToken}` } }
+  )
+  if (!response.ok) throw new Error(`GitLab API error: ${response.status}`)
+  const data = await response.json()
+  return (Array.isArray(data) ? data : []).filter((f: any) => f.type !== 'tree').map((f: any) => ({
+    name: f.name,
+    path: f.path,
+    sizeBytes: 0,
+    modifiedAt: new Date().toISOString(),
+    url: `https://gitlab.com/${projectId}/-/raw/main/${f.path}`,
+  }))
+}
+
+async function listCodebergFiles(
+  token: OAuthToken,
+  prefix: string
+): Promise<RemoteFileInfo[]> {
+  const [owner, repo] = prefix.split('/')
+  if (!owner || !repo) return []
+
+  const response = await fetch(
+    `https://codeberg.org/api/v1/repos/${owner}/${repo}/contents`,
+    { headers: { Authorization: `Bearer ${token.accessToken}` } }
+  )
+  if (!response.ok) throw new Error(`Codeberg API error: ${response.status}`)
+  const data = await response.json()
+  return (Array.isArray(data) ? data : []).filter((f: any) => f.type !== 'dir').map((f: any) => ({
+    name: f.name,
+    path: f.path,
+    sizeBytes: f.size || 0,
+    modifiedAt: new Date().toISOString(),
+    url: f.download_url || '',
+  }))
+}
+
+async function listGiteaFiles(
+  token: OAuthToken,
+  prefix: string
+): Promise<RemoteFileInfo[]> {
+  const [owner, repo] = prefix.split('/')
+  if (!owner || !repo) return []
+
+  const baseUrl = prefix.includes('/') && prefix.split('/').length > 2
+    ? prefix.split('/').slice(0, -2).join('/')
+    : 'https://try.gitea.io'
+  const response = await fetch(
+    `${baseUrl}/api/v1/repos/${owner}/${repo}/contents`,
+    { headers: { Authorization: `Bearer ${token.accessToken}` } }
+  )
+  if (!response.ok) throw new Error(`Gitea API error: ${response.status}`)
+  const data = await response.json()
+  return (Array.isArray(data) ? data : []).filter((f: any) => f.type !== 'dir').map((f: any) => ({
+    name: f.name,
+    path: f.path,
+    sizeBytes: f.size || 0,
+    modifiedAt: new Date().toISOString(),
+    url: f.download_url || '',
   }))
 }
 

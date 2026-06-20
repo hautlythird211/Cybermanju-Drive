@@ -59,8 +59,12 @@ impl MegaBackend {
 }
 
 impl StorageBackend for MegaBackend {
-    fn name(&self) -> &str { "Mega" }
-    fn backend_type(&self) -> SyncBackendType { SyncBackendType::Mega }
+    fn name(&self) -> &str {
+        "Mega"
+    }
+    fn backend_type(&self) -> SyncBackendType {
+        SyncBackendType::Mega
+    }
 
     fn upload_file(&self, local_path: &str, remote_path: &str) -> Result<String, String> {
         let data = fs::read(local_path).map_err(|e| format!("read: {}", e))?;

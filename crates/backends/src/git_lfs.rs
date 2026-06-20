@@ -31,10 +31,7 @@ impl GitLfsClient {
 
     /// GitHub LFS endpoint: POST /repos/{owner}/{repo}/git/lfs/batch
     fn github_lfs_batch_url(&self) -> String {
-        format!(
-            "https://github.com/{}/git/lfs/batch",
-            self.repo_id
-        )
+        format!("https://github.com/{}/git/lfs/batch", self.repo_id)
     }
 
     /// Generic GitLab/Codeberg/Gitea LFS endpoint: POST /{namespace/project}.git/info/lfs/batch
@@ -113,8 +110,9 @@ impl GitLfsClient {
             return Err(format!("LFS batch request failed ({}): {}", status, body));
         }
 
-        let batch_resp: LfsBatchResponse =
-            resp.json().map_err(|e| format!("parse LFS batch response: {}", e))?;
+        let batch_resp: LfsBatchResponse = resp
+            .json()
+            .map_err(|e| format!("parse LFS batch response: {}", e))?;
 
         // 2. Find our object in the response
         let obj = batch_resp
@@ -165,10 +163,7 @@ impl GitLfsClient {
             .map_err(|e| format!("LFS upload to {}: {}", upload.href, e))?;
 
         if !upload_resp.status().is_success() {
-            return Err(format!(
-                "LFS upload failed: HTTP {}",
-                upload_resp.status()
-            ));
+            return Err(format!("LFS upload failed: HTTP {}", upload_resp.status()));
         }
 
         Ok(oid)
@@ -212,11 +207,16 @@ impl GitLfsClient {
 
         if !resp.status().is_success() {
             let body = resp.text().unwrap_or_default();
-            return Err(format!("LFS download batch failed ({}): {}", resp.status(), body));
+            return Err(format!(
+                "LFS download batch failed ({}): {}",
+                resp.status(),
+                body
+            ));
         }
 
-        let batch_resp: LfsBatchResponse =
-            resp.json().map_err(|e| format!("parse LFS batch response: {}", e))?;
+        let batch_resp: LfsBatchResponse = resp
+            .json()
+            .map_err(|e| format!("parse LFS batch response: {}", e))?;
 
         let obj = batch_resp
             .objects
@@ -254,7 +254,10 @@ impl GitLfsClient {
             .map_err(|e| format!("LFS download from {}: {}", download.href, e))?;
 
         if !download_resp.status().is_success() {
-            return Err(format!("LFS download failed: HTTP {}", download_resp.status()));
+            return Err(format!(
+                "LFS download failed: HTTP {}",
+                download_resp.status()
+            ));
         }
 
         let data = download_resp
@@ -317,24 +320,17 @@ impl GitLfsClient {
 *.rar filter=lfs diff=lfs merge=lfs -text
 *.iso filter=lfs diff=lfs merge=lfs -text
 *.bin filter=lfs diff=lfs merge=lfs -text
-"#.to_string()
+"#
+        .to_string()
     }
 
     /// Build the remote LFS URL for a given git provider.
     pub fn build_lfs_url(backend_type: &str, repo: &str, base_url: Option<&str>) -> String {
         match backend_type {
             "github" => format!("https://github.com/{}", repo),
-            "gitlab" => format!(
-                "{}/{}",
-                base_url.unwrap_or("https://gitlab.com"),
-                repo
-            ),
+            "gitlab" => format!("{}/{}", base_url.unwrap_or("https://gitlab.com"), repo),
             "codeberg" => format!("https://codeberg.org/{}", repo),
-            "gitea" => format!(
-                "{}/{}",
-                base_url.unwrap_or("https://try.gitea.io"),
-                repo
-            ),
+            "gitea" => format!("{}/{}", base_url.unwrap_or("https://try.gitea.io"), repo),
             _ => format!("https://github.com/{}", repo),
         }
     }

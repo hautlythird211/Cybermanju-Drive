@@ -33,6 +33,7 @@ pub fn create_backend(config: &SyncConfig) -> Result<Box<dyn StorageBackend>, St
                 "project": config.repo_name,
                 "branch": config.branch,
                 "base_url": config.base_path,
+                "use_git_lfs": config.use_git_lfs,
             });
             cybermanju_backends::create_backend(&config.backend_type, token, &cfg)
         }
@@ -80,6 +81,6 @@ pub fn create_backend(config: &SyncConfig) -> Result<Box<dyn StorageBackend>, St
 
 // Re-export all shared backend structs for any code that references them directly.
 pub use cybermanju_backends::{
-    transfer_files, CodebergBackend, GitHubBackend, GiteaBackend, GitLabBackend,
+    transfer_files, CodebergBackend, GitHubBackend, GitLabBackend, GiteaBackend,
     GoogleDriveBackend, GooglePhotosBackend, LocalBackend, MegaBackend, TelegramBackend,
 };

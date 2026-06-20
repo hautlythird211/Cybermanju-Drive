@@ -11,7 +11,8 @@
 ]}
 {"type": "crate_detail", "name": "cybermanju-types", "path": "crates/types", "src_files": ["src/lib.rs", "src/schema.rs", "src/sync.rs"], "description": "Foundation types crate — every other crate (including src-tauri) depends on this. Defines all data models, enums, and the StorageBackend trait.", "deps": ["serde (derive)", "serde_json"], "exports": [
   {"schema types": ["FileNode", "Account", "Collection", "CollectionItem", "FaceGroup", "EncryptionKey", "LooseGroup", "User", "UserFilePermission", "Location", "TrashItem", "AuditEntry", "FileVersion", "ShareLink", "FileRelation", "DeletionRecord", "RecoveryEntry", "PortableHeader", "ContentStoreEntry", "PreviewStoreEntry"]},
-  {"sync types": ["SyncBackendType (Local/GitHub/GitLab/GoogleDrive/GooglePhotos/Telegram/Mega)", "SyncStatus (Idle/Scanning/Compressing/Uploading/Linking/Cleaning/Error/Done/Syncing/Completed/Cancelled)", "CloudAccount", "OAuthCredentials", "SyncFile", "SyncConfig", "SyncProgress", "SyncResult", "RemoteFile"]},
+      {"sync types": ["SyncBackendType (Local/GitHub/GitLab/Codeberg/Gitea/GoogleDrive/GooglePhotos/Telegram/Mega)", "SyncStatus (Idle/Scanning/Compressing/Uploading/Linking/Cleaning/Error/Done/Syncing/Completed/Cancelled)", "CloudAccount", "OAuthCredentials", "SyncFile", "SyncConfig", "SyncProgress", "SyncResult", "RemoteFile"]},
+  {"lfs types": ["LfsBatchRequest", "LfsBatchResponse", "LfsObject", "LfsObjectResponse", "LfsActions", "LfsAction", "LfsError", "LfsPointer", "RepoLayout (Flat/Sharded/Split)"]},
   {"trait": "StorageBackend: Send + Sync { name(), backend_type(), upload_file(), download_file(), delete_file(), list_files(), get_file_url(), test_connection() }"}
 ], "used_by": ["db", "crypto", "faces", "backends", "portable-db", "tests", "cli", "src-tauri", "drive-wasm"]}
 {"type": "crate_detail", "name": "cybermanju-crypto", "path": "crates/crypto", "src_files": ["src/lib.rs", "src/pqc.rs"], "description": "Post-quantum cryptography engine implementing NIST FIPS 203 (ML-KEM) and FIPS 204 (ML-DSA). Uses real pqcrypto-mlkem and ml-dsa crates — no stubs or placeholders.", "deps": ["anyhow", "base64", "blake3", "chacha20poly1305", "chrono", "hkdf", "hmac", "ml-dsa 0.1.1", "pqcrypto-mlkem 0.1", "pqcrypto-traits 0.3", "rand_core", "serde/serde_json", "sha2", "signature 3", "uuid", "x25519-dalek 2"], "exports": [
@@ -152,16 +153,20 @@
     "has_changes() -> bool", "reset()", "to_json() -> String", "from_json(json) -> SyncEngine"
   ]
 }, "used_by": ["Frontend: src/wasm/ modules load via import('cybermanju-drive-wasm')"]}
-{"type": "crate_detail", "name": "cybermanju-backends", "path": "crates/backends", "src_files": ["src/lib.rs", "src/local.rs", "src/github.rs", "src/gitlab.rs", "src/google_drive.rs", "src/google_photos.rs", "src/telegram.rs", "src/mega.rs", "src/transfer.rs", "src/util.rs"], "description": "Storage backend implementations for cloud sync. Each backend implements the StorageBackend trait. Also provides cross-backend file transfer with progress callbacks.", "deps": ["cybermanju-types", "serde/serde_json", "reqwest (blocking, json, multipart)", "base64", "chrono", "log", "urlencoding 2", "megalib 0.11", "tokio"], "backends": [
+{"type": "crate_detail", "name": "cybermanju-backends", "path": "crates/backends", "src_files": ["src/lib.rs", "src/local.rs", "src/github.rs", "src/gitlab.rs", "src/codeberg.rs", "src/gitea.rs", "src/git_lfs.rs", "src/repo_layout.rs", "src/google_drive.rs", "src/google_photos.rs", "src/telegram.rs", "src/mega.rs", "src/transfer.rs", "src/util.rs"], "description": "Storage backend implementations for cloud sync. Each backend implements the StorageBackend trait. Also provides cross-backend file transfer with progress callbacks, Git LFS batch API client, and .cybermanju repo structure manager.",   "deps": ["cybermanju-types", "serde/serde_json", "reqwest (blocking, json, multipart, rustls-tls)", "base64", "chrono", "log", "urlencoding 2", "megalib 0.11", "tokio", "sha2 0.10"], "backends": [
   {"name": "LocalBackend", "protocol": "std::fs copy to local directory", "auth": "None"},
+  {"name": "GitLfsClient", "protocol": "Git LFS Batch API v1 — SHA-256 OID, basic transfer, upload/download/verify actions", "auth": "Bearer token or PRIVATE-TOKEN"},
+  {"name": "RepoLayoutManager", "protocol": ".cybermanju repo structure manager — flat, sharded (hash-prefix dirs), or split (meta+blob repos)", "auth": "Delegated to backend"},
   {"name": "GitHubBackend", "protocol": "GitHub Contents API for files <25MB, GitHub Releases for larger (up to 2GB)", "auth": "Personal Access Token"},
-  {"name": "GitLabBackend", "protocol": "GitLab Repository Files API", "auth": "Personal Access Token"},
+  {"name": "GitLabBackend", "protocol": "GitLab Repository Files API with LFS support", "auth": "Personal Access Token"},
+  {"name": "CodebergBackend", "protocol": "Codeberg (Forgejo/Gitea) Repository API v1", "auth": "Personal Access Token or OAuth2"},
+  {"name": "GiteaBackend", "protocol": "Gitea/Forgejo Repository API v1 — supports any self-hosted instance", "auth": "Personal Access Token or OAuth2"},
   {"name": "GoogleDriveBackend", "protocol": "Google Drive API v3 (REST)", "auth": "OAuth 2.0"},
   {"name": "GooglePhotosBackend", "protocol": "Google Photos Library API (curl-based)", "auth": "OAuth 2.0"},
   {"name": "TelegramBackend", "protocol": "Telegram Bot API", "auth": "Bot Token"},
   {"name": "MegaBackend", "protocol": "MEGA API via megalib crate", "auth": "Email + Password (+ 2FA)"}
 ], "exports": [
-  "LocalBackend", "GitHubBackend", "GitLabBackend", "GoogleDriveBackend", "GooglePhotosBackend", "TelegramBackend", "MegaBackend",
+  "LocalBackend", "GitHubBackend", "GitLabBackend", "CodebergBackend", "GiteaBackend", "GitLfsClient", "RepoLayoutManager", "GoogleDriveBackend", "GooglePhotosBackend", "TelegramBackend", "MegaBackend",
   "transfer_files(source_backend, dest_backend, file_mappings, progress_cb) -> Result<TransferSummary>",
   "ProgressCallback: Fn(TransferProgress)",
   "TransferProgress { current, total, current_file, bytes_copied, errors }"
@@ -245,7 +250,7 @@
   {"name": "drive.ts", "wraps": "WASM VirtualDrive + IndexedDB persistence layer", "purpose": "In-browser virtual file system with create/read/update/delete, search, geo, starred files, quota tracking. Persists to IndexedDB."},
   {"name": "storage.ts", "purpose": "IndexedDB-backed KV store (setItem/getItem/removeItem/clear)"},
   {"name": "sync.ts", "wraps": "SyncEngine + IndexedDB persistence", "purpose": "Browser sync state: configs, file entries, progress tracking, remote file listing"},
-  {"name": "oauth.ts", "purpose": "Browser OAuth flow handler for Google, GitHub, GitLab, Telegram"},
+  {"name": "oauth.ts", "purpose": "Browser OAuth flow handler for Google, GitHub, GitLab, Codeberg, Gitea, Telegram"},
   {"name": "transfer.ts", "purpose": "Browser-side cross-backend file transfer operations"},
   {"name": "native-fs.ts", "purpose": "File System Access API wrappers: openDirectory, openFiles, readFile, writeFile, listDirectory, resolveHandle, persistHandle"},
   {"name": "data.ts", "purpose": "IndexedDB data access layer: accounts CRUD, collections CRUD, face groups, encryption keys, users, locations"}

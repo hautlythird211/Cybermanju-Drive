@@ -248,9 +248,9 @@ pub struct LfsError {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LfsPointer {
-    pub version: String,   // "https://git-lfs.github.com/spec/v1"
-    pub oid: String,       // SHA-256 hex of the large file
-    pub size: u64,         // Size in bytes
+    pub version: String, // "https://git-lfs.github.com/spec/v1"
+    pub oid: String,     // SHA-256 hex of the large file
+    pub size: u64,       // Size in bytes
 }
 
 impl std::fmt::Display for LfsPointer {
@@ -316,7 +316,7 @@ impl std::fmt::Display for RepoLayout {
 }
 
 impl RepoLayout {
-    pub fn parse_str(s: &str) -> Self {
+    pub fn from_str(s: &str) -> Self {
         match s {
             "sharded" => Self::Sharded,
             "split" => Self::Split,
