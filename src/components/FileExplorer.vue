@@ -799,7 +799,7 @@ onMounted(() => {
   --bg-secondary: var(--bg-elevated);
   --bg-tertiary: var(--bg-overlay);
   --bg-hover: rgba(255, 255, 255, 0.04);
-  --bg-active: rgba(0, 255, 65, 0.06);
+  --bg-active: rgba(var(--accent-rgb), 0.06);
   --text-primary: var(--text-primary);
   --text-secondary: var(--text-secondary);
   --text-tertiary: var(--text-muted);

@@ -301,7 +301,7 @@ onUnmounted(() => {
 
 .dock-item.active .dock-iconify {
   color: rgba(255, 255, 255, 0.9);
-  filter: drop-shadow(0 0 6px rgba(0, 255, 65, 0.15));
+  filter: drop-shadow(0 0 6px rgba(var(--accent-rgb), 0.15));
 }
 
 .dock-item:hover .dock-iconify {
@@ -353,7 +353,7 @@ onUnmounted(() => {
   width: 16px;
   border-radius: 2px;
   height: 3px;
-  box-shadow: 0 0 8px rgba(0, 255, 65, 0.2);
+  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.2);
 }
 
 .indicator-dot.muted {

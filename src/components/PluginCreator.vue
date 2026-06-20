@@ -199,7 +199,7 @@ onMounted(loadPlugins)
 .plugin-creator {
   display: flex;
   height: 100%;
-  background: #0a0a0a;
+  background: var(--bg-surface);
   color: #e0e0e0;
   font-family: var(--font-mono);
 }

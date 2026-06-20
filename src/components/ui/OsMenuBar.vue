@@ -245,7 +245,7 @@ onUnmounted(() => {
 
 .os-menubar--neon {
   background: var(--bg-surface);
-  border-bottom: 1px solid rgba(0, 255, 65, 0.15);
+  border-bottom: 1px solid rgba(var(--accent-rgb), 0.15);
 }
 
 .os-menubar--gothic {

@@ -162,7 +162,7 @@ onUnmounted(() => {
 
 .os-dock--neon {
   background: rgba(0, 0, 0, 0.7);
-  border: 1px solid rgba(0, 255, 65, 0.2);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
   box-shadow: 0 0 12px var(--accent-dim);
 }
 

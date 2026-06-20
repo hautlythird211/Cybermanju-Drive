@@ -162,7 +162,7 @@ onUnmounted(() => { stopDrag() })
 }
 .os-window.focused {
   border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 255, 65, 0.15);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(var(--accent-rgb), 0.15);
 }
 .os-window--maximized {
   border-radius: 0;
@@ -176,16 +176,16 @@ onUnmounted(() => { stopDrag() })
   -webkit-backdrop-filter: blur(24px) saturate(1.6);
 }
 .os-window--glass.focused {
-  border-color: rgba(0, 255, 65, 0.1);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 255, 65, 0.06);
+  border-color: rgba(var(--accent-rgb), 0.1);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(var(--accent-rgb), 0.06);
 }
 .os-window--neon {
-  border-color: rgba(0, 255, 65, 0.12);
+  border-color: rgba(var(--accent-rgb), 0.12);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 255, 65, 0.03);
 }
 .os-window--neon.focused {
   border-color: rgba(0, 255, 65, 0.25);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 255, 65, 0.06);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), 0 0 30px rgba(var(--accent-rgb), 0.06);
 }
 .os-window--gothic { background: rgba(10, 5, 5, 0.94); border-color: rgba(60, 15, 15, 0.5); }
 .os-window--gothic.focused { border-color: rgba(80, 20, 20, 0.7); }
@@ -200,7 +200,7 @@ onUnmounted(() => { stopDrag() })
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 .os-window--apple.focused {
-  border-color: rgba(0, 255, 65, 0.08);
+  border-color: rgba(var(--accent-rgb), 0.08);
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 30px rgba(0, 255, 65, 0.02);
 }
 
@@ -224,7 +224,7 @@ onUnmounted(() => { stopDrag() })
 }
 
 .os-window--glass .os-window__titlebar { background: rgba(0, 0, 0, 0.2); border-bottom: 1px solid rgba(255, 255, 255, 0.03); }
-.os-window--neon .os-window__titlebar { border-bottom-color: rgba(0, 255, 65, 0.06); }
+.os-window--neon .os-window__titlebar { border-bottom-color: rgba(var(--accent-rgb), 0.06); }
 .os-window--gothic .os-window__titlebar { border-bottom-color: rgba(60, 15, 15, 0.3); }
 .os-window--cute .os-window__titlebar { border-bottom-color: rgba(255, 107, 157, 0.06); }
 .os-window--apple .os-window__titlebar { background: rgba(0, 0, 0, 0.15); border-bottom: 1px solid rgba(255, 255, 255, 0.03); }

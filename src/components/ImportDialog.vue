@@ -324,7 +324,7 @@ watch(() => props.visible, (v) => {
   align-items: center;
   justify-content: space-between;
   padding: 10px 18px;
-  border-bottom: 1px solid #0a0a0a;
+  border-bottom: 1px solid var(--border-subtle);
   background: #080808;
 }
 
@@ -339,7 +339,7 @@ watch(() => props.visible, (v) => {
 }
 
 .import-select-all input {
-  accent-color: #00ff41;
+  accent-color: var(--text-accent);
 }
 
 .import-type-filter {
@@ -362,8 +362,8 @@ watch(() => props.visible, (v) => {
 }
 
 .import-type-filter button.active {
-  border-color: #00ff41;
-  color: #00ff41;
+  border-color: var(--text-accent);
+  color: var(--text-accent);
   background: rgba(0, 255, 65, 0.04);
 }
 
@@ -408,7 +408,7 @@ watch(() => props.visible, (v) => {
 }
 
 .import-file input {
-  accent-color: #00ff41;
+  accent-color: var(--text-accent);
   flex-shrink: 0;
 }
 
@@ -420,7 +420,7 @@ watch(() => props.visible, (v) => {
   justify-content: center;
   flex-shrink: 0;
   border-radius: 4px;
-  background: #0a0a0a;
+  background: var(--bg-surface);
 }
 
 .import-file-info {
@@ -482,14 +482,14 @@ watch(() => props.visible, (v) => {
 }
 
 .bw-btn-inverse {
-  border-color: #00ff41;
-  color: #00ff41;
-  text-shadow: 0 0 4px rgba(0, 255, 65, 0.15);
+  border-color: var(--text-accent);
+  color: var(--text-accent);
+  text-shadow: 0 0 4px rgba(var(--accent-rgb), 0.15);
 }
 
 .bw-btn-inverse:hover {
-  background: rgba(0, 255, 65, 0.08);
-  box-shadow: 0 0 12px rgba(0, 255, 65, 0.1);
+  background: rgba(var(--accent-rgb), 0.08);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.1);
 }
 
 .bw-btn:disabled {

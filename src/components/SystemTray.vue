@@ -218,7 +218,7 @@ onUnmounted(() => {
   border-radius: 50%;
   background: var(--accent);
   cursor: pointer;
-  box-shadow: 0 0 6px rgba(0, 255, 65, 0.3);
+  box-shadow: 0 0 6px rgba(var(--accent-rgb), 0.3);
 }
 
 .popup-value {
@@ -262,8 +262,8 @@ onUnmounted(() => {
 .cal-today {
   color: var(--accent);
   font-weight: 700;
-  background: rgba(0, 255, 65, 0.08);
-  box-shadow: 0 0 4px rgba(0, 255, 65, 0.15);
+  background: rgba(var(--accent-rgb), 0.08);
+  box-shadow: 0 0 4px rgba(var(--accent-rgb), 0.15);
 }
 
 .calendar-events {

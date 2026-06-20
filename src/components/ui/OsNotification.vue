@@ -131,7 +131,7 @@ onUnmounted(() => {
   background: var(--bg-glass-heavy);
   backdrop-filter: blur(var(--glass-blur-xl));
   -webkit-backdrop-filter: blur(var(--glass-blur-xl));
-  border: 1px solid rgba(0, 255, 65, 0.2);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
   color: var(--text-accent);
   box-shadow: var(--shadow-dropdown), var(--glow-accent);
   border-left: 3px solid var(--accent);

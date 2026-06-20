@@ -243,7 +243,7 @@ onUnmounted(() => {
 }
 .os-btn--neon:hover {
   background: var(--accent-dim);
-  box-shadow: var(--glow-accent), 0 0 16px var(--accent-glow), inset 0 0 12px rgba(0, 255, 65, 0.08);
+  box-shadow: var(--glow-accent), 0 0 16px var(--accent-glow), inset 0 0 12px rgba(var(--accent-rgb), 0.08);
 }
 
 /* variant: gothic */

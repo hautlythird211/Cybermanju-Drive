@@ -170,7 +170,7 @@ onUnmounted(() => {
 
 .os-modal--neon {
   background: var(--bg-surface);
-  border: 1px solid rgba(0, 255, 65, 0.3);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
   box-shadow: 0 0 24px var(--accent-dim), var(--glow-accent);
 }
 

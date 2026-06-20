@@ -64,7 +64,7 @@ const cls = computed(() => [
   background: var(--gradient-accent);
   background-size: 200% 100%;
   animation: shimmer 3s ease-in-out infinite;
-  border: 1px solid rgba(0, 255, 65, 0.2);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
   color: var(--text-accent);
 }
 

@@ -387,7 +387,7 @@ onUnmounted(() => {
   font-weight: 800;
   color: var(--text-accent);
   letter-spacing: 4px;
-  text-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
+  text-shadow: 0 0 20px rgba(var(--accent-rgb), 0.2);
 }
 
 .overview-grid {
@@ -417,20 +417,20 @@ onUnmounted(() => {
 }
 
 .overview-screen:hover {
-  border-color: rgba(0, 255, 65, 0.2);
+  border-color: rgba(var(--accent-rgb), 0.2);
   transform: translateY(-4px) scale(1.03);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 255, 65, 0.04);
 }
 
 .overview-screen.hovered {
-  border-color: rgba(0, 255, 65, 0.3);
+  border-color: rgba(var(--accent-rgb), 0.3);
   box-shadow:
-    0 0 20px rgba(0, 255, 65, 0.08),
+    0 0 20px rgba(var(--accent-rgb), 0.08),
     inset 0 0 30px rgba(0, 255, 65, 0.02);
 }
 
 .overview-screen.active {
-  border-color: rgba(0, 255, 65, 0.2);
+  border-color: rgba(var(--accent-rgb), 0.2);
 }
 
 .overview-screen-label {
@@ -526,7 +526,7 @@ onUnmounted(() => {
 .ambient-orb--1 {
   width: clamp(300px, 50vw, 700px);
   height: clamp(300px, 50vw, 700px);
-  background: radial-gradient(circle, rgba(0, 255, 65, 0.12), rgba(0, 200, 255, 0.04) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.12), rgba(0, 200, 255, 0.04) 50%, transparent 70%);
   top: -10%;
   left: -10%;
   animation: ambient-drift-1 12s ease-in-out infinite;

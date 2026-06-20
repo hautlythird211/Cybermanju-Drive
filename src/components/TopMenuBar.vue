@@ -425,7 +425,7 @@ onUnmounted(() => {
   height: 1px;
   background: linear-gradient(90deg,
     transparent 0%,
-    rgba(0, 255, 65, 0.15) 20%,
+    rgba(var(--accent-rgb), 0.15) 20%,
     rgba(90, 240, 255, 0.12) 40%,
     rgba(179, 136, 255, 0.12) 60%,
     rgba(255, 107, 157, 0.1) 80%,
@@ -459,7 +459,7 @@ onUnmounted(() => {
 
 .app-logo:hover .logo-brand {
   color: var(--accent);
-  text-shadow: 0 0 12px rgba(0, 255, 65, 0.3);
+  text-shadow: 0 0 12px rgba(var(--accent-rgb), 0.3);
 }
 
 .logo-brand {
@@ -577,7 +577,7 @@ onUnmounted(() => {
 }
 
 .menu-dropdown-item:hover {
-  background: rgba(0, 255, 65, 0.06);
+  background: rgba(var(--accent-rgb), 0.06);
   color: var(--text-primary);
   padding-left: 12px;
 }
@@ -640,7 +640,7 @@ onUnmounted(() => {
 }
 
 .search-wrap:focus-within {
-  border-color: rgba(0, 255, 65, 0.2);
+  border-color: rgba(var(--accent-rgb), 0.2);
   box-shadow: 0 0 8px rgba(0, 255, 65, 0.04);
 }
 
@@ -749,7 +749,7 @@ onUnmounted(() => {
 .tmb-active {
   color: var(--accent);
   font-weight: 700;
-  text-shadow: 0 0 8px rgba(0, 255, 65, 0.2);
+  text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.2);
 }
 
 .tmb-info {
@@ -764,7 +764,7 @@ onUnmounted(() => {
   font-weight: 700;
   font-size: var(--font-size-xs);
   color: var(--accent);
-  border: 1px solid rgba(0, 255, 65, 0.2);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
   padding: 1px 5px;
   border-radius: 3px;
   white-space: nowrap;

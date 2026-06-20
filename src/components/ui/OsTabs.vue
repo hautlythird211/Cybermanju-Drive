@@ -215,7 +215,7 @@ onUnmounted(() => {
 /* variant: neon */
 .os-tabs--neon { gap: 4px; }
 .os-tabs--neon .os-tabs__tab { border: 1px solid transparent; border-radius: var(--radius-sm); }
-.os-tabs--neon .os-tabs__tab--active { border-color: rgba(0, 255, 65, 0.3); color: var(--text-accent); text-shadow: 0 0 4px var(--accent-glow); }
+.os-tabs--neon .os-tabs__tab--active { border-color: rgba(var(--accent-rgb), 0.3); color: var(--text-accent); text-shadow: 0 0 4px var(--accent-glow); }
 
 /* variant: gothic */
 .os-tabs--gothic { gap: 2px; }

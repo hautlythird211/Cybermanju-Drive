@@ -390,9 +390,9 @@ async function doOAuth(provider: OAuthProvider, storageKey: OAuthProvider, oauth
 .login-title {
   font-size: 13px;
   font-weight: 800;
-  color: #00ff41;
+  color: var(--text-accent);
   letter-spacing: 2px;
-  text-shadow: 0 0 8px rgba(0, 255, 65, 0.12);
+  text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.12);
 }
 
 .login-subtitle {
@@ -437,7 +437,7 @@ async function doOAuth(provider: OAuthProvider, storageKey: OAuthProvider, oauth
 
 .login-input {
   width: 100%;
-  background: #0a0a0a;
+  background: var(--bg-surface);
   border: 1px solid #1a1a1a;
   border-radius: 6px;
   color: #e0e0e0;
@@ -449,8 +449,8 @@ async function doOAuth(provider: OAuthProvider, storageKey: OAuthProvider, oauth
 }
 
 .login-input:focus {
-  border-color: #00ff41;
-  box-shadow: 0 0 8px rgba(0, 255, 65, 0.08);
+  border-color: var(--text-accent);
+  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.08);
 }
 
 .login-input::placeholder {
@@ -484,15 +484,15 @@ async function doOAuth(provider: OAuthProvider, storageKey: OAuthProvider, oauth
 }
 
 .btn-primary {
-  background: rgba(0, 255, 65, 0.08);
+  background: rgba(var(--accent-rgb), 0.08);
   border: 1px solid #00ff41;
-  color: #00ff41;
-  text-shadow: 0 0 4px rgba(0, 255, 65, 0.15);
+  color: var(--text-accent);
+  text-shadow: 0 0 4px rgba(var(--accent-rgb), 0.15);
 }
 
 .btn-primary:hover {
-  background: rgba(0, 255, 65, 0.15);
-  box-shadow: 0 0 12px rgba(0, 255, 65, 0.1);
+  background: rgba(var(--accent-rgb), 0.15);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.1);
 }
 
 .btn-secondary {
@@ -534,7 +534,7 @@ async function doOAuth(provider: OAuthProvider, storageKey: OAuthProvider, oauth
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  background: #0a0a0a;
+  background: var(--bg-surface);
   border: 1px solid #1a1a1a;
   border-radius: 8px;
   cursor: pointer;

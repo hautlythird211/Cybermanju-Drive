@@ -118,7 +118,7 @@ onUnmounted(() => {
 .os-toggle--default.os-toggle--on .os-toggle__track { background: var(--accent); border-color: var(--accent); }
 
 /* neon variant */
-.os-toggle--neon .os-toggle__track { background: var(--bg-surface); border: 1px solid rgba(0, 255, 65, 0.2); }
+.os-toggle--neon .os-toggle__track { background: var(--bg-surface); border: 1px solid rgba(var(--accent-rgb), 0.2); }
 .os-toggle--neon.os-toggle--on .os-toggle__track { background: var(--accent-dim); border-color: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
 
 /* gothic variant */

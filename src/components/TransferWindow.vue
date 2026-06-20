@@ -521,12 +521,12 @@ onUnmounted(() => {
 .bw-btn-inverse {
   border-color: var(--accent);
   color: var(--text-accent);
-  text-shadow: 0 0 4px rgba(0, 255, 65, 0.15);
+  text-shadow: 0 0 4px rgba(var(--accent-rgb), 0.15);
 }
 
 .bw-btn-inverse:hover {
   background: var(--accent-dim);
-  box-shadow: 0 0 12px rgba(0, 255, 65, 0.1);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.1);
 }
 
 .bw-btn-danger {

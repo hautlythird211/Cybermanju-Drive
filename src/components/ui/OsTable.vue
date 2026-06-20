@@ -173,8 +173,8 @@ onUnmounted(() => {
 .os-table--glass tbody tr:hover { background: rgba(255,255,255,0.05); }
 
 .os-table--neon { color: var(--text-secondary); }
-.os-table--neon th { border-bottom: 1px solid rgba(0, 255, 65, 0.15); color: var(--text-muted); }
-.os-table--neon td { border-bottom: 1px solid rgba(0, 255, 65, 0.08); }
+.os-table--neon th { border-bottom: 1px solid rgba(var(--accent-rgb), 0.15); color: var(--text-muted); }
+.os-table--neon td { border-bottom: 1px solid rgba(var(--accent-rgb), 0.08); }
 .os-table--neon tbody tr:hover { background: var(--accent-dim); }
 
 .os-table--gothic { color: #d4a0b0; }

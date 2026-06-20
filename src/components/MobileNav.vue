@@ -55,8 +55,8 @@ const store = useAppStore()
 }
 
 .mn-btn.active {
-  color: #00ff41;
-  background: rgba(0, 255, 65, 0.08);
+  color: var(--text-accent);
+  background: rgba(var(--accent-rgb), 0.08);
 }
 
 @media (max-width: 768px) {

@@ -234,7 +234,7 @@ function highlightTerms(text: string, query: string): string {
 }
 
 .panel-card-row.active {
-  border-color: rgba(0, 255, 65, 0.3);
+  border-color: rgba(var(--accent-rgb), 0.3);
 }
 
 .panel-title {
@@ -355,8 +355,8 @@ function highlightTerms(text: string, query: string): string {
 }
 
 .bw-checkbox:checked {
-  background: #00ff41;
-  border-color: #00ff41;
+  background: var(--accent);
+  border-color: var(--text-accent);
 }
 
 .search-results-list {
@@ -590,9 +590,9 @@ function highlightTerms(text: string, query: string): string {
   font-size: 8px;
   font-weight: 700;
   padding: 2px 8px;
-  background: rgba(0, 255, 65, 0.1);
-  color: #00ff41;
-  border: 1px solid rgba(0, 255, 65, 0.2);
+  background: rgba(var(--accent-rgb), 0.1);
+  color: var(--text-accent);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
   border-radius: 3px;
   letter-spacing: 0.5px;
 }
@@ -663,8 +663,8 @@ function highlightTerms(text: string, query: string): string {
 }
 
 .bw-dot-on {
-  background: #00ff41;
-  border-color: #00ff41;
+  background: var(--accent);
+  border-color: var(--text-accent);
 }
 
 .truncate {
@@ -674,14 +674,14 @@ function highlightTerms(text: string, query: string): string {
 }
 
 .search-result-name :deep(mark) {
-  background: rgba(0, 255, 65, 0.2);
-  color: #00ff41;
+  background: rgba(var(--accent-rgb), 0.2);
+  color: var(--text-accent);
   padding: 0 2px;
   border-radius: 2px;
 }
 
 .search-result-snippet :deep(mark) {
-  background: rgba(0, 255, 65, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
   color: #ccc;
   padding: 0 2px;
   border-radius: 2px;

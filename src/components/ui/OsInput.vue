@@ -212,7 +212,7 @@ onMounted(() => {
 /* variant: neon */
 .os-input--neon {
   background: transparent;
-  border: 1px solid rgba(0, 255, 65, 0.3);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
   color: var(--text-accent);
   text-shadow: 0 0 2px var(--accent-glow);
 }

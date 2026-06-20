@@ -253,14 +253,17 @@ pub struct LfsPointer {
     pub size: u64,         // Size in bytes
 }
 
-impl LfsPointer {
-    pub fn to_string(&self) -> String {
-        format!(
+impl std::fmt::Display for LfsPointer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
             "version {}\noid sha256:{}\nsize {}\n",
             self.version, self.oid, self.size
         )
     }
+}
 
+impl LfsPointer {
     pub fn from_string(s: &str) -> Result<Self, String> {
         let mut version = String::new();
         let mut oid = String::new();
@@ -313,7 +316,7 @@ impl std::fmt::Display for RepoLayout {
 }
 
 impl RepoLayout {
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse_str(s: &str) -> Self {
         match s {
             "sharded" => Self::Sharded,
             "split" => Self::Split,

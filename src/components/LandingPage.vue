@@ -582,7 +582,7 @@ onUnmounted(() => {
   text-align: center;
   font-size: 11px;
   line-height: 1.15;
-  color: #00ff41;
+  color: var(--text-accent);
   text-shadow: 0 0 6px rgba(0, 255, 65, 0.25);
   letter-spacing: 1px;
   transition: opacity 0.05s;
@@ -599,7 +599,7 @@ onUnmounted(() => {
 
 .particle {
   position: absolute;
-  color: rgba(0, 255, 65, 0.15);
+  color: rgba(var(--accent-rgb), 0.15);
   font-size: 8px;
   animation: float 4s ease-in-out infinite;
 }
@@ -617,18 +617,18 @@ onUnmounted(() => {
   max-width: 640px;
   max-height: 40vh;
   background: rgba(3, 3, 8, 0.82);
-  border: 1px solid rgba(0, 255, 65, 0.12);
+  border: 1px solid rgba(var(--accent-rgb), 0.12);
   border-radius: 12px;
   padding: 16px 20px;
   backdrop-filter: blur(20px) saturate(1.4);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 1px rgba(0, 255, 65, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 1px rgba(var(--accent-rgb), 0.2);
   cursor: text;
   transition: opacity 0.3s ease;
 }
 
 .boot-terminal {
-  border-color: rgba(0, 255, 65, 0.1);
+  border-color: rgba(var(--accent-rgb), 0.1);
 }
 
 .terminal-log {
@@ -647,7 +647,7 @@ onUnmounted(() => {
 }
 
 .term-system { color: rgba(0, 255, 65, 0.7); }
-.term-prompt { color: #00ff41; font-weight: 700; }
+.term-prompt { color: var(--text-accent); font-weight: 700; }
 
 .term-input-line {
   display: flex;
@@ -657,7 +657,7 @@ onUnmounted(() => {
 }
 
 .term-prompt-sign {
-  color: #00ff41;
+  color: var(--text-accent);
   font-weight: 700;
   opacity: 0.8;
   font-size: 12px;
@@ -665,12 +665,12 @@ onUnmounted(() => {
 }
 
 .term-input-text {
-  color: #00ff41;
+  color: var(--text-accent);
   font-size: 12px;
 }
 
 .term-cursor {
-  color: #00ff41;
+  color: var(--text-accent);
   font-size: 11px;
   animation: blink 500ms step-end infinite;
 }
@@ -703,23 +703,23 @@ onUnmounted(() => {
 
 .launch-button {
   background: transparent;
-  border: 1px solid rgba(0, 255, 65, 0.3);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
   border-radius: 6px;
-  color: #00ff41;
+  color: var(--text-accent);
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 700;
   padding: 10px 24px;
   cursor: pointer;
-  text-shadow: 0 0 4px rgba(0, 255, 65, 0.2);
+  text-shadow: 0 0 4px rgba(var(--accent-rgb), 0.2);
   transition: all 0.15s;
   letter-spacing: 1px;
 }
 
 .launch-button:hover {
-  background: rgba(0, 255, 65, 0.1);
-  border-color: #00ff41;
-  box-shadow: 0 0 16px rgba(0, 255, 65, 0.2);
+  background: rgba(var(--accent-rgb), 0.1);
+  border-color: var(--text-accent);
+  box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.2);
 }
 
 @keyframes blink {

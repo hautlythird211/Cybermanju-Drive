@@ -190,7 +190,7 @@ onMounted(async () => {
 }
 
 .os-quadrant--neon .os-quadrant__cell {
-  border: 1px solid rgba(0, 255, 65, 0.1);
+  border: 1px solid rgba(var(--accent-rgb), 0.1);
   border-radius: var(--radius-md);
 }
 

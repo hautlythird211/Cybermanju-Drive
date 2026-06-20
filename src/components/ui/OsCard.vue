@@ -150,12 +150,12 @@ onUnmounted(() => {
 /* variant: neon */
 .os-card--neon {
   background: var(--bg-surface);
-  border: 1px solid rgba(0, 255, 65, 0.2);
+  border: 1px solid rgba(var(--accent-rgb), 0.2);
   color: var(--text-primary);
   box-shadow: 0 0 12px var(--accent-dim);
 }
 .os-card--neon:hover {
-  border-color: rgba(0, 255, 65, 0.4);
+  border-color: rgba(var(--accent-rgb), 0.4);
 }
 
 /* variant: gothic */

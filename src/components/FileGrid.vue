@@ -528,7 +528,7 @@ async function handleRenameConfirm() {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #0a0a0a;
+  background: var(--bg-surface);
   position: relative;
   height: 100%;
 }
@@ -540,7 +540,7 @@ async function handleRenameConfirm() {
   height: 32px;
   padding: 0 8px;
   border-bottom: 2px solid #00ff41;
-  background: #0a0a0a;
+  background: var(--bg-surface);
   flex-shrink: 0;
 }
 
@@ -575,9 +575,9 @@ async function handleRenameConfirm() {
 }
 
 .sort-select {
-  background: #0a0a0a;
+  background: var(--bg-surface);
   border: 2px solid #00ff41;
-  color: #00ff41;
+  color: var(--text-accent);
   font-family: var(--font-mono);
   font-size: 9px;
   padding: 2px 4px;
@@ -585,9 +585,9 @@ async function handleRenameConfirm() {
 }
 
 .filter-input {
-  background: #0a0a0a;
+  background: var(--bg-surface);
   border: 2px solid #00ff41;
-  color: #00ff41;
+  color: var(--text-accent);
   font-family: var(--font-mono);
   font-size: 9px;
   padding: 2px 6px;
@@ -603,8 +603,8 @@ async function handleRenameConfirm() {
   align-items: center;
   gap: 6px;
   padding: 4px 8px;
-  background: #00ff41;
-  border-bottom: 2px solid #0a0a0a;
+  background: var(--accent);
+  border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
 }
 
@@ -612,7 +612,7 @@ async function handleRenameConfirm() {
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
-  color: #0a0a0a;
+  color: var(--text-inverse);
   margin-right: 8px;
 }
 
@@ -622,19 +622,19 @@ async function handleRenameConfirm() {
   font-size: 9px;
   font-weight: 700;
   cursor: pointer;
-  border: 2px solid #0a0a0a;
-  background: #00ff41;
-  color: #0a0a0a;
+  border: 1px solid var(--border-subtle);
+  background: var(--accent);
+  color: var(--text-inverse);
 }
 
 .bulk-btn:hover {
-  background: #0a0a0a;
-  color: #00ff41;
+  background: var(--bg-surface);
+  color: var(--text-accent);
 }
 
 .bulk-btn.danger:hover {
-  background: #0a0a0a;
-  color: #00ff41;
+  background: var(--bg-surface);
+  color: var(--text-accent);
 }
 
 .view-toggle {
@@ -651,14 +651,14 @@ async function handleRenameConfirm() {
 }
 
 .view-toggle:hover {
-  color: #00ff41;
-  border-color: #00ff41;
+  color: var(--text-accent);
+  border-color: var(--text-accent);
 }
 
 .view-toggle.active {
-  color: #0a0a0a;
-  background: #00ff41;
-  border-color: #00ff41;
+  color: var(--text-inverse);
+  background: var(--accent);
+  border-color: var(--text-accent);
 }
 
 .grid-view {
@@ -679,33 +679,33 @@ async function handleRenameConfirm() {
   padding: 12px 8px 8px;
   cursor: pointer;
   border: 2px solid #00ff41;
-  background: #0a0a0a;
+  background: var(--bg-surface);
   min-height: 110px;
   position: relative;
 }
 
 .file-card:hover {
-  background: #00ff41;
+  background: var(--accent);
 }
 
 .file-card:hover .file-card-name,
 .file-card:hover .file-card-meta {
-  color: #0a0a0a;
+  color: var(--text-inverse);
 }
 
 .file-card.selected {
-  background: #00ff41;
+  background: var(--accent);
 }
 
 .file-card.selected .file-card-name,
 .file-card.selected .file-card-meta,
 .file-card.selected .file-icon {
-  color: #0a0a0a;
+  color: var(--text-inverse);
 }
 
 .file-card.bulk-selected {
   border-width: 3px;
-  border-color: #00ff41;
+  border-color: var(--text-accent);
   background: rgba(0, 255, 65,0.08);
 }
 
@@ -719,7 +719,7 @@ async function handleRenameConfirm() {
 .check-box {
   font-family: var(--font-mono);
   font-size: 8px;
-  color: #00ff41;
+  color: var(--text-accent);
   border: 1px solid #00ff41;
   padding: 0 1px;
   line-height: 12px;
@@ -727,8 +727,8 @@ async function handleRenameConfirm() {
 }
 
 .check-box.checked {
-  background: #00ff41;
-  color: #0a0a0a;
+  background: var(--accent);
+  color: var(--text-inverse);
 }
 
 .file-card-icon {
@@ -742,7 +742,7 @@ async function handleRenameConfirm() {
 .file-icon {
   font-family: var(--font-mono);
   font-size: 18px;
-  color: #00ff41;
+  color: var(--text-accent);
 }
 
 .file-thumb {
@@ -769,7 +769,7 @@ async function handleRenameConfirm() {
 .file-card-name {
   font-size: 10px;
   font-weight: 600;
-  color: #00ff41;
+  color: var(--text-accent);
   text-align: center;
   width: 100%;
 }
@@ -793,7 +793,7 @@ async function handleRenameConfirm() {
   font-family: var(--font-mono);
   font-size: 8px;
   font-weight: 700;
-  color: #00ff41;
+  color: var(--text-accent);
   border: 1px solid #00ff41;
   padding: 0 2px;
 }
@@ -822,27 +822,27 @@ async function handleRenameConfirm() {
   break-inside: avoid;
   cursor: pointer;
   border: 2px solid #00ff41;
-  background: #0a0a0a;
+  background: var(--bg-surface);
   position: relative;
 }
 
 .masonry-item:hover {
-  background: #00ff41;
+  background: var(--accent);
 }
 
 .masonry-item:hover .masonry-name,
 .masonry-item:hover .masonry-meta {
-  color: #0a0a0a;
+  color: var(--text-inverse);
 }
 
 .masonry-item.selected {
-  background: #00ff41;
+  background: var(--accent);
 }
 
 .masonry-item.selected .masonry-name,
 .masonry-item.selected .masonry-meta,
 .masonry-item.selected .masonry-icon .file-icon {
-  color: #0a0a0a;
+  color: var(--text-inverse);
 }
 
 .masonry-item.bulk-selected {
@@ -874,7 +874,7 @@ async function handleRenameConfirm() {
 .masonry-name {
   font-size: 10px;
   font-weight: 600;
-  color: #00ff41;
+  color: var(--text-accent);
   text-align: center;
   width: 100%;
 }
@@ -902,7 +902,7 @@ async function handleRenameConfirm() {
   align-items: center;
   height: 28px;
   padding: 0 10px;
-  background: #0a0a0a;
+  background: var(--bg-surface);
   border-bottom: 2px solid #00ff41;
   font-size: 9px;
   font-family: var(--font-mono);
@@ -919,7 +919,7 @@ async function handleRenameConfirm() {
 }
 
 .list-header .lc:hover {
-  color: #00ff41;
+  color: var(--text-accent);
 }
 
 .list-row {
@@ -930,7 +930,7 @@ async function handleRenameConfirm() {
   border-bottom: 1px solid rgba(0, 255, 65,0.1);
   cursor: pointer;
   font-size: 11px;
-  color: #00ff41;
+  color: var(--text-accent);
 }
 
 .list-row:hover {
@@ -938,8 +938,8 @@ async function handleRenameConfirm() {
 }
 
 .list-row.selected {
-  background: #00ff41;
-  color: #0a0a0a;
+  background: var(--accent);
+  color: var(--text-inverse);
 }
 
 .list-row.selected .text-muted {
@@ -970,7 +970,7 @@ async function handleRenameConfirm() {
 .file-icon-sm {
   font-family: var(--font-mono);
   font-size: 11px;
-  color: #00ff41;
+  color: var(--text-accent);
   flex-shrink: 0;
   width: 18px;
   text-align: center;
@@ -982,7 +982,7 @@ async function handleRenameConfirm() {
   font-weight: 700;
   border: 1px solid #00ff41;
   padding: 0 2px;
-  color: #00ff41;
+  color: var(--text-accent);
 }
 
 .empty-list {
@@ -996,12 +996,12 @@ async function handleRenameConfirm() {
 .context-menu {
   position: fixed;
   z-index: 1000;
-  background: #0a0a0a;
+  background: var(--bg-surface);
   border: 2px solid #00ff41;
   min-width: 180px;
   font-family: var(--font-mono);
   font-size: 10px;
-  color: #00ff41;
+  color: var(--text-accent);
   box-shadow: 4px 4px 0 rgba(0, 255, 65,0.15);
 }
 
@@ -1015,13 +1015,13 @@ async function handleRenameConfirm() {
 }
 
 .context-menu-item:hover {
-  background: #00ff41;
-  color: #0a0a0a;
+  background: var(--accent);
+  color: var(--text-inverse);
 }
 
 .context-menu-item.danger:hover {
-  background: #00ff41;
-  color: #0a0a0a;
+  background: var(--accent);
+  color: var(--text-inverse);
 }
 
 .context-menu-item.disabled {
@@ -1038,7 +1038,7 @@ async function handleRenameConfirm() {
   position: absolute;
   left: 100%;
   top: -2px;
-  background: #0a0a0a;
+  background: var(--bg-surface);
   border: 2px solid #00ff41;
   min-width: 220px;
   z-index: 1001;
@@ -1067,12 +1067,12 @@ async function handleRenameConfirm() {
 }
 
 .rename-modal {
-  background: #0a0a0a;
+  background: var(--bg-surface);
   border: 2px solid #00ff41;
   padding: 16px;
   width: 300px;
   font-family: var(--font-mono);
-  color: #00ff41;
+  color: var(--text-accent);
   box-shadow: 4px 4px 0 rgba(0, 255, 65,0.15);
 }
 
@@ -1085,9 +1085,9 @@ async function handleRenameConfirm() {
 
 .rename-input {
   width: 100%;
-  background: #0a0a0a;
+  background: var(--bg-surface);
   border: 2px solid #00ff41;
-  color: #00ff41;
+  color: var(--text-accent);
   font-family: var(--font-mono);
   font-size: 11px;
   padding: 6px 8px;
@@ -1103,7 +1103,7 @@ async function handleRenameConfirm() {
 .rename-btn {
   background: transparent;
   border: 2px solid #00ff41;
-  color: #00ff41;
+  color: var(--text-accent);
   padding: 4px 12px;
   font-family: var(--font-mono);
   font-size: 10px;
@@ -1112,18 +1112,18 @@ async function handleRenameConfirm() {
 }
 
 .rename-btn:hover {
-  background: #00ff41;
-  color: #0a0a0a;
+  background: var(--accent);
+  color: var(--text-inverse);
 }
 
 .rename-btn-primary {
-  background: #00ff41;
-  color: #0a0a0a;
+  background: var(--accent);
+  color: var(--text-inverse);
 }
 
 .rename-btn-primary:hover {
-  background: #0a0a0a;
-  color: #00ff41;
+  background: var(--bg-surface);
+  color: var(--text-accent);
 }
 
 .text-muted { color: rgba(0, 255, 65,0.5) !important; }

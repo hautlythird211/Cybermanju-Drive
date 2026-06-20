@@ -74,7 +74,7 @@ onMounted(checkCrash)
   width: 560px;
   max-width: 92vw;
   max-height: 80vh;
-  background: #0a0a0a;
+  background: var(--bg-surface);
   border: 1px solid #ff5f57;
   border-radius: 10px;
   display: flex;
@@ -134,8 +134,8 @@ onMounted(checkCrash)
 }
 
 .crash-tips code {
-  color: #00ff41;
-  background: rgba(0, 255, 65, 0.06);
+  color: var(--text-accent);
+  background: rgba(var(--accent-rgb), 0.06);
   padding: 1px 6px;
   border-radius: 3px;
   font-size: 9px;

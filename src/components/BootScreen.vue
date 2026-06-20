@@ -847,7 +847,7 @@ onUnmounted(() => {
   position: absolute;
   left: 0;
   right: 0;
-  background: rgba(0, 255, 65, 0.08);
+  background: rgba(var(--accent-rgb), 0.08);
   z-index: 3;
   pointer-events: none;
   animation: glitch-slice 2s ease-in-out infinite;
@@ -897,9 +897,9 @@ onUnmounted(() => {
 .boot-title {
   font-size: 11px;
   font-weight: 800;
-  color: #00ff41;
+  color: var(--text-accent);
   letter-spacing: 2px;
-  text-shadow: 0 0 8px rgba(0, 255, 65, 0.2), 0 0 20px rgba(0, 255, 65, 0.05);
+  text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.2), 0 0 20px rgba(0, 255, 65, 0.05);
 }
 
 .boot-version {
@@ -930,7 +930,7 @@ onUnmounted(() => {
 }
 
 .line-arrow {
-  color: #00ff41;
+  color: var(--text-accent);
   margin-right: 8px;
   opacity: 0.6;
 }
@@ -942,14 +942,14 @@ onUnmounted(() => {
 .warn { color: #febc2e; }
 .err { color: #ff5f57; }
 .cyan { color: #00e5ff; }
-.green { color: #00ff41; }
+.green { color: var(--text-accent); }
 
 .phase-post .line-text { color: #667; }
 .phase-kernel .line-text { color: #aab; }
 
 .boot-cursor { margin-top: 2px; }
 .cursor-blink {
-  color: #00ff41;
+  color: var(--text-accent);
   font-weight: 700;
   animation: cursor-blink 0.8s step-end infinite;
 }
@@ -970,7 +970,7 @@ onUnmounted(() => {
   animation: hue-rotate 2s linear infinite;
   transition: width 0.15s ease-out;
   border-radius: 1px;
-  box-shadow: 0 0 12px rgba(0, 255, 65, 0.3), 0 0 24px rgba(0, 229, 255, 0.15);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.3), 0 0 24px rgba(0, 229, 255, 0.15);
 }
 
 .boot-progress-label {
@@ -978,10 +978,10 @@ onUnmounted(() => {
   right: 0;
   top: -16px;
   font-size: 9px;
-  color: #00ff41;
+  color: var(--text-accent);
   font-weight: 700;
   letter-spacing: 1px;
-  text-shadow: 0 0 6px rgba(0, 255, 65, 0.2);
+  text-shadow: 0 0 6px rgba(var(--accent-rgb), 0.2);
 }
 
 .boot-skip-hint {
@@ -1047,9 +1047,9 @@ onUnmounted(() => {
 }
 
 .login-hint {
-  color: #00ff41;
+  color: var(--text-accent);
   animation: cursor-blink 1.2s step-end infinite;
-  text-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
+  text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.3);
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -1098,15 +1098,15 @@ onUnmounted(() => {
 }
 
 .login-logo {
-  filter: drop-shadow(0 0 8px rgba(0, 255, 65, 0.3));
+  filter: drop-shadow(0 0 8px rgba(var(--accent-rgb), 0.3));
 }
 
 .login-brand-title {
   font-size: 16px;
   font-weight: 800;
-  color: #00ff41;
+  color: var(--text-accent);
   letter-spacing: 3px;
-  text-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+  text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.2);
 }
 
 .login-brand-sub {
@@ -1139,7 +1139,7 @@ onUnmounted(() => {
   background: rgba(8, 8, 20, 0.8);
   border: 1px solid #1a1a2e;
   border-radius: 6px;
-  color: #00ff41;
+  color: var(--text-accent);
   font-family: var(--font-mono);
   font-size: 14px;
   padding: 10px 14px;
@@ -1150,8 +1150,8 @@ onUnmounted(() => {
 }
 
 .username-input:focus {
-  border-color: #00ff41;
-  box-shadow: 0 0 12px rgba(0, 255, 65, 0.1), 0 0 24px rgba(0, 255, 65, 0.03);
+  border-color: var(--text-accent);
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.1), 0 0 24px rgba(0, 255, 65, 0.03);
 }
 
 .username-input::placeholder {
@@ -1163,7 +1163,7 @@ onUnmounted(() => {
   background: transparent;
   border: 1px solid #00ff41;
   border-radius: 6px;
-  color: #00ff41;
+  color: var(--text-accent);
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
@@ -1175,8 +1175,8 @@ onUnmounted(() => {
 }
 
 .login-go-btn:hover:not(:disabled) {
-  background: rgba(0, 255, 65, 0.1);
-  box-shadow: 0 0 16px rgba(0, 255, 65, 0.15);
+  background: rgba(var(--accent-rgb), 0.1);
+  box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.15);
 }
 
 .login-go-btn:disabled {
@@ -1231,7 +1231,7 @@ onUnmounted(() => {
 }
 
 .provider-card.connected {
-  border-color: #00ff41;
+  border-color: var(--text-accent);
   background: rgba(0, 255, 65, 0.03);
   cursor: default;
 }
@@ -1251,7 +1251,7 @@ onUnmounted(() => {
 }
 
 .provider-status { font-size: 8px; letter-spacing: 1px; }
-.status-ok { color: #00ff41; font-weight: 700; }
+.status-ok { color: var(--text-accent); font-weight: 700; }
 .status-busy { color: #febc2e; }
 .status-off { color: #556; }
 
@@ -1312,7 +1312,7 @@ onUnmounted(() => {
   outline: none;
 }
 
-.bw-input:focus { border-color: #00ff41; }
+.bw-input:focus { border-color: var(--text-accent); }
 
 .bw-btn {
   background: transparent;
@@ -1331,12 +1331,12 @@ onUnmounted(() => {
 .bw-btn:hover { border-color: #556; color: #dde; }
 
 .bw-btn-inverse {
-  border-color: #00ff41;
-  color: #00ff41;
+  border-color: var(--text-accent);
+  color: var(--text-accent);
 }
 
 .bw-btn-inverse:hover {
-  background: rgba(0, 255, 65, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
 }
 
 .bw-btn:disabled {

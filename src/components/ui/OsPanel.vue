@@ -92,7 +92,7 @@ onUnmounted(() => {
 }
 
 .os-panel--neon {
-  border: 1px solid rgba(0, 255, 65, 0.15);
+  border: 1px solid rgba(var(--accent-rgb), 0.15);
   border-radius: var(--radius-lg);
   box-shadow: var(--glow-accent);
 }
