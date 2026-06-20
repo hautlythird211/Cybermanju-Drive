@@ -16,7 +16,7 @@
       class="desktop-menubar"
     />
 
-    <div class="desktop-content gpu-layer">
+    <div class="desktop-content">
       <div
         ref="workspaceRef"
         class="desktop-workspace"
@@ -328,6 +328,7 @@ onUnmounted(() => {
 
 .desktop-grid {
   position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   padding: 6px;
@@ -532,6 +533,10 @@ onUnmounted(() => {
 .desktop-content {
   position: relative;
   z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   isolation: isolate;
 }
 

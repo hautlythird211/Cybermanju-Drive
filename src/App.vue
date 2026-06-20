@@ -30,7 +30,6 @@ import UnboxDialog from '@/components/UnboxDialog.vue'
 import MobileNav from '@/components/MobileNav.vue'
 import ContextMenu from '@/components/ContextMenu.vue'
 import CrashReporter from '@/components/CrashReporter.vue'
-import DataTransparencyReport from '@/components/DataTransparencyReport.vue'
 import type { PanelType, FileNode } from '@/types'
 
 const store = useAppStore()
@@ -517,7 +516,6 @@ import { useLogin } from '@/composables/useLogin'
 const { restoreSession } = useLogin()
 
 const bootPhase = ref<'boot' | 'desktop'>('boot')
-const showTransparencyReport = ref(false)
 
 onMounted(async () => {
   store.currentPanel = 'landing'
@@ -528,7 +526,6 @@ onMounted(async () => {
 
 function onBootComplete() {
   bootPhase.value = 'desktop'
-  showTransparencyReport.value = true
 }
 
 function handleLandingLaunch() {
@@ -613,7 +610,6 @@ function handleLandingLaunch() {
         />
         <MobileNav />
         <ContextMenu />
-        <DataTransparencyReport v-if="showTransparencyReport" @close="showTransparencyReport = false" />
         <CrashReporter />
     </template>
   </div>
