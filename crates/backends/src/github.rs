@@ -67,7 +67,7 @@ impl GitHubBackend {
     }
 
     fn should_use_lfs(&self, size: u64) -> bool {
-        self.use_lfs && size >= LFS_SIZE_THRESHOLD && size <= RELEASES_API_MAX
+        self.use_lfs && (LFS_SIZE_THRESHOLD..=RELEASES_API_MAX).contains(&size)
     }
 
     /// Upload via Contents API (for files < 100 MB).
@@ -119,7 +119,7 @@ impl GitHubBackend {
         });
 
         let release_resp = client
-            .post(&format!(
+            .post(format!(
                 "https://api.github.com/repos/{}/{}/releases",
                 owner, repo
             ))
@@ -155,7 +155,7 @@ impl GitHubBackend {
 
         // 3. Upload the asset
         let asset_resp = client
-            .post(&format!("{}?name={}", upload_url, file_name))
+            .post(format!("{}?name={}", upload_url, file_name))
             .header("Authorization", format!("Bearer {}", self.token))
             .header("Accept", "application/vnd.github+json")
             .header("Content-Type", "application/octet-stream")

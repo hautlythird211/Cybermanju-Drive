@@ -228,7 +228,7 @@ impl StorageBackend for GiteaBackend {
     fn test_connection(&self) -> Result<bool, String> {
         let client = http_client()?;
         let resp = client
-            .get(&format!("{}/api/v1/user", self.base_url))
+            .get(format!("{}/api/v1/user", self.base_url))
             .header("Authorization", format!("token {}", self.token))
             .send()
             .map_err(|e| format!("request: {}", e))?;

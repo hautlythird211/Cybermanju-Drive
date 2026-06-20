@@ -126,7 +126,7 @@ impl StorageBackend for MegaBackend {
                 .map(|n| RemoteFile {
                     name: n.name.clone(),
                     path: n.name.clone(),
-                    size_bytes: n.size as u64,
+                    size_bytes: n.size,
                     modified_at: String::new(),
                     url: format!("mega://{}", n.handle),
                 })

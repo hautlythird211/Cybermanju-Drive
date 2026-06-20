@@ -1,280 +1,800 @@
 # Cybermanju Drive — Resolution Tree Architecture
 
-> Machine-readable architecture context for `.cybermanju` v2, resolution-based
-> file decomposition, cross-backend distribution, preview key system, and
-> byte-level recovery with neural upscaling.
+> Machine-readable architecture context for `.cybermanju` v2: a distributed,
+> indexed, multi-shard container system with resolution-based file decomposition,
+> cross-backend erasure coding, preview-without-decrypt, and byte-level recovery.
 
 ---
 
 ## Table of Contents
 
-1. [Problem Statement](#1-problem-statement)
-2. [Core Insight: Resolution as First-Class Citizen](#2-core-insight-resolution-as-first-class-citizen)
-3. [`.cybermanju` v2 Binary Format](#3-cybermanju-v2-binary-format)
-4. [Resolution Merkle Tree](#4-resolution-merkle-tree)
-5. [Three-Tier Key System](#5-three-tier-key-system)
-6. [Cross-Backend Distribution](#6-cross-backend-distribution)
-7. [Erasure Coding Strategies](#7-erasure-coding-strategies)
-8. [Compression Pipeline](#8-compression-pipeline)
-9. [Shared Preview Library](#9-shared-preview-library)
-10. [Recovery Pipeline](#10-recovery-pipeline)
-11. [Technology Stack](#11-technology-stack)
-12. [Implementation Roadmap](#12-implementation-roadmap)
-13. [Design Decisions Log](#13-design-decisions-log)
-14. [Crate Migration Guide](#14-crate-migration-guide)
+1. [Core Architecture Model](#1-core-architecture-model)
+2. [`.cybermanju` Shard Format](#2-cybermanju-shard-format)
+3. [`root.cybermanju` Master Index](#3-rootcybermanju-master-index)
+4. [Index Layer: Read Without Decrypt](#4-index-layer-read-without-decrypt)
+5. [Content Layer: Encrypted Blob Store](#5-content-layer-encrypted-blob-store)
+6. [Resolution Merkle Tree](#6-resolution-merkle-tree)
+7. [Three-Tier Key System](#7-three-tier-key-system)
+8. [Cross-Backend Distribution](#8-cross-backend-distribution)
+9. [Erasure Coding Strategies](#9-erasure-coding-strategies)
+10. [Compression Pipeline](#10-compression-pipeline)
+11. [Shared Preview Library](#11-shared-preview-library)
+12. [Recovery Pipeline](#12-recovery-pipeline)
+13. [Technology Stack](#13-technology-stack)
+14. [Implementation Roadmap](#14-implementation-roadmap)
+15. [Design Decisions Log](#15-design-decisions-log)
+16. [Crate Migration Guide](#16-crate-migration-guide)
 
 ---
 
-## 1. Problem Statement
+## 1. Core Architecture Model
 
-The current architecture treats a file as **one blob** — compress it, encrypt it,
-ship it to one backend. The portable DB stores recovery data in flat sidecar
-directories. Versioning only snapshots metadata (hash + size), not actual content
-decomposition.
+### The Shard Model
 
-### Limitations
-
-| Problem | Current State | Impact |
-|---------|--------------|--------|
-| No resolution awareness | Full decrypt+decompress for preview | Slow gallery loads, wasted bandwidth |
-| Flat resilience | All-or-nothing per backend | One backend death = total loss or zero loss |
-| No preview access control | Same key for everything | Cannot share previews without exposing originals |
-| No dedup across resolutions | Each resolution stored independently | Wasted storage for same content at different sizes |
-| No byte-level recovery | Binary success/fail | Partial data loss = total loss |
-| Legacy crypto | `pqcrypto-*` C wrappers | Archiving June 2026, no pure-Rust path |
-
----
-
-## 2. Core Insight: Resolution as First-Class Citizen
-
-A "file" is not a single entity — it is a **Merkle tree of resolutions**,
-each atomically stored, independently encrypted, potentially distributed across
-different backends.
+A Cybermanju Drive library is NOT a single file. It is **hundreds of `.cybermanju`
+shard files** distributed across multiple backends, unified by a single
+`root.cybermanju` master index.
 
 ```
-File "photo.jpg" (4032x3024, 8MB)
-├── r0: 200x200 WebP (3KB)     → ALL backends (redundant, tiny)
-├── r1: 640x480 JPEG (45KB)    → GitHub + Google Drive (2+ backends)
-├── r2: 1920x1080 JPEG (450KB) → Local + MEGA (1-2 backends)
-├── r3: Original (8MB)          → Split across Local + MEGA (MSR coded)
-└── parity: MSR shards (2MB)    → GitHub + GitLab (parity distribution)
+My Library (10,000 files, 50GB)
+├── root.cybermanju                    # Master index (1-5MB, knows everything)
+├── shard_0001.cybermanju              # Backend: GitHub     (chunk of files)
+├── shard_0002.cybermanju              # Backend: GitHub     (chunk of files)
+├── shard_0003.cybermanju              # Backend: GitLab     (chunk of files)
+├── shard_0004.cybermanju              # Backend: Google Drive (chunk of files)
+├── shard_0005.cybermanju              # Backend: Local      (chunk of files)
+├── shard_0006.cybermanju              # Backend: MEGA       (chunk of files)
+├── ...                                # (hundreds more)
+├── parity_shard_A.cybermanju          # Backend: GitHub     (parity for reconstruction)
+├── parity_shard_B.cybermanju          # Backend: GitLab     (parity for reconstruction)
+└── preview_shard.cybermanju           # Backend: ALL        (ultra-compressed previews)
 ```
 
-Each resolution node has its own BLAKE3 hash. The root hash is the file's
-identity. This is the "git tree" for resolutions.
+### What Each Shard Contains
 
-### Resolution Levels
+Each `.cybermanju` file is a **self-contained, indexed, encrypted container**:
 
-| Level | Name | Typical Size | Typical Use | Distribution |
-|-------|------|-------------|-------------|-------------|
-| r0 | Root/Thumbnail | 2-5KB | Gallery, face grid, instant preview | ALL backends |
-| r1 | Preview | 40-60KB | Share link, card view, quick glance | 2+ backends |
-| r2 | Medium | 400-600KB | Detail view, editing preview | 1-2 backends |
-| r3 | Full/Original | Variable | Download, archival, print | Split/MSR across backends |
-| rp | Parity | ~33% of r3 | Recovery when shards lost | 2+ cheap backends |
+```
+.shard.cybermanju
+├── [HEADER]           Magic, version, shard_id, root_hash_backlink
+├── [INDEX LAYER]      File manifest, blob map, resolution map — READABLE
+├── [CONTENT LAYER]    Encrypted blobs: r0, r1, r2, r3, parity — ENCRYPTED
+└── [FOOTER]           BLAKE3 checksums, signature, erasure metadata
+```
+
+**Key insight**: The INDEX layer is separate from the CONTENT layer.
+You can read the index (browse files, see metadata, view previews) WITHOUT
+ever decrypting the content. The index is either:
+
+1. **Unencrypted** — anyone can see file names, sizes, hashes
+2. **Index-key encrypted** — only index key holders can browse
+3. **Partially encrypted** — public metadata visible, private metadata hidden
+
+### Recovery Model
+
+Each shard contains **minimized recovery bytes**. Any sufficient subset of
+shards can reconstruct the entire library:
+
+```
+Recovery threshold:
+├── Index reconstruction:  root.cybermanju + any 1 shard
+├── File reconstruction:   any k shards with the file's data
+├── Preview reconstruction: preview_shard.cybermanju (self-contained)
+└── Full library:          root.cybermanju + enough shards for all files
+```
 
 ### Access Patterns
 
-| Scenario | Data Needed | Latency Target | Backend Hit |
-|----------|------------|----------------|-------------|
-| Gallery thumbnail | r0 (3KB) | <50ms | 1 (any) |
-| Share preview | r0 + r1 (48KB) | <200ms | 1 (any with r0) |
-| Detail view | r1 + r2 (495KB) | <500ms | 1-2 |
-| Full download | r3 (8MB) | <5s | Split reconstruction |
-| Disaster recovery | Parity + available shards | <30s | 2+ |
-| Approximate recovery | Lower res + upscaler | <5s | 1 (any with lower res) |
+| Action | What You Need | What You DON'T Need |
+|--------|--------------|---------------------|
+| Browse file list | root.cybermanju | No content key |
+| See file metadata | root.cybermanju | No content key |
+| View thumbnail (r0) | shard + preview_key | No content_key |
+| View preview (r1) | shard + preview_key | No content_key |
+| Stream video (r2) | shard + content_key | No full decrypt |
+| Download original (r3) | shard + content_key | No full library |
+| Recover lost shard | root + k other shards | No original data |
 
 ---
 
-## 3. `.cybermanju` v2 Binary Format
+## 2. `.cybermanju` Shard Format
 
-### File Structure
-
-```
-.cybermanju
-├── [0..32)      magic: "CYBERMANJU_V2\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
-├── [32..36)     header_json_len (u32 LE)
-├── [36..+h)     header_json (PortableHeaderV2)
-├── [+h..+m)     merkle_manifest_json (ResolutionManifest)
-├── [+m..+p)     erasure_config_json (ErasureConfig)
-├── [+p..+k)     preview_access_config_json (PreviewAccessConfig)
-├── [+k..+s)     sync_state_json (SyncState)
-└── [+s..)       encrypted_compressed_redb (triple-layer, optionally PQC encrypted)
-```
-
-### Sidecar Directory Structure
+### Binary Layout
 
 ```
-.cybermanju.cyb3/
-├── r0/                          # Resolution 0 — thumbnails
-│   ├── {file_id}.webp           # 200x200 WebP, ~2-5KB
-│   └── {file_id}.meta           # {w, h, mime, original_blake3}
-├── r1/                          # Resolution 1 — previews
-│   ├── {file_id}.jpg            # 640x480 JPEG, ~45KB
-│   └── {file_id}.meta
-├── r2/                          # Resolution 2 — medium
-│   ├── {file_id}.jpg            # 1920x1080, ~450KB
-│   └── {file_id}.meta
-├── r3/                          # Resolution 3 — original
-│   ├── {file_id}.enc            # Encrypted original
-│   └── {file_id}.meta
-├── parity/                      # Erasure coding shards
-│   ├── {file_id}.clay.shard.0   # MSR parity shard 0
-│   ├── {file_id}.clay.shard.1   # MSR parity shard 1
-│   ├── {file_id}.fountain pkt   # Fountain code packets
-│   └── {file_id}.fountain pkt
-├── sprites/                     # Sprite sheets for gallery view
-│   └── {batch_id}.png           # 16 thumbnails per sheet (4x4 grid)
-├── previews/                    # Ultra-compressed shared library
-│   └── {blake3_prefix}/
-│       └── {hash}.webp          # Deduplicated, content-addressed
-└── keys/                        # Encrypted key material
-    ├── {file_id}.master.enc     # Master-encrypted content key
-    └── {file_id}.preview.enc    # Preview-encrypted preview key
+Offset    Size      Field
+─────────────────────────────────────────────────────────────
+[0..32)   32B       Magic: "CYBSHARD_V2\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
+[32..36)  4B        header_len (u32 LE)
+[36..+h)  variable  header_json (ShardHeader)
+[h..+i)   variable  index_json_len (u32 LE)
+[+i..+j)  variable  index_json (ShardIndex) — THE READABLE LAYER
+[j..+c)   variable  content_json_len (u32 LE)
+[+c..+e)  variable  content_map_json (ContentMap) — byte ranges into content
+[e..+f)   variable  erasure_json_len (u32 LE)
+[+f..+g)  variable  erasure_json (ErasureMeta) — shard parity info
+[g..+s)   variable  signature_len (u32 LE)
+[+s..+k)  variable  shard_signature (ML-DSA-65 over everything above)
+[k..)     variable  content_blobs — ENCRYPTED r0/r1/r2/r3/parity data
 ```
 
-### PortableHeaderV2
+### ShardHeader
 
 ```json
 {
+  "magic": "CYBSHARD_V2",
   "version": "2.0",
+  "shard_id": "shard_0042",
+  "root_hash_backlink": "blake3:root_cybermanju_hash...",
   "created_at": "2026-06-20T00:00:00Z",
-  "last_modified_at": "2026-06-20T00:00:00Z",
+  "modified_at": "2026-06-20T12:00:00Z",
   "app_version": "0.2.0",
-  "db_hash": "blake3:abcdef...",
-  "encryption": {
-    "algorithm": "ml-kem-1024+chacha20poly1305",
-    "key_id": "master-key-001",
-    "kdf": "hkdf-sha256"
+  "shard_type": "content",
+  "file_count": 47,
+  "total_size_bytes": 268435456,
+  "index_encrypted": false,
+  "content_encrypted": true,
+  "content_algorithm": "ml-kem-1024+chacha20poly1305",
+  "compression": "lz4+zstd15+brotli11",
+  "erasure_codec": "clay-codes",
+  "erasure_params": { "k": 3, "m": 1, "d": 4 },
+  "platform_origin": "linux"
+}
+```
+
+### ShardIndex (THE READABLE LAYER)
+
+This is the key innovation. The index is a complete manifest of everything
+inside the shard, readable WITHOUT decrypting any content.
+
+```json
+{
+  "shard_id": "shard_0042",
+  "files": {
+    "file_abc123": {
+      "name": "vacation_photo.jpg",
+      "mime": "image/jpeg",
+      "folder": "/photos/2026/italy",
+      "tags": ["vacation", "italy", "beach"],
+      "original_size": 8388608,
+      "original_blake3": "blake3:def456...",
+      "created_at": "2026-06-15T10:30:00Z",
+      "modified_at": "2026-06-15T10:30:00Z",
+      "gps": { "lat": 41.9028, "lon": 12.4964 },
+      "face_groups": ["face_alice", "face_bob"],
+      "versions": 3,
+      "current_version": 3,
+      "resolutions": {
+        "r0": {
+          "blake3": "blake3:thumb...",
+          "size": 3072,
+          "format": "webp",
+          "width": 200,
+          "height": 150,
+          "content_offset": 1024,
+          "content_length": 3072,
+          "encrypted": true,
+          "encryption_key_tier": "preview"
+        },
+        "r1": {
+          "blake3": "blake3:preview...",
+          "size": 46080,
+          "format": "jpeg",
+          "width": 640,
+          "height": 480,
+          "content_offset": 4096,
+          "content_length": 46080,
+          "encrypted": true,
+          "encryption_key_tier": "preview"
+        },
+        "r2": {
+          "blake3": "blake3:medium...",
+          "size": 460800,
+          "format": "jpeg",
+          "width": 1920,
+          "height": 1080,
+          "content_offset": 50176,
+          "content_length": 460800,
+          "encrypted": true,
+          "encryption_key_tier": "content"
+        },
+        "r3": {
+          "blake3": "blake3:original...",
+          "size": 8388608,
+          "format": "encrypted",
+          "content_offset": 510976,
+          "content_length": 8388608,
+          "encrypted": true,
+          "encryption_key_tier": "content",
+          "chunk_count": 8,
+          "chunk_size": 1048576
+        }
+      },
+      "parity": {
+        "codec": "clay-codes",
+        "shard_indices": [0, 1, 2],
+        "parity_indices": [3],
+        "parity_in_shards": ["shard_0043", "shard_0044"]
+      }
+    },
+    "file_def789": {
+      "name": "beach_sunset.mp4",
+      "mime": "video/mp4",
+      "folder": "/videos/2026/italy",
+      "original_size": 157286400,
+      "resolutions": {
+        "r0": { "content_offset": 8894464, "content_length": 4096, "encrypted": true, "encryption_key_tier": "preview" },
+        "r1": { "content_offset": 8898560, "content_length": 61440, "encrypted": true, "encryption_key_tier": "preview" },
+        "r2": { "content_offset": 8960000, "content_length": 3145728, "encrypted": true, "encryption_key_tier": "content" },
+        "r3": { "content_offset": 12105728, "content_length": 157286400, "encrypted": true, "encryption_key_tier": "content", "chunk_count": 150, "chunk_size": 1048576 }
+      }
+    }
   },
-  "compression": {
-    "algorithm": "lz4+zstd15+brotli11",
-    "fast_path": "lz4+zstd3"
+  "sprite_sheets": {
+    "batch_0": { "content_offset": 1701920768, "content_length": 30720, "grid": "4x4", "thumb_count": 16 }
   },
-  "resolution_config": {
-    "levels": 4,
-    "level_specs": [
-      { "level": 0, "name": "thumbnail",  "max_dim": 200,  "format": "webp",  "quality": 80 },
-      { "level": 1, "name": "preview",    "max_dim": 640,  "format": "jpeg",  "quality": 75 },
-      { "level": 2, "name": "medium",     "max_dim": 1920, "format": "jpeg",  "quality": 90 },
-      { "level": 3, "name": "original",   "max_dim": 0,    "format": "native","quality": 100 }
+  "erasure_map": {
+    "clay_shards": [
+      { "shard_index": 0, "content_offset": 1701951488, "content_length": 3355443 },
+      { "shard_index": 1, "content_offset": 1705305931, "content_length": 3355443 }
+    ],
+    "fountain_packets": [
+      { "packet_id": 0, "content_offset": 1708660374, "content_length": 1040 },
+      { "packet_id": 1, "content_offset": 1708661414, "content_length": 1040 }
     ]
   },
-  "erasure": {
-    "r3_codec": "clay-codes",
-    "r3_params": { "k": 3, "m": 1, "d": 4 },
-    "parity_codec": "fountain-raptorq",
-    "parity_params": { "symbol_size": 1024, "redundancy": 0.33 }
+  "merkle_root": "blake3:shard_merkle_root..."
+}
+```
+
+### ContentMap (Byte-Range Access)
+
+The ContentMap tells you exactly where each blob lives in the content section:
+
+```json
+{
+  "blob_regions": [
+    { "id": "r0_file_abc123", "offset": 1024, "length": 3072, "key_tier": "preview", "compression": "webp-lossy" },
+    { "id": "r1_file_abc123", "offset": 4096, "length": 46080, "key_tier": "preview", "compression": "mozjpeg-q75" },
+    { "id": "r2_file_abc123", "offset": 50176, "length": 460800, "key_tier": "content", "compression": "mozjpeg-q90" },
+    { "id": "r3_file_abc123_chunk_0", "offset": 510976, "length": 1048576, "key_tier": "content", "compression": "lz4+zstd15+brotli11" },
+    { "id": "r3_file_abc123_chunk_1", "offset": 1559552, "length": 1048576, "key_tier": "content", "compression": "lz4+zstd15+brotli11" },
+    { "id": "r0_file_def789", "offset": 8894464, "length": 4096, "key_tier": "preview", "compression": "webp-lossy" }
+  ],
+  "content_total_bytes": 1712000000,
+  "compression_ratio": 0.62,
+  "encrypted_ratio": 1.0
+}
+```
+
+### ErasureMeta (Recovery Info)
+
+```json
+{
+  "shard_id": "shard_0042",
+  "erasure_codec": "clay-codes",
+  "erasure_params": { "k": 3, "m": 1, "d": 4 },
+  "this_shard_role": "data_shard_0",
+  "parity_distributed_to": ["shard_0043", "shard_0044", "shard_0045"],
+  "recovery_threshold": {
+    "data_shards_needed": 3,
+    "total_shards_available": 6,
+    "can_recover_with": ["shard_0043", "shard_0044", "shard_0045"]
   },
-  "preview_access": {
-    "token_standard": "paseto-v4",
-    "key_derivation": "hkdf-sha256",
-    "max_view_tokens": 100,
-    "token_expiry_hours": 24,
-    "revocable": true
+  "fountain_config": {
+    "symbol_size": 1024,
+    "source_symbols": 8192,
+    "repair_symbols_per_shard": 2048,
+    "min_packets_for_recovery": 8192
+  },
+  "shard_blake3": "blake3:entire_shard_content_hash..."
+}
+```
+
+---
+
+## 3. `root.cybermanju` Master Index
+
+The root file is the **single source of truth** that knows about every shard,
+every file, every resolution, every backend. It is small (1-5MB for 10K files)
+and can be replicated everywhere.
+
+### Binary Layout
+
+```
+Offset    Size      Field
+─────────────────────────────────────────────────────────────
+[0..32)   32B       Magic: "CYBROOT__V2\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
+[32..36)  4B        header_len (u32 LE)
+[36..+h)  variable  header_json (RootHeader)
+[h..+i)   variable  shard_index_len (u32 LE)
+[+i..+j)  variable  shard_index_json (ShardIndex) — ALL SHARDS
+[j..+k)   variable  file_manifest_len (u32 LE)
+[+k..+m)  variable  file_manifest_json (FileManifest) — ALL FILES
+[m..+n)   variable  distribution_len (u32 LE)
+[+n..+p)  variable  distribution_json (DistributionPolicy)
+[p..+q)   variable  revocation_len (u32 LE)
+[q..+r)   variable  revocation_merkle_root (32B)
+[r..+s)   variable  signature_len (u32 LE)
+[s..+t)   variable  root_signature (ML-DSA-65)
+```
+
+### RootHeader
+
+```json
+{
+  "magic": "CYBROOT__V2",
+  "version": "2.0",
+  "library_id": "lib_001",
+  "library_name": "My Photo Library",
+  "created_at": "2026-01-01T00:00:00Z",
+  "modified_at": "2026-06-20T12:00:00Z",
+  "app_version": "0.2.0",
+  "total_files": 12345,
+  "total_shards": 156,
+  "total_size_bytes": 53687091200,
+  "total_preview_size": 15728640,
+  "total_parity_size": 8933376000,
+  "shard_distribution": {
+    "github": 42,
+    "gitlab": 18,
+    "google_drive": 35,
+    "local": 28,
+    "mega": 33
+  },
+  "erasure_codec": "clay-codes",
+  "erasure_params": { "k": 3, "m": 1, "d": 4 },
+  "encryption": {
+    "algorithm": "ml-kem-1024+chacha20poly1305",
+    "index_key_id": "index-key-001",
+    "content_key_id": "content-key-001",
+    "preview_key_id": "preview-key-001"
   },
   "sync": {
     "crdt": "delta-state",
     "vector_clock": true,
     "last_sync_hash": "blake3:..."
   },
-  "stats": {
-    "total_files": 1234,
-    "total_previews": 1234,
-    "total_relations": 5678,
-    "total_deletions": 12,
-    "db_size_bytes": 1048576,
-    "content_store_size": 52428800,
-    "preview_store_size": 2097152,
-    "parity_store_size": 17301504
-  },
-  "platform_origin": "linux",
-  "synced_platforms": ["github", "google_drive", "mega"]
+  "revocation_merkle_root": "blake3:revocation_tree_root..."
 }
 ```
 
-### ResolutionManifest
+### ShardIndex (All Shards)
+
+```json
+{
+  "shards": {
+    "shard_0001": {
+      "shard_type": "content",
+      "backend": "github",
+      "remote_path": "cybermanju/shards/shard_0001.cybermanju",
+      "remote_url": "https://api.github.com/repos/.../contents/...",
+      "file_count": 47,
+      "size_bytes": 268435456,
+      "blake3": "blake3:shard_hash...",
+      "shard_signature": "ml_dsa65:...",
+      "last_verified": "2026-06-20T12:00:00Z"
+    },
+    "shard_0002": {
+      "shard_type": "content",
+      "backend": "github",
+      "remote_path": "cybermanju/shards/shard_0002.cybermanju",
+      "file_count": 52,
+      "size_bytes": 301989888,
+      "blake3": "blake3:shard_hash...",
+      "shard_signature": "ml_dsa65:..."
+    },
+    "parity_shard_A": {
+      "shard_type": "parity",
+      "backend": "gitlab",
+      "remote_path": "cybermanju/parity/parity_shard_A.cybermanju",
+      "file_count": 0,
+      "size_bytes": 893337600,
+      "blake3": "blake3:parity_hash...",
+      "covers_shards": ["shard_0001", "shard_0002", "shard_0003"]
+    },
+    "preview_shard": {
+      "shard_type": "preview",
+      "backend": "ALL",
+      "remote_path": "cybermanju/preview/preview_shard.cybermanju",
+      "file_count": 12345,
+      "size_bytes": 15728640,
+      "blake3": "blake3:preview_hash..."
+    }
+  },
+  "shard_merkle_root": "blake3:root_of_all_shard_hashes"
+}
+```
+
+### FileManifest (File → Shard Map)
 
 ```json
 {
   "files": {
-    "file_id_001": {
-      "name": "photo.jpg",
+    "file_abc123": {
+      "name": "vacation_photo.jpg",
       "mime": "image/jpeg",
+      "folder": "/photos/2026/italy",
       "original_size": 8388608,
-      "original_blake3": "blake3:abcdef1234567890...",
-      "resolutions": {
-        "r0": {
-          "hash": "blake3:thumb_hash...",
-          "size": 3072,
-          "format": "webp",
-          "width": 200,
-          "height": 150,
-          "backends": ["github", "gitlab", "google_drive", "local", "mega"],
-          "blob_path": "r0/{file_id}.webp"
-        },
-        "r1": {
-          "hash": "blake3:preview_hash...",
-          "size": 46080,
-          "format": "jpeg",
-          "width": 640,
-          "height": 480,
-          "backends": ["github", "google_drive"],
-          "blob_path": "r1/{file_id}.jpg"
-        },
-        "r2": {
-          "hash": "blake3:medium_hash...",
-          "size": 460800,
-          "format": "jpeg",
-          "width": 1920,
-          "height": 1080,
-          "backends": ["local", "mega"],
-          "blob_path": "r2/{file_id}.jpg"
-        },
-        "r3": {
-          "hash": "blake3:original_hash...",
-          "size": 8388608,
-          "format": "encrypted",
-          "backends": ["local", "mega"],
-          "blob_path": "r3/{file_id}.enc",
-          "erasure": {
-            "codec": "clay-codes",
-            "shards": 3,
-            "parity": 1,
-            "shard_size": 2796203,
-            "shard_backend_map": {
-              "shard_0": "local",
-              "shard_1": "mega",
-              "shard_2": "local",
-              "parity_0": "github"
-            }
-          }
-        }
+      "original_blake3": "blake3:def456...",
+      "created_at": "2026-06-15T10:30:00Z",
+      "tags": ["vacation", "italy"],
+      "face_groups": ["face_alice"],
+      "shard_assignments": {
+        "r0": ["shard_0001", "shard_0002", "parity_shard_A"],
+        "r1": ["shard_0001", "shard_0002"],
+        "r2": ["shard_0001"],
+        "r3": ["shard_0001", "shard_0003", "parity_shard_A"]
       },
-      "parity": {
-        "hash": "blake3:parity_hash...",
-        "size": 2796203,
-        "codec": "fountain-raptorq",
-        "packets_stored": 8,
-        "min_packets_needed": 5,
-        "backends": ["github", "gitlab"],
-        "blob_path": "parity/{file_id}.fountain"
-      },
-      "sprite": {
-        "hash": "blake3:sprite_hash...",
-        "size": 30720,
-        "grid": "4x4",
-        "backends": ["github", "gitlab", "google_drive", "local", "mega"]
+      "merkle_root": "blake3:file_merkle_root..."
+    },
+    "file_def789": {
+      "name": "beach_sunset.mp4",
+      "mime": "video/mp4",
+      "folder": "/videos/2026/italy",
+      "original_size": 157286400,
+      "shard_assignments": {
+        "r0": ["shard_0002", "parity_shard_A"],
+        "r1": ["shard_0002", "shard_0004"],
+        "r2": ["shard_0002"],
+        "r3": ["shard_0002", "shard_0005", "parity_shard_A"]
       }
     }
   },
-  "merkle_root": "blake3:root_hash_of_all_file_merkle_roots"
+  "folders": {
+    "/photos/2026/italy": { "file_ids": ["file_abc123"], "subfolders": [] },
+    "/videos/2026/italy": { "file_ids": ["file_def789"], "subfolders": [] }
+  },
+  "tags_index": {
+    "vacation": ["file_abc123"],
+    "italy": ["file_abc123", "file_def789"]
+  },
+  "face_index": {
+    "face_alice": ["file_abc123"]
+  }
+}
+```
+
+### DistributionPolicy
+
+```json
+{
+  "resolution_distribution": {
+    "r0": {
+      "backends": ["ALL"],
+      "redundancy": "max",
+      "erasure": "none",
+      "priority": "instant"
+    },
+    "r1": {
+      "backends": ["github", "google_drive", "local"],
+      "redundancy": 2,
+      "erasure": "none",
+      "priority": "fast"
+    },
+    "r2": {
+      "backends": ["local", "mega"],
+      "redundancy": 1,
+      "erasure": "optional",
+      "priority": "normal"
+    },
+    "r3": {
+      "backends": ["local", "mega", "github"],
+      "redundancy": 0,
+      "erasure": {
+        "codec": "clay-codes",
+        "params": { "k": 3, "m": 1, "d": 4 }
+      },
+      "priority": "background"
+    },
+    "parity": {
+      "backends": ["github", "gitlab"],
+      "redundancy": 0,
+      "erasure": {
+        "codec": "fountain-raptorq",
+        "params": { "symbol_size": 1024, "redundancy": 0.33 }
+      },
+      "priority": "background"
+    }
+  },
+  "shard_size_target_bytes": 268435456,
+  "shard_split_strategy": "by_folder",
+  "cost_model": {
+    "storage_cost_per_gb_month": {
+      "github": 0.0,
+      "gitlab": 0.0,
+      "google_drive": 0.02,
+      "local": 0.0,
+      "mega": 0.005
+    }
+  }
 }
 ```
 
 ---
 
-## 4. Resolution Merkle Tree
+## 4. Index Layer: Read Without Decrypt
+
+This is the critical design principle. The index layer enables full browse,
+search, and preview capability WITHOUT ever decrypting the content layer.
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────┐
+│  .cybermanju SHARD                                   │
+│                                                      │
+│  ┌──────────────────────────────────────────────┐   │
+│  │  INDEX LAYER (readable without content key)   │   │
+│  │                                               │   │
+│  │  • File names, sizes, dates, folders          │   │
+│  │  • Tags, face groups, GPS coordinates         │   │
+│  │  • Thumbnail byte ranges + preview key        │   │
+│  │  • Resolution metadata (width, height, mime)  │   │
+│  │  • Erasure coding map                         │   │
+│  │  • Shard cross-references                     │   │
+│  │                                               │   │
+│  │  Encrypted with: INDEX KEY (or unencrypted)   │   │
+│  └──────────────────────────────────────────────┘   │
+│                                                      │
+│  ┌──────────────────────────────────────────────┐   │
+│  │  CONTENT LAYER (encrypted, separate keys)     │   │
+│  │                                               │   │
+│  │  • r0 thumbnails: encrypted with PREVIEW KEY  │   │
+│  │  • r1 previews: encrypted with PREVIEW KEY    │   │
+│  │  • r2 medium: encrypted with CONTENT KEY      │   │
+│  │  • r3 original: encrypted with CONTENT KEY    │   │
+│  │  • Parity shards: encrypted with CONTENT KEY  │   │
+│  │                                               │   │
+│  │  Each chunk independently decryptable          │   │
+│  └──────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────┘
+```
+
+### Index Encryption Modes
+
+```rust
+enum IndexEncryption {
+    /// Index is fully readable — anyone with the shard can browse
+    /// Good for: public libraries, shared galleries
+    Plaintext,
+
+    /// Index encrypted with a separate index key
+    /// Good for: private libraries, access-controlled sharing
+    Encrypted {
+        key_id: String,
+        algorithm: String,  // "aes-256-gcm" or "chacha20poly1305"
+    },
+
+    /// Partial encryption: public metadata visible, private metadata hidden
+    /// Good for: mixed-access libraries
+    Partial {
+        public_fields: Vec<String>,  // ["name", "mime", "size", "folder"]
+        encrypted_fields: Vec<String>,  // ["gps", "face_groups", "tags"]
+    },
+}
+```
+
+### Browse Flow (No Content Key Needed)
+
+```rust
+fn browse_shard(shard_path: &Path, index_key: Option<&Key>) -> ShardIndex {
+    // 1. Read shard header (always plaintext)
+    let header = read_shard_header(shard_path);
+
+    // 2. Read index layer
+    let index_bytes = read_index_layer(shard_path, &header);
+
+    // 3. Decrypt index if needed (with index key, NOT content key)
+    let index = match &header.index_encrypted {
+        false => serde_json::from_slice(&index_bytes)?,
+        true => {
+            let key = index_key.expect("Index key required");
+            let decrypted = decrypt_index(&index_bytes, key)?;
+            serde_json::from_slice(&decrypted)?
+        }
+    };
+
+    index
+}
+
+fn browse_all_files(root: &RootCybermanju, index_key: Option<&Key>) -> Vec<FileManifest> {
+    let mut all_files = Vec::new();
+
+    // 1. Read root index (small, maybe cached)
+    let root_index = read_root_index(root)?;
+
+    // 2. For each shard, read its index
+    for shard_info in root_index.shards.values() {
+        let shard_index = browse_shard(&shard_info.local_path, index_key)?;
+        all_files.extend(shard_index.files.values().cloned());
+    }
+
+    all_files
+}
+```
+
+### Preview Flow (Preview Key Only, No Content Key)
+
+```rust
+fn preview_file(
+    root: &RootCybermanju,
+    file_id: &str,
+    preview_key: &Key,
+    target_resolution: ResolutionLevel,
+) -> Result<Vec<u8>> {
+    // 1. Find which shard contains this file's preview
+    let file_entry = root.file_manifest.get(file_id)?;
+    let shard_id = &file_entry.shard_assignments[&target_resolution][0];
+    let shard_info = root.shard_index.get(shard_id)?;
+
+    // 2. Read shard index (no content key needed)
+    let shard_index = browse_shard(&shard_info.local_path, None)?;
+
+    // 3. Find the byte range for this resolution
+    let resolution = shard_index.files[file_id].resolutions[&target_resolution];
+    let content_offset = resolution.content_offset;
+    let content_length = resolution.content_length;
+
+    // 4. Read encrypted bytes from shard
+    let encrypted_bytes = read_content_bytes(
+        &shard_info.local_path,
+        content_offset,
+        content_length,
+    )?;
+
+    // 5. Decrypt with PREVIEW KEY (not content key!)
+    let decrypted = decrypt_preview(&encrypted_bytes, preview_key, file_id)?;
+
+    Ok(decrypted)
+}
+```
+
+### Search Flow (Index Only)
+
+```rust
+fn search_files(
+    root: &RootCybermanju,
+    query: &str,
+    index_key: Option<&Key>,
+) -> Vec<FileManifest> {
+    let mut results = Vec::new();
+
+    // 1. Search root index (tags, folders, names)
+    for (file_id, file) in root.file_manifest.files.iter() {
+        if file.name.contains(query)
+            || file.tags.iter().any(|t| t.contains(query))
+            || file.folder.contains(query)
+        {
+            results.push(file.clone());
+        }
+    }
+
+    // 2. Optionally search shard-level indexes for deeper metadata
+    for shard_info in root.shard_index.shards.values() {
+        let shard_index = browse_shard(&shard_info.local_path, index_key)?;
+        for (file_id, file) in shard_index.files.iter() {
+            // Search face groups, GPS, custom metadata
+            if file.face_groups.iter().any(|f| f.contains(query)) {
+                results.push(file.clone());
+            }
+        }
+    }
+
+    results
+}
+```
+
+---
+
+## 5. Content Layer: Encrypted Blob Store
+
+### Chunk-Level Encryption
+
+Each content blob is independently encrypted. This enables:
+- Read r0 without touching r3
+- Stream r2 without decrypting entire file
+- Seek to any chunk in r3
+
+```rust
+struct ChunkEncryption {
+    /// Each chunk gets its own nonce (96-bit for ChaCha20-Poly1305)
+    chunk_index: u32,
+    nonce: [u8; 12],
+    /// Key tier determines which key encrypts this chunk
+    key_tier: KeyTier,
+    /// Auth tag (16 bytes for Poly1305)
+    auth_tag: [u8; 16],
+}
+
+enum KeyTier {
+    /// Preview key — encrypts r0, r1 thumbnails/previews
+    Preview,
+    /// Content key — encrypts r2, r3, parity
+    Content,
+}
+```
+
+### Chunked r3 for Streaming
+
+Large files (r3) are split into independently encrypted chunks:
+
+```
+r3 original (8MB file, 1MB chunks)
+├── chunk_0: [encrypted: 1MB + 16B auth tag]  → ChaCha20(key=content_key, nonce=chunk_0_nonce)
+├── chunk_1: [encrypted: 1MB + 16B auth tag]  → ChaCha20(key=content_key, nonce=chunk_1_nonce)
+├── chunk_2: [encrypted: 1MB + 16B auth tag]  → ChaCha20(key=content_key, nonce=chunk_2_nonce)
+├── ...
+└── chunk_7: [encrypted: 1MB + 16B auth tag]  → ChaCha20(key=content_key, nonce=chunk_7_nonce)
+```
+
+### Streaming Without Full Decrypt
+
+```rust
+fn stream_video_chunk(
+    shard_path: &Path,
+    file_id: &str,
+    chunk_index: u32,
+    content_key: &Key,
+) -> Result<Vec<u8>> {
+    // 1. Read shard index (no key needed)
+    let shard_index = browse_shard(shard_path, None)?;
+
+    // 2. Find chunk byte range
+    let resolution = shard_index.files[file_id].resolutions[&ResolutionLevel::R2];
+    let chunk_offset = resolution.content_offset + (chunk_index as u64 * resolution.chunk_size);
+    let chunk_length = resolution.chunk_size;
+
+    // 3. Read only this chunk's bytes
+    let encrypted_chunk = read_content_bytes(shard_path, chunk_offset, chunk_length + 16)?;
+
+    // 4. Decrypt only this chunk
+    let nonce = compute_chunk_nonce(file_id, chunk_index);
+    let plaintext = chacha20poly1305_decrypt(&encrypted_chunk, content_key, &nonce)?;
+
+    Ok(plaintext)
+}
+```
+
+### Compression Before Encryption
+
+Each blob is compressed BEFORE encryption, so the encrypted output is opaque
+but the plaintext is compressed:
+
+```
+Original file → Compress (triple-layer) → Encrypt (chunk-level) → Store in shard
+
+Reading:
+Shard → Read byte range → Decrypt chunk → Decompress → Original file
+```
+
+### Random-Access Decompression
+
+For r3 with chunk-level compression, you can seek to any chunk:
+
+```rust
+fn read_r3_chunk(
+    shard_path: &Path,
+    file_id: &str,
+    chunk_index: u32,
+    content_key: &Key,
+) -> Result<Vec<u8>> {
+    // 1. Read encrypted chunk
+    let encrypted = read_content_bytes(shard_path, chunk_offset, chunk_len + 16)?;
+
+    // 2. Decrypt
+    let compressed = chacha20poly1305_decrypt(&encrypted, content_key, &nonce)?;
+
+    // 3. Decompress (only this chunk)
+    let decompressed = triple_decompress(&compressed)?;
+
+    Ok(decompressed)
+}
+```
+
+---
+
+## 6. Resolution Merkle Tree
 
 Each file has a Merkle tree where the root is the file's identity and leaves
 are individual resolutions.
@@ -329,12 +849,13 @@ fn verify_resolution(
 
 ---
 
-## 5. Three-Tier Key System
+## 7. Three-Tier Key System
 
 ### Key Hierarchy
 
 ```
 Master Key (user-controlled, permanent, 256-bit)
+├── Derives → Index Key      (encrypts shard indexes)
 ├── Derives → Content Key    (encrypts r2, r3 — full resolution data)
 ├── Derives → Preview Key    (encrypts r0, r1 — thumbnails/previews)
 └── Derives → View Token Key (time-limited, view-limited, encrypts ONLY r0)
@@ -345,6 +866,16 @@ Master Key (user-controlled, permanent, 256-bit)
 ```rust
 use hkdf::Hkdf;
 use sha2::Sha256;
+
+fn derive_index_key(master_key: &[u8], library_id: &str) -> [u8; 32] {
+    let hk = Hkdf::<Sha256>::new(
+        Some(b"cybermanju-index-v1"),
+        master_key
+    );
+    let mut key = [0u8; 32];
+    hk.expand(library_id.as_bytes(), &mut key).unwrap();
+    key
+}
 
 fn derive_content_key(master_key: &[u8], file_id: &str) -> [u8; 32] {
     let hk = Hkdf::<Sha256>::new(
@@ -362,7 +893,8 @@ fn derive_preview_key(master_key: &[u8], file_id: &str) -> [u8; 32] {
         master_key
     );
     let mut key = [0u8; 32];
-    hk.expand(file_id.as_bytes(), &mut key).key
+    hk.expand(file_id.as_bytes(), &mut key).unwrap();
+    key
 }
 
 fn derive_view_token_key(
@@ -404,36 +936,37 @@ Generate Token:
   2. Derive token_key = HKDF(preview_key, file_id, token_id)
   3. Encrypt r0 data with token_key
   4. Create PASETO V4 token with claims
-  5. Store token metadata in DB (for revocation)
+  5. Store token metadata in root index (for revocation)
   6. Return encrypted r0 + token
 
 Validate Token:
   1. Parse PASETO V4 token
   2. Check expiry (exp claim)
-  3. Check revocation list (jti claim)
+  3. Check revocation list (jti claim against revocation Merkle tree)
   4. Derive token_key = HKDF(preview_key, file_id, token_id)
   5. Decrypt r0 data with token_key
   6. Increment view count (if < vcn, else revoke)
 
 Revoke Token:
   1. Add jti to revocation Merkle tree
-  2. Update revocation root in .cybermanju header
+  2. Update revocation root in root.cybermanju header
   3. Token becomes invalid on next validation
 ```
 
 ### Access Control Matrix
 
-| Resolution | Master Key | Content Key | Preview Key | View Token |
-|-----------|-----------|-------------|-------------|------------|
-| r0 (thumb) | Full access | Full access | Full access | Time-limited, view-limited |
-| r1 (preview) | Full access | Full access | Full access | No access |
-| r2 (medium) | Full access | Full access | No access | No access |
-| r3 (original) | Full access | Full access | No access | No access |
-| Parity shards | Full access | Full access | No access | No access |
+| Layer | Master Key | Index Key | Content Key | Preview Key | View Token |
+|-------|-----------|-----------|-------------|-------------|------------|
+| Index (metadata) | Full access | Full access | No access | No access | No access |
+| r0 (thumb) | Full access | Read-only | Full access | Full access | Time-limited, view-limited |
+| r1 (preview) | Full access | Read-only | Full access | Full access | No access |
+| r2 (medium) | Full access | Read-only | Full access | No access | No access |
+| r3 (original) | Full access | Read-only | Full access | No access | No access |
+| Parity shards | Full access | Read-only | Full access | No access | No access |
 
 ---
 
-## 6. Cross-Backend Distribution
+## 8. Cross-Backend Distribution
 
 ### Backend Types (Existing)
 
@@ -467,13 +1000,9 @@ struct DistributionPolicy {
 }
 
 enum BackendSelector {
-    /// Specific backend by ID
     Specific(String),
-    /// Any backend matching predicate
     Matching(fn(&dyn StorageBackend) -> bool),
-    /// Random selection from pool
     Random { pool: Vec<String>, count: usize },
-    /// Round-robin across pool
     RoundRobin { pool: Vec<String> },
 }
 ```
@@ -484,29 +1013,29 @@ enum BackendSelector {
 resolution_distribution:
   r0:
     backends: [ALL]
-    redundancy: max        # all available backends
-    erasure: none          # full copies, too small for EC
-    priority: instant      # must be fastest to access
+    redundancy: max
+    erasure: none
+    priority: instant
 
   r1:
     backends: [github, google_drive, local]
-    redundancy: 2          # at least 2 copies
-    erasure: none          # small enough for full copies
-    priority: fast         # <200ms access
+    redundancy: 2
+    erasure: none
+    priority: fast
 
   r2:
     backends: [local, mega]
-    redundancy: 1          # at least 1 copy
-    erasure: optional      # RS if backend supports it
-    priority: normal       # <500ms access
+    redundancy: 1
+    erasure: optional
+    priority: normal
 
   r3:
     backends: [local, mega, github]
-    redundancy: 0          # no full copies
+    redundancy: 0
     erasure:
       codec: clay-codes
-      params: { k: 3, m: 1, d: 4 }  # 33% overhead, 2.9× less repair BW
-    priority: background   # reconstructed on demand
+      params: { k: 3, m: 1, d: 4 }
+    priority: background
 
   parity:
     backends: [github, gitlab]
@@ -514,18 +1043,15 @@ resolution_distribution:
     erasure:
       codec: fountain-raptorq
       params: { symbol_size: 1024, redundancy: 0.33 }
-    priority: background   # used only for recovery
+    priority: background
 ```
 
 ### Cost-Aware Placement
 
 ```rust
 struct CostModel {
-    /// Cost per GB per month for each backend
     storage_cost: HashMap<String, f64>,
-    /// Cost per GB for download
     download_cost: HashMap<String, f64>,
-    /// Cost per GB for upload
     upload_cost: HashMap<String, f64>,
 }
 
@@ -535,16 +1061,16 @@ impl CostModel {
         file: &FileResolutions,
         policy: &DistributionPolicy,
     ) -> PlacementPlan {
-        // For r3 (large): use cheapest backends with sufficient bandwidth
-        // For r0 (tiny): ignore cost, maximize availability
-        // For parity: use cheapest backends with sufficient storage
+        // r3 (large): cheapest backends with sufficient bandwidth
+        // r0 (tiny): ignore cost, maximize availability
+        // parity: cheapest backends with sufficient storage
     }
 }
 ```
 
 ---
 
-## 7. Erasure Coding Strategies
+## 9. Erasure Coding Strategies
 
 ### Tier 1: Reed-Solomon (Proven, Fast)
 
@@ -552,31 +1078,18 @@ impl CostModel {
 
 ```toml
 [dependencies]
-reed-solomon-simd = "3.1.0"  # 10.2 GiB/s encode, O(n log n)
+reed-solomon-simd = "3.1.0"
 ```
 
 ```rust
 use reed_solomon_simd::ReedSolomon;
 
-// RS(3,4) — 3 data shards, 1 parity, tolerates 1 loss
 let rs = ReedSolomon::new(3, 1)?;
-
 let shards = rs.encode(&data)?;
-// shards: [data0, data1, data2, parity0]
-
-// Distribute across backends
-for (i, shard) in shards.iter().enumerate() {
-    backend.upload(&format!("shard_{}", i), shard)?;
-}
-
-// Reconstruct from any 3 of 4 shards
 let recovered = rs.reconstruct(&available_shards)?;
 ```
 
-**Performance** (256:256 shards on Ryzen 5 3600):
-- Encode: 10.2 GiB/s
-- Decode: 1.0 GiB/s
-- SIMD: SSSE3, AVX2, NEON (runtime dispatch)
+**Performance**: 10.2 GiB/s encode, 1.0 GiB/s decode (Ryzen 5 3600).
 
 ### Tier 2: Fountain Codes (Rateless)
 
@@ -590,31 +1103,15 @@ fountain_scheme = "1.0.1"
 ```rust
 use fountain_scheme::{Encoder, Decoder, RaptorQ};
 
-// Create fountain encoder
 let encoder = RaptorQ::new(symbol_size: 1024, source_symbols: &data)?;
-
-// Generate infinite stream of encoded packets
 let packet = encoder.encode(sequence_number);
 
-// Distribute packets across backends (any order, any count)
-for packet in encoder.take(10) {
-    let backend = select_backend();
-    backend.upload(&packet.id(), &packet.encode())?;
-}
-
-// Decode from ANY k packets (regardless of which ones)
 let mut decoder = Decoder::new(symbol_size: 1024, source_len: data.len());
 for packet in received_packets {
     decoder.add_packet(packet)?;
 }
 let recovered = decoder.decode()?;
 ```
-
-**Properties**:
-- Rateless: generate infinite packets from k source symbols
-- Any k-of-n packets reconstruct the data
-- No fixed shard assignment needed
-- Ideal for variable-backend-count scenarios
 
 ### Tier 3: MSR Codes (Minimum Storage Regenerating)
 
@@ -628,16 +1125,8 @@ clay-codes = "0.1.1"
 ```rust
 use clay_codes::{ClayCodec, Shard};
 
-// Clay(k=3, m=1, d=4) — same storage overhead as RS(3,4)
-// but 2.9× less repair bandwidth when one shard is lost
 let codec = ClayCodec::new(k: 3, m: 1, d: 4)?;
-
 let shards = codec.encode(&data)?;
-
-// When shard_2 is lost:
-// RS: download 3 full shards (24MB) to reconstruct 1 shard (8MB)
-// Clay: download β sub-chunks from d=4 helpers (4MB) to reconstruct
-// → 2.9× less bandwidth
 let repaired = codec.repair(lost_shard: 2, available: &shards)?;
 ```
 
@@ -647,23 +1136,13 @@ let repaired = codec.repair(lost_shard: 2, available: &shards)?;
 
 ```toml
 [dependencies]
-shamir-zero = "0.1.10"  # 2.8× faster than Go, zero-unsafe
+shamir-zero = "0.1.10"
 ```
 
 ```rust
 use shamir_zero::Shamir;
 
-// Split master key into 5 shares, any 3 can reconstruct
 let shares = Shamir::split(&master_key, threshold: 3, shares: 5)?;
-
-// Distribute shares across devices
-device_1.store(&shares[0]);
-device_2.store(&shares[1]);
-device_3.store(&shares[2]);
-device_4.store(&shares[3]);
-device_5.store(&shares[4]);
-
-// Reconstruct from any 3 shares
 let reconstructed = Shamir::combine(&[share_0, share_1, share_2])?;
 ```
 
@@ -711,7 +1190,7 @@ fn distribute_file(file: &FileResolutions, policy: &DistributionPolicy) {
 
 ---
 
-## 8. Compression Pipeline
+## 10. Compression Pipeline
 
 ### Current Triple-Layer (LZ4 → Zstd → Brotli)
 
@@ -740,7 +1219,6 @@ DECOMPRESS: data → Brotli decompress → Zstd decompress → LZ4 decompress �
 | brotli 11 | **1.632x** | Slow compress, fast decompress | Web text assets |
 | zstd 3 | ~1.4x | Very fast compress | **Everyday default** |
 | lz4 | ~1.3x | Extremely fast both | Real-time, local |
-| gzip 4 | ~1.3x | Medium | Legacy compatibility |
 
 ### Per-Resolution Compression
 
@@ -762,8 +1240,7 @@ fastcdc = "4.0.1"
 ```rust
 use fastcdc::v2020::FastCDC;
 
-// Chunk file content-defined boundaries
-let mutcdc = FastCDC::new(data, min_size: 2048, max_size: 65536, avg_size: 32768);
+let mut cdc = FastCDC::new(data, min_size: 2048, max_size: 65536, avg_size: 32768);
 
 let chunks: Vec<(u64, Vec<u8>)> = cdc
     .filter_map(|chunk| {
@@ -776,13 +1253,12 @@ let chunks: Vec<(u64, Vec<u8>)> = cdc
     })
     .collect();
 
-// Dedup: same content = same hash = shared blob
 let deduped: HashMap<blake3::Hash, Vec<u8>> = chunks.into_iter().collect();
 ```
 
 ---
 
-## 9. Shared Preview Library
+## 11. Shared Preview Library
 
 ### Structure
 
@@ -813,17 +1289,15 @@ struct SpriteSheet {
 
 impl SpriteSheet {
     fn generate(thumbnails: &[Vec<u8>]) -> Vec<u8> {
-        // Create 800x800 RGBA image
         let mut sheet = ImageBuffer::new(800, 800);
 
         for (i, thumb) in thumbnails.iter().enumerate() {
-            let x = (i % 4) * 204;  // 200 + 4px padding
+            let x = (i % 4) * 204;
             let y = (i / 4) * 204;
             let img = image::load_from_memory(thumb).unwrap();
             sheet.copy_from(&img, x, y).unwrap();
         }
 
-        // Encode as optimized PNG
         let mut buf = Cursor::new(Vec::new());
         sheet.write_to(&mut buf, ImageFormat::Png).unwrap();
         buf.into_inner()
@@ -831,17 +1305,9 @@ impl SpriteSheet {
 }
 ```
 
-### Benefits
-
-- **Deduplication**: Same image content shares the same preview hash
-- **Ultra-compression**: 200x200 WebP is typically 2-5KB (1/1600 of 8MB photo)
-- **Sprite sheets**: 16 thumbnails in one 800x800 PNG (~30KB) for gallery loading
-- **Content-addressed**: Same content = same hash = automatic dedup
-- **Portable**: Syncs to ALL backends since it's so small
-
 ---
 
-## 10. Recovery Pipeline
+## 12. Recovery Pipeline
 
 ### Recovery Gradient
 
@@ -860,33 +1326,24 @@ impl SpriteSheet {
 
 ```rust
 enum RecoveryStrategy {
-    /// Exact reconstruction from Clay/RS shards
     ErasureReconstruct {
         shards: Vec<Shard>,
-        codec: ClayCodes,               // clay-codes 0.1.1
+        codec: ClayCodes,
     },
-
-    /// Exact reconstruction from fountain packets
     FountainReconstruct {
         packets: Vec<FountainPacket>,
-        codec: RaptorQ,                 // fountain_scheme 1.0.1
+        codec: RaptorQ,
     },
-
-    /// Approximate reconstruction via neural upscaling
     UpscaleFromLower {
         source: ResolutionLevel,
         target: ResolutionLevel,
         upscaler: UpscalerEngine,
     },
-
-    /// Fast traditional upscaling (no AI)
     FastLanczos {
         source: ResolutionLevel,
         target: ResolutionLevel,
-        resize: FastImageResize,        // fast_image_resize 6.0
+        resize: FastImageResize,
     },
-
-    /// Hybrid: partial reconstruction + upscaling
     HybridReconstruct {
         partial_shards: Vec<Shard>,
         partial_data: Vec<u8>,
@@ -899,26 +1356,19 @@ enum RecoveryStrategy {
 
 ```rust
 enum UpscalerEngine {
-    /// Built-in SIMD Lanczos3 — fast, no model needed
     LanczosClassic,                     // fast_image_resize 6.0
-
-    /// Neural upscaling via ONNX Runtime
     OnnxRealEsrGan {
-        model_path: PathBuf,            // ~60MB ONNX model
-        execution_provider: GpuProvider, // CUDA/Metal/Vulkan/CPU
-    },                                  // ort 2.0 + Real-ESRGAN ONNX
-
-    /// Neural upscaling via Burn framework
-    BurnEsrGan {
-        model: BurnModel,               // burn 0.21
+        model_path: PathBuf,
+        execution_provider: GpuProvider,
     },
-
-    /// Frequency-domain recovery
-    FourierRecover,                     // Custom implementation
+    BurnEsrGan {
+        model: BurnModel,
+    },
+    FourierRecover,
 }
 ```
 
-### Recovery Pipeline Implementation
+### Recovery Pipeline
 
 ```rust
 impl RecoveryPipeline {
@@ -928,24 +1378,20 @@ impl RecoveryPipeline {
         target: ResolutionLevel,
         available: &AvailableData,
     ) -> Result<RecoveryResult> {
-        // 1. Check if exact data available
         if let Some(data) = self.try_exact_recovery(file_id, target, available) {
             return Ok(RecoveryResult::Exact(data));
         }
 
-        // 2. Try erasure reconstruction
         if available.has_enough_shards(target) {
             let data = self.erasure_reconstruct(available)?;
             return Ok(RecoveryResult::Exact(data));
         }
 
-        // 3. Try fountain reconstruction
         if available.has_enough_packets() {
             let data = self.fountain_reconstruct(available)?;
             return Ok(RecoveryResult::Exact(data));
         }
 
-        // 4. Try upscaling from lower resolution
         if let Some(lower) = target.lower_resolution() {
             if let Some(lower_data) = self.load_resolution(file_id, lower) {
                 let upscaled = self.upscaler.upscale(&lower_data, target)?;
@@ -954,44 +1400,17 @@ impl RecoveryPipeline {
             }
         }
 
-        // 5. Try hybrid reconstruction
         if available.has_partial_data() {
             let data = self.hybrid_reconstruct(available, target)?;
             let confidence = self.estimate_hybrid_confidence(available, target);
             return Ok(RecoveryResult::Approximate(data, confidence));
         }
 
-        // 6. Nothing available
         Err(RecoveryError::InsufficientData {
             file_id: file_id.to_string(),
             target,
             available: available.summary(),
         })
-    }
-
-    fn try_exact_recovery(
-        &self,
-        file_id: &str,
-        target: ResolutionLevel,
-        available: &AvailableData,
-    ) -> Option<Vec<u8>> {
-        // Check if we have the exact resolution blob
-        available.get_resolution(file_id, target)
-    }
-
-    fn estimate_confidence(
-        &self,
-        source: ResolutionLevel,
-        target: ResolutionLevel,
-    ) -> f64 {
-        // Lower resolution → lower confidence
-        let ratio = source.size_ratio_to(target);
-        match ratio {
-            r if r > 0.5 => 0.9,   // Close resolutions, high confidence
-            r if r > 0.25 => 0.7,  // Medium gap, moderate confidence
-            r if r > 0.1 => 0.5,   // Large gap, lower confidence
-            _ => 0.3,              // Very large gap, low confidence
-        }
     }
 }
 ```
@@ -1026,21 +1445,14 @@ impl OnnxUpscaler {
         };
 
         let session = session.commit_from_file(model_path)?;
-
         Ok(Self { session })
     }
 
     fn upscale(&self, input: &[u8], target: ResolutionLevel) -> Result<Vec<u8>> {
-        // Decode input image to tensor
         let img = image::load_from_memory(input)?;
         let tensor = img_to_tensor(&img)?;
-
-        // Run inference
         let output = self.session.run(ort::inputs![tensor]?)?;
-
-        // Decode output tensor to image
         let output_img = tensor_to_img(&output[0])?;
-
         Ok(output_img)
     }
 }
@@ -1048,7 +1460,7 @@ impl OnnxUpscaler {
 
 ---
 
-## 11. Technology Stack
+## 13. Technology Stack
 
 ### Core Dependencies
 
@@ -1086,65 +1498,62 @@ serde_json = "1"
 
 # crates/erasure/Cargo.toml
 [dependencies]
-reed-solomon-simd = "3.1.0"        # RS O(n log n), 10 GiB/s
-clay-codes = "0.1.1"               # MSR codes, 2.9× less repair BW
-fountain_scheme = "1.0.1"          # LT/RaptorQ fountain codes
-shamir-zero = "0.1.10"             # Shamir secret sharing, zero-unsafe
-gf256 = "0.3.1"                    # GF(256) toolkit: RS+RAID+Shamir
+reed-solomon-simd = "3.1.0"
+clay-codes = "0.1.1"
+fountain_scheme = "1.0.1"
+shamir-zero = "0.1.10"
+gf256 = "0.3.1"
 
 # crates/preview-keys/Cargo.toml
 [dependencies]
-rusty_paseto = "0.10.0"            # PASETO V4 tokens
-hkdf = "0.13.0"                    # Key derivation
-ml-kem = "0.3.2"                   # ML-KEM-1024 (FIPS 203)
-ml-dsa = "0.1.1"                   # ML-DSA-65 (FIPS 204)
+rusty_paseto = "0.10.0"
+hkdf = "0.13.0"
+ml-kem = "0.3.2"
+ml-dsa = "0.1.1"
 
 # crates/recovery/Cargo.toml
 [dependencies]
-fast_image_resize = "6.0"          # SIMD Lanczos3/Bicubic
+fast_image_resize = "6.0"
 ort = { version = "2.0.0-rc.12", features = ["load-dynamic"] }
 image = "0.25.10"
-ravif = "0.13.0"                   # AVIF encoding
-mozjpeg-rs = "0.9.2"               # Pure safe-Rust JPEG
-pdfium-render = "0.8"              # PDF rendering
-ffmpeg-next = "7"                   # Video thumbnails
+ravif = "0.13.0"
+mozjpeg-rs = "0.9.2"
+pdfium-render = "0.8"
+ffmpeg-next = "7"
 
 # crates/sync-crdt/Cargo.toml
 [dependencies]
-abyo-crdt = "0.4"                  # Delta-state CRDTs
-vclock = "0.4.4"                   # Vector clocks
-iroh = "1.0.0"                     # P2P content-addressed networking
-iroh-blobs = "1.0.0"               # BLAKE3 verified blob transfer
-fastcdc = "4.0.1"                  # Content-defined chunking
+abyo-crdt = "0.4"
+vclock = "0.4.4"
+iroh = "1.0.0"
+iroh-blobs = "1.0.0"
+fastcdc = "4.0.1"
 ```
 
 ### Existing Dependencies to Upgrade
 
 ```toml
-# Upgrade these
-lz4_flex = "0.13.1"                # was 0.12
-zstd = "0.13.3"                    # was unknown
-brotli = "8.0.4"                   # was unknown
+lz4_flex = "0.13.1"
+zstd = "0.13.3"
+brotli = "8.0.4"
 
-# Remove these (archived)
+# Remove (archived)
 # pqcrypto-mlkem = "0.19.x"       # → ml-kem
 # pqcrypto-mlkem768 = "0.19.x"    # → ml-kem
 # pqcrypto-ml-dsa = "0.19.x"      # → ml-dsa
-# pqcrypto-falcon = "0.4.x"       # → falcon-rs (experimental)
+# pqcrypto-falcon = "0.4.x"       # → falcon-rs
 # pqcrypto-sphincsplus = "0.7.x"  # → slh-dsa
 ```
 
 ---
 
-## 12. Implementation Roadmap
+## 14. Implementation Roadmap
 
 ### Phase 0: Crypto Migration (Urgent — before June 2026)
 
-**Goal**: Migrate from archived `pqcrypto-*` to pure-Rust `ml-kem`/`ml-dsa`/`slh-dsa`.
-
 | Task | Crate | Effort |
 |------|-------|--------|
-| Replace `pqcrypto-mlkem` → `ml-kem` 0.3.2 | `cybermanju-crypto` | 2-3 days |
+| Replace `pqcrypto-*` → `ml-kem` 0.3.2 | `cybermanju-crypto` | 2-3 days |
 | Replace `pqcrypto-ml-dsa` → `ml-dsa` 0.1.1 | `cybermanju-crypto` | 2-3 days |
 | Add `hpke` 0.13.0 for hybrid KEM | `cybermanju-crypto` | 1-2 days |
 | Add `rusty_paseto` 0.10.0 for tokens | New crate | 2-3 days |
@@ -1155,26 +1564,21 @@ brotli = "8.0.4"                   # was unknown
 
 **Total**: ~2-3 weeks
 
-### Phase 1: Resolution Tree (Foundation)
-
-**Goal**: Add resolution awareness to the file model.
+### Phase 1: Shard Format + Root Index
 
 | Task | Crate | Effort |
 |------|-------|--------|
-| Create `cybermanju-resolutions` crate | New | 1 day |
-| Implement `ResolutionTree` struct | `resolutions` | 3-5 days |
-| Implement `ResolutionManifest` | `resolutions` | 2-3 days |
-| Modify `FileNode` with resolution metadata | `types` | 1-2 days |
-| Modify portable DB to v2 format | `portable-db` | 3-5 days |
-| Add resolution generation pipeline | `resolutions` | 3-5 days |
-| Update Tauri commands | `src-tauri` | 2-3 days |
+| Implement `.cybermanju` shard format | `portable-db` | 5-7 days |
+| Implement `root.cybermanju` master index | `portable-db` | 5-7 days |
+| Implement index layer (read without decrypt) | `portable-db` | 3-5 days |
+| Implement content layer (chunk encryption) | `crypto` | 3-5 days |
+| Add byte-range access API | `portable-db` | 2-3 days |
+| Update Tauri commands | `src-tauri` | 3-5 days |
 | Update WASM bridge | `drive-wasm` | 2-3 days |
 
-**Total**: ~3-4 weeks
+**Total**: ~4-5 weeks
 
 ### Phase 2: Erasure Coding
-
-**Goal**: Distribute r3 and parity across backends with erasure coding.
 
 | Task | Crate | Effort |
 |------|-------|--------|
@@ -1183,15 +1587,12 @@ brotli = "8.0.4"                   # was unknown
 | Integrate `clay-codes` 0.1.1 | `erasure` | 3-5 days |
 | Integrate `fountain_scheme` 1.0.1 | `erasure` | 3-5 days |
 | Implement `DistributionPolicy` | `erasure` | 3-5 days |
-| Modify sync pipeline for resolution distribution | `src-tauri/sync` | 5-7 days |
+| Modify sync pipeline for shard distribution | `src-tauri/sync` | 5-7 days |
 | Add cost-aware placement | `erasure` | 2-3 days |
-| Add repair bandwidth optimization | `erasure` | 2-3 days |
 
 **Total**: ~3-4 weeks
 
 ### Phase 3: Preview Keys
-
-**Goal**: PASETO V4 view tokens with resolution-limited access.
 
 | Task | Crate | Effort |
 |------|-------|--------|
@@ -1201,13 +1602,10 @@ brotli = "8.0.4"                   # was unknown
 | Add HKDF key derivation hierarchy | `preview-keys` | 1-2 days |
 | Add Merkle tree for revocation list | `preview-keys` | 2-3 days |
 | Integrate with Tauri commands | `src-tauri` | 2-3 days |
-| Update web dashboard API | `src-tauri/web_dashboard` | 2-3 days |
 
 **Total**: ~2-3 weeks
 
 ### Phase 4: Shared Preview Library
-
-**Goal**: Content-addressed, deduplicated preview store with sprite sheets.
 
 | Task | Crate | Effort |
 |------|-------|--------|
@@ -1216,13 +1614,10 @@ brotli = "8.0.4"                   # was unknown
 | Implement sprite sheet generation | `resolutions` | 2-3 days |
 | Add `fastcdc` chunking for large previews | `resolutions` | 1-2 days |
 | Integrate with sync pipeline | `src-tauri/sync` | 2-3 days |
-| Add preview library sync to all backends | `src-tauri/sync` | 2-3 days |
 
 **Total**: ~2-3 weeks
 
 ### Phase 5: Recovery Pipeline
-
-**Goal**: Byte-level recovery with neural upscaling.
 
 | Task | Crate | Effort |
 |------|-------|--------|
@@ -1232,14 +1627,11 @@ brotli = "8.0.4"                   # was unknown
 | Add `ffmpeg-next` for video thumbnails | `recovery` | 2-3 days |
 | Add `pdfium-render` for PDF previews | `recovery` | 2-3 days |
 | Implement recovery gradient logic | `recovery` | 3-5 days |
-| Add confidence scoring | `recovery` | 1-2 days |
 | Integrate with Tauri commands | `src-tauri` | 2-3 days |
 
 **Total**: ~3-4 weeks
 
 ### Phase 6: Distributed Sync CRDT
-
-**Goal**: Delta-state CRDT sync with vector clocks.
 
 | Task | Crate | Effort |
 |------|-------|--------|
@@ -1249,81 +1641,85 @@ brotli = "8.0.4"                   # was unknown
 | Add vector clock causal ordering | `sync-crdt` | 2-3 days |
 | Integrate `iroh` for P2P transport | `sync-crdt` | 5-7 days |
 | Add conflict resolution UI | Vue frontend | 3-5 days |
-| Test multi-device sync | Testing | 3-5 days |
 
 **Total**: ~4-5 weeks
 
 ---
 
-## 13. Design Decisions Log
+## 15. Design Decisions Log
 
-### Decision 1: Fixed 4 Resolution Levels
+### Decision 1: Shard Model (Hundreds of `.cybermanju` files)
 
-**Chosen**: 4 fixed levels (r0-r3) + parity
-
-**Alternatives considered**:
-- 2 levels (thumb + full): Too simple, no recovery gradient
-- 8 levels: Too much complexity, diminishing returns
-- Dynamic levels: Maximum flexibility but hard to reason about
-
-**Rationale**: 4 levels provide a good balance:
-- r0 (200x200): Instant gallery access
-- r1 (640x480): Share preview
-- r2 (1920x1080): Detail view
-- r3 (original): Full resolution
-- Plus parity for recovery
-
-### Decision 2: Clay Codes for r3, Fountain Codes for Parity
-
-**Chosen**: Clay codes (MSR) for r3 distribution, fountain codes (RaptorQ) for parity
+**Chosen**: Distributed shards, each a self-contained `.cybermanju` file.
 
 **Alternatives considered**:
-- Reed-Solomon for both: Fixed shard count, higher repair bandwidth
-- Fountain codes for both: No fixed assignment, but less repair optimization
-- Clay codes for both: Fixed shard count, complex implementation
+- Single `.cybermanju` file: Too large, single point of failure
+- Sidecar directories: Not portable, not self-contained
+- Pure database (redb): No random-access byte ranges
 
-**Rationale**: Clay codes optimize repair bandwidth for the large r3 data.
+**Rationale**: Each shard is portable, self-contained, and independently
+verifiable. A shard can be copied, moved, or recovered independently.
+
+### Decision 2: Index Layer Separate from Content Layer
+
+**Chosen**: Index readable without decrypting content.
+
+**Alternatives considered**:
+- Single encrypted blob: Must decrypt to browse
+- Unencrypted index, encrypted content: Good, but index might leak metadata
+- Encrypted index with separate key: Best balance
+
+**Rationale**: Enables browsing, searching, and previewing without ever
+exposing the content encryption key. The index key can be shared separately.
+
+### Decision 3: Fixed 4 Resolution Levels
+
+**Chosen**: 4 fixed levels (r0-r3) + parity.
+
+**Alternatives considered**:
+- 2 levels: Too simple, no recovery gradient
+- 8 levels: Diminishing returns, complexity
+- Dynamic: Maximum flexibility but hard to reason about
+
+**Rationale**: 4 levels provide gallery access, share preview, detail view,
+and original — covering all common use cases.
+
+### Decision 4: Clay Codes for r3, Fountain Codes for Parity
+
+**Chosen**: Clay codes (MSR) for r3, fountain codes (RaptorQ) for parity.
+
+**Rationale**: Clay codes optimize repair bandwidth for large r3 data.
 Fountain codes are rateless, ideal for parity where backend count varies.
 
-### Decision 3: PASETO V4 for View Tokens
+### Decision 5: PASETO V4 for View Tokens
 
-**Chosen**: PASETO V4 Local tokens
+**Chosen**: PASETO V4 Local tokens.
 
 **Alternatives considered**:
-- JWT: Complex, security issues, JWK complexity
+- JWT: Complex, security issues
 - age: File encryption, not token standard
 - Custom: Reinventing the wheel
 
 **Rationale**: PASETO is a modern token standard designed to replace JWT.
-V4 Local uses AES-256-CTR + BLAKE3-MACT, simpler and more secure than JWT.
+V4 Local uses AES-256-CTR + BLAKE3-MACT, simpler and more secure.
 
-### Decision 4: BLAKE3 for All Hashing
+### Decision 6: BLAKE3 for All Hashing
 
-**Chosen**: BLAKE3 for Merkle trees, content addressing, and integrity
-
-**Alternatives considered**:
-- SHA-256: Slower, NIST standard
-- SHA-3: Slower, NIST standard
-- Keccak: Same family as SHA-3
+**Chosen**: BLAKE3 for Merkle trees, content addressing, and integrity.
 
 **Rationale**: BLAKE3 is 14× faster than SHA-256, has built-in tree hashing
 for parallelism, and is used by iroh, Cargo, and many content-addressed systems.
 
-### Decision 5: `redb` for Metadata, `fjall` Optional for Blob Index
+### Decision 7: `redb` for Metadata, Optional `fjall` for Blob Index
 
-**Chosen**: Keep `redb` as primary DB, optionally add `fjall` for blob indexing
-
-**Alternatives considered**:
-- Replace `redb` with `fjall`: LSM-tree is better for write-heavy workloads
-- Keep only `redb`: Simple, but blob indexing is write-heavy
-- Use `iroh` for everything: Too much coupling
+**Chosen**: Keep `redb` as primary DB, optionally add `fjall` for blob indexing.
 
 **Rationale**: `redb` is proven, ACID, stable format. `fjall` is better for
 write-heavy blob indexing but adds complexity. Keep it optional.
 
 ---
 
-## 14. Crate Migration Guide
+## 16. Crate Migration Guide
 
 ### `pqcrypto-*` → RustCrypto Migration
 
@@ -1345,7 +1741,6 @@ let keypair = MlKem1024::generate(&mut rng);
 let (ct, ss) = keypair.encapsulate(&mut rng)?;
 let shared = keypair.decapsulate(&ct)?;
 
-// Signatures
 let signing_key = MlDsa65::generate(&mut rng);
 let signature = signing_key.sign_randomized(&mut rng, &message)?;
 let verified = signing_key.verify(&message, &signature)?;
@@ -1356,10 +1751,8 @@ let verified = signing_key.verify(&message, &signature)?;
 ```rust
 use rusty_paseto::prelude::*;
 
-// Generate preview key
 let preview_key = PasetoSymmetricKey::<V4, Local>::new();
 
-// Create view token
 let token = PasetoBuilder::<V4, Local>::new()
     .set_claim("sub", "file_id_001")?
     .set_claim("res", "r0")?
@@ -1368,10 +1761,7 @@ let token = PasetoBuilder::<V4, Local>::new()
     .set_claim("jti", Uuid::new_v4().to_string())?
     .build(&preview_key)?;
 
-// Validate token
 let claims = Paseto::<V4, Local>::parse(&token, &preview_key)?;
-
-// Check expiry, view count, revocation
 ```
 
 ### HPKE Hybrid Key Exchange
@@ -1379,19 +1769,26 @@ let claims = Paseto::<V4, Local>::parse(&token, &preview_key)?;
 ```rust
 use hpke::{Hpke, DhKem};
 
-// X-Wing: ML-KEM-768 + X25519 (hybrid)
 let hpke = Hpke::<DhKem>::new();
-
-// Encapsulate (for encrypting to a public key)
 let (enc, shared_secret) = hpke.encapsulate(&recipient_public_key)?;
 
-// The shared_secret is quantum-resistant even if X25519 is broken
 let key = hkdf_sha256(shared_secret, "cybermanju-content-v1", file_id);
 ```
 
 ---
 
 ## Appendix A: File Size Estimates
+
+### Per-Shard Storage
+
+| Component | Size | Notes |
+|-----------|------|-------|
+| Header | 512B | Fixed metadata |
+| Index layer | 50KB per 100 files | File manifest + blob map |
+| Content layer | Variable | Actual file data |
+| Erasure metadata | 1KB | Shard mapping |
+| Signature | 3KB | ML-DSA-65 |
+| **Overhead per shard** | **~55KB** | For 100 files |
 
 ### Per-File Storage Overhead
 
@@ -1428,9 +1825,11 @@ let key = hkdf_sha256(shared_secret, "cybermanju-content-v1", file_id);
 
 | Operation | Target | Implementation |
 |-----------|--------|---------------|
-| Gallery load (100 thumbs) | <100ms | r0 from any backend |
+| Browse file list | <100ms | root.cybermanju + shard indexes |
+| Gallery load (100 thumbs) | <100ms | r0 from any shard |
 | Share preview | <200ms | r0+r1 with view token |
 | Detail view | <500ms | r1+r2 |
+| Stream video chunk | <50ms | r2 chunk seek |
 | Full download | <5s | r3 reconstruction |
 | Recovery (Lanczos) | <100ms | fast_image_resize SIMD |
 | Recovery (neural) | <2s | ort + Real-ESRGAN |
@@ -1453,9 +1852,11 @@ let key = hkdf_sha256(shared_secret, "cybermanju-content-v1", file_id);
 | Data corruption | BLAKE3 Merkle tree integrity verification |
 | Ransomware | r0 on ALL backends, parity for reconstruction |
 | Insider threat | Multi-user ACL with audit trail |
+| Index leak | Index key separate from content key |
+| Shard tampering | ML-DSA-65 signature on each shard |
 
 ---
 
-*Document version: 2.0.0*
+*Document version: 2.1.0*
 *Last updated: 2026-06-20*
 *Status: Architecture proposal — pending review*

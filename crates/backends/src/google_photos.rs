@@ -96,7 +96,7 @@ impl StorageBackend for GooglePhotosBackend {
     fn delete_file(&self, remote_path: &str) -> Result<(), String> {
         let client = http_client()?;
         let resp = client
-            .delete(&format!(
+            .delete(format!(
                 "https://photoslibrary.googleapis.com/v1/mediaItems/{}",
                 remote_path
             ))
@@ -139,7 +139,7 @@ impl StorageBackend for GooglePhotosBackend {
     fn get_file_url(&self, remote_path: &str) -> Result<String, String> {
         let client = http_client()?;
         let resp = client
-            .get(&format!(
+            .get(format!(
                 "https://photoslibrary.googleapis.com/v1/mediaItems/{}",
                 remote_path
             ))

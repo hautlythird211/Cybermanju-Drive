@@ -1,8 +1,6 @@
 use crate::util::http_client;
 use base64::Engine;
-use cybermanju_types::sync::{
-    LfsBatchRequest, LfsBatchResponse, LfsObject, LfsPointer,
-};
+use cybermanju_types::sync::{LfsBatchRequest, LfsBatchResponse, LfsObject, LfsPointer};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::Path;
@@ -254,11 +252,7 @@ impl GitLfsClient {
         let status = resp.status();
         if !status.is_success() {
             let body = resp.text().unwrap_or_default();
-            return Err(format!(
-                "LFS download batch failed ({}): {}",
-                status,
-                body
-            ));
+            return Err(format!("LFS download batch failed ({}): {}", status, body));
         }
 
         let batch_resp: LfsBatchResponse = resp

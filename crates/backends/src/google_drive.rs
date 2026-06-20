@@ -88,7 +88,7 @@ impl StorageBackend for GoogleDriveBackend {
     fn delete_file(&self, remote_path: &str) -> Result<(), String> {
         let client = http_client()?;
         let resp = client
-            .delete(&format!(
+            .delete(format!(
                 "https://www.googleapis.com/drive/v3/files/{}",
                 remote_path
             ))

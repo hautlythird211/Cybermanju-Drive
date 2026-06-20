@@ -236,7 +236,7 @@ impl StorageBackend for GitLabBackend {
     fn test_connection(&self) -> Result<bool, String> {
         let client = http_client()?;
         let resp = client
-            .get(&format!(
+            .get(format!(
                 "{}/api/v4/projects/{}",
                 self.base_url, self.project_id
             ))

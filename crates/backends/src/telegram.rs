@@ -47,7 +47,7 @@ impl StorageBackend for TelegramBackend {
             );
         let client = http_client()?;
         let resp = client
-            .post(&self.api("sendDocument"))
+            .post(self.api("sendDocument"))
             .multipart(form)
             .send()
             .map_err(|e| format!("send: {}", e))?;
@@ -81,7 +81,7 @@ impl StorageBackend for TelegramBackend {
     fn download_file(&self, remote_path: &str, local_path: &str) -> Result<(), String> {
         let client = http_client()?;
         let resp = client
-            .get(&self.api(&format!("getFile?file_id={}", remote_path)))
+            .get(self.api(&format!("getFile?file_id={}", remote_path)))
             .send()
             .map_err(|e| format!("getFile: {}", e))?;
         if !resp.status().is_success() {
@@ -90,7 +90,7 @@ impl StorageBackend for TelegramBackend {
         let v: serde_json::Value = resp.json().map_err(|e| format!("parse: {}", e))?;
         let file_path = v["result"]["file_path"].as_str().ok_or("no file_path")?;
         let dl = client
-            .get(&format!(
+            .get(format!(
                 "https://api.telegram.org/file/bot{}/{}",
                 self.bot_token, file_path
             ))
@@ -114,7 +114,7 @@ impl StorageBackend for TelegramBackend {
     fn list_files(&self, _prefix: &str) -> Result<Vec<RemoteFile>, String> {
         let client = http_client()?;
         let resp = client
-            .get(&self.api("getUpdates"))
+            .get(self.api("getUpdates"))
             .send()
             .map_err(|e| format!("updates: {}", e))?;
         if !resp.status().is_success() {
@@ -147,7 +147,7 @@ impl StorageBackend for TelegramBackend {
     fn get_file_url(&self, remote_path: &str) -> Result<String, String> {
         let client = http_client()?;
         let resp = client
-            .get(&self.api(&format!("getFile?file_id={}", remote_path)))
+            .get(self.api(&format!("getFile?file_id={}", remote_path)))
             .send()
             .map_err(|e| format!("getFile: {}", e))?;
         let v: serde_json::Value = resp.json().map_err(|e| format!("parse: {}", e))?;
@@ -161,7 +161,7 @@ impl StorageBackend for TelegramBackend {
     fn test_connection(&self) -> Result<bool, String> {
         let client = http_client()?;
         let resp = client
-            .get(&self.api("getMe"))
+            .get(self.api("getMe"))
             .send()
             .map_err(|e| format!("getMe: {}", e))?;
         let status = resp.status().as_u16();
