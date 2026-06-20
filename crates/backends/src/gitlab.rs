@@ -46,36 +46,6 @@ impl GitLabBackend {
     fn should_use_lfs(&self, size: u64) -> bool {
         self.use_lfs && size >= LFS_SIZE_THRESHOLD
     }
-}
-
-impl StorageBackend for GitLabBackend {
-    fn name(&self) -> &str {
-        "GitLab"
-    }
-    fn backend_type(&self) -> SyncBackendType {
-        SyncBackendType::GitLab
-    }
-
-    fn upload_file(&self, local_path: &str, remote_path: &str) -> Result<String, String> {
-        let data = fs::read(local_path).map_err(|e| format!("read: {}", e))?;
-        let file_size = data.len() as u64;
-
-        // Use Git LFS for large files
-        if self.should_use_lfs(file_size) {
-            let lfs = GitLfsClient::new(
-                &self.base_url,
-                &self.project_id,
-                &self.token,
-                LfsPlatform::GitLab,
-            );
-            let oid = lfs.upload_via_lfs(local_path)?;
-            let pointer = GitLfsClient::create_pointer(&oid, file_size);
-            let pointer_content = pointer.to_string();
-            return self.upload_content(pointer_content.as_bytes(), remote_path);
-        }
-
-        self.upload_content(&data, remote_path)
-    }
 
     /// Internal helper: upload raw content via GitLab Repository Files API.
     fn upload_content(&self, data: &[u8], remote_path: &str) -> Result<String, String> {
@@ -120,6 +90,36 @@ impl StorageBackend for GitLabBackend {
             "{}/-/blob/{}/{}",
             self.base_url, self.branch, remote_path
         ))
+    }
+}
+
+impl StorageBackend for GitLabBackend {
+    fn name(&self) -> &str {
+        "GitLab"
+    }
+    fn backend_type(&self) -> SyncBackendType {
+        SyncBackendType::GitLab
+    }
+
+    fn upload_file(&self, local_path: &str, remote_path: &str) -> Result<String, String> {
+        let data = fs::read(local_path).map_err(|e| format!("read: {}", e))?;
+        let file_size = data.len() as u64;
+
+        // Use Git LFS for large files
+        if self.should_use_lfs(file_size) {
+            let lfs = GitLfsClient::new(
+                &self.base_url,
+                &self.project_id,
+                &self.token,
+                LfsPlatform::GitLab,
+            );
+            let oid = lfs.upload_via_lfs(local_path)?;
+            let pointer = GitLfsClient::create_pointer(&oid, file_size);
+            let pointer_content = pointer.to_string();
+            return self.upload_content(pointer_content.as_bytes(), remote_path);
+        }
+
+        self.upload_content(&data, remote_path)
     }
 
     fn download_file(&self, remote_path: &str, local_path: &str) -> Result<(), String> {

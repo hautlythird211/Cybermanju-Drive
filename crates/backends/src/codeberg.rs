@@ -3,7 +3,6 @@ use base64::Engine;
 use cybermanju_types::sync::{RemoteFile, StorageBackend, SyncBackendType};
 use std::fs;
 use std::path::Path;
-use urlencoding::encode;
 
 /// Codeberg (Forgejo/Gitea-based) storage backend.
 /// Uses the same API pattern as GitLab since Codeberg runs Forgejo,
@@ -21,20 +20,6 @@ impl CodebergBackend {
             repo: repo.to_string(),
             branch: branch.to_string(),
         }
-    }
-
-    fn api_url(&self, ep: &str) -> String {
-        // Codeberg API is at https://codeberg.org/api/v1/
-        // (Forgejo uses /api/v1, not /api/v4 like GitLab)
-        format!("https://codeberg.org/api/v1/repos/{}/{}", self.repo, ep)
-    }
-
-    fn parse_repo(&self) -> Result<(String, String), String> {
-        let parts: Vec<&str> = self.repo.trim_start_matches('/').splitn(2, '/').collect();
-        if parts.len() != 2 || parts[0].is_empty() || parts[1].is_empty() {
-            return Err(format!("Invalid repo '{}', need owner/repo", self.repo));
-        }
-        Ok((parts[0].to_string(), parts[1].to_string()))
     }
 
     /// Forgejo/Gitea file API uses a different endpoint than GitLab.

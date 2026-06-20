@@ -35,20 +35,6 @@ impl GiteaBackend {
             self.base_url, self.repo, path
         )
     }
-
-    /// Extended contents API — returns richer metadata including LFS info.
-    fn contents_ext_url(&self, path: &str) -> String {
-        format!(
-            "{}/api/v1/repos/{}/contents-ext/{}?includes=file_content,lfs_metadata,commit_metadata",
-            self.base_url, self.repo, path
-        )
-    }
-
-    /// Batch modify multiple files in one API call.
-    /// Gitea/Forgejo uniquely supports this — GitHub and GitLab do not.
-    fn batch_url(&self) -> String {
-        format!("{}/api/v1/repos/{}/contents", self.base_url, self.repo)
-    }
 }
 
 impl StorageBackend for GiteaBackend {

@@ -2,7 +2,6 @@ use crate::util::http_client;
 use base64::Engine;
 use cybermanju_types::sync::RepoLayout;
 use sha2::{Digest, Sha256};
-use std::path::Path;
 
 /// Manages the .cybermanju repository layout on git-based backends.
 /// Supports flat, sharded (by hash prefix), and split-repo layouts.
@@ -38,6 +37,11 @@ impl RepoLayoutManager {
         file_hash: Option<&str>,
         is_blob: bool,
     ) -> String {
+        let hash = file_hash.map(|h| h.to_string()).unwrap_or_else(|| {
+            let mut h = Sha256::new();
+            h.update(logical_path.as_bytes());
+            format!("{:x}", h.finalize())
+        });
         match self.layout {
             RepoLayout::Flat => {
                 if is_blob {
@@ -47,11 +51,6 @@ impl RepoLayoutManager {
                 }
             }
             RepoLayout::Sharded => {
-                let hash = file_hash.unwrap_or_else(|| {
-                    let mut h = Sha256::new();
-                    h.update(logical_path.as_bytes());
-                    &format!("{:x}", h.finalize())
-                });
                 if is_blob {
                     // blobs/{first 2 hex chars}/{next 2 hex chars}/{hash}.cyb3
                     format!(".blobs/{}/{}/{}.cyb3", &hash[..2], &hash[2..4], hash)
@@ -64,11 +63,6 @@ impl RepoLayoutManager {
                 // In split layout, blobs go to the blob_repo, metadata to main
                 if is_blob {
                     // Path for blob repo (sharded by default in blob repo)
-                    let hash = file_hash.unwrap_or_else(|| {
-                        let mut h = Sha256::new();
-                        h.update(logical_path.as_bytes());
-                        &format!("{:x}", h.finalize())
-                    });
                     format!("{}/{}/{}.cyb3", &hash[..2], &hash[2..4], hash)
                 } else {
                     format!(".cybermanju/{}", logical_path)
@@ -78,7 +72,7 @@ impl RepoLayoutManager {
     }
 
     /// Determine which repo (main or blob) a path belongs to in split layout.
-    pub fn get_repo_for_path(&self, remote_path: &str, is_blob: bool) -> &str {
+    pub fn get_repo_for_path(&self, _remote_path: &str, is_blob: bool) -> &str {
         if self.layout == RepoLayout::Split && is_blob {
             self.blob_repo.as_deref().unwrap_or(&self.main_repo)
         } else {

@@ -38,7 +38,7 @@ pub fn create_backend(
     let layout = config
         .get("repo_layout")
         .and_then(|v| v.as_str())
-        .map(RepoLayout::from_str)
+        .map(RepoLayout::parse_str)
         .unwrap_or(RepoLayout::Flat);
     let lfs_repo = config
         .get("lfs_repo")

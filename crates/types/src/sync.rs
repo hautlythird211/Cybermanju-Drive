@@ -316,7 +316,7 @@ impl std::fmt::Display for RepoLayout {
 }
 
 impl RepoLayout {
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse_str(s: &str) -> Self {
         match s {
             "sharded" => Self::Sharded,
             "split" => Self::Split,

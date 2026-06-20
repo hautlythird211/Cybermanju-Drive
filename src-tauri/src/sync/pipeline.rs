@@ -188,7 +188,7 @@ impl SyncPipeline {
             .config
             .repo_layout
             .as_deref()
-            .map(RepoLayout::from_str)
+            .map(RepoLayout::parse_str)
             .unwrap_or(RepoLayout::Flat);
 
         let layout_mgr = RepoLayoutManager::new(
