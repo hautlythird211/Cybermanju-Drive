@@ -166,77 +166,44 @@ const SECRET_ENV_MAP: Record<string, OAuthProvider>[] = [
 
 export function loadClientIdsFromEnv(): void {
   if (typeof import.meta === 'undefined' || !import.meta.env) {
-    console.warn('[OAuth][DEBUG] import.meta.env is undefined — env vars unavailable')
     return
   }
   const env = import.meta.env as Record<string, string | undefined>
   const foundIds: string[] = []
   const foundSecrets: string[] = []
-  const allKeys = Object.keys(env).filter(k => k.startsWith('VITE_') || k.includes('CLIENT_') || k.includes('OAUTH'))
 
-  console.log('[OAuth][DEBUG] ── ENV VAR SCAN ──')
-  console.log('[OAuth][DEBUG] Total env keys:', Object.keys(env).length)
-  console.log('[OAuth][DEBUG] Relevant keys:', allKeys.length ? allKeys.join(', ') : '(none found)')
-
-  // Load client IDs
-  console.log('[OAuth][DEBUG] Checking provider client IDs:')
   for (const map of ENV_MAP) {
     for (const [key, provider] of Object.entries(map)) {
       const val = env[key]
-      const status = val ? `SET (${val.slice(0, 6)}...${val.slice(-3)})` : 'NOT SET'
-      console.log(`[OAuth][DEBUG]   ${key} → ${provider}: ${status}`)
       if (val && !PROVIDER_CONFIGS[provider].clientId) {
         PROVIDER_CONFIGS[provider].clientId = val
-        foundIds.push(`${key}=${val.slice(0, 8)}...`)
+        foundIds.push(key)
       }
     }
   }
 
-  // Load client secrets
-  console.log('[OAuth][DEBUG] Checking provider client secrets:')
   for (const map of SECRET_ENV_MAP) {
     for (const [key, provider] of Object.entries(map)) {
       const val = env[key]
-      const status = val ? `SET (${val.slice(0, 4)}...${val.slice(-3)})` : 'NOT SET'
-      console.log(`[OAuth][DEBUG]   ${key} → ${provider}: ${status}`)
       if (val && !PROVIDER_CONFIGS[provider].clientSecret) {
         PROVIDER_CONFIGS[provider].clientSecret = val
-        foundSecrets.push(`${key}=${val.slice(0, 6)}...`)
+        foundSecrets.push(key)
       }
     }
   }
 
-  // Also populate googlePhotos from googleDrive if only one Google ID was set
   if (PROVIDER_CONFIGS.googleDrive.clientId && !PROVIDER_CONFIGS.googlePhotos.clientId) {
     PROVIDER_CONFIGS.googlePhotos.clientId = PROVIDER_CONFIGS.googleDrive.clientId
-    console.log('[OAuth][DEBUG] googlePhotos inheriting clientId from googleDrive')
   }
   if (PROVIDER_CONFIGS.googleDrive.clientSecret && !PROVIDER_CONFIGS.googlePhotos.clientSecret) {
     PROVIDER_CONFIGS.googlePhotos.clientSecret = PROVIDER_CONFIGS.googleDrive.clientSecret
-    console.log('[OAuth][DEBUG] googlePhotos inheriting clientSecret from googleDrive')
   }
 
-  console.log('[OAuth][DEBUG] ── FINAL STATUS ──')
-  for (const [provider, config] of Object.entries(PROVIDER_CONFIGS)) {
-    const id = config.clientId ? `ID:${config.clientId.slice(0, 6)}...` : 'ID:—'
-    const secret = config.clientSecret ? `SECRET:${config.clientSecret.slice(0, 4)}...` : 'SECRET:—'
-    console.log(`[OAuth][DEBUG]   ${provider}: ${id} ${secret}`)
+  if (foundIds.length === 0) {
+    console.error('[OAuth] No client IDs found in environment. Set VITE_OAUTH_* env vars.')
   }
-
-  if (foundIds.length > 0) {
-    console.log('[OAuth] Client IDs loaded:', foundIds.join(', '))
-  } else {
-    console.warn('[OAuth] ⚠ NO CLIENT IDs FOUND IN ENVIRONMENT')
-    console.warn('[OAuth] Tried env keys:', Object.values(ENV_MAP).flatMap(m => Object.keys(m)).join(', '))
-    console.warn('[OAuth] Solution: Create .env file from .env.example and fill in your OAuth client IDs')
-    console.warn('[OAuth] Or set VITE_OAUTH_* env vars before running `npm run dev`')
-  }
-  if (foundSecrets.length > 0) {
-    console.log('[OAuth] Client secrets loaded:', foundSecrets.join(', '))
-  } else {
-    console.warn('[OAuth] ⚠ NO CLIENT SECRETS FOUND — Google token exchange will fail')
-    console.warn('[OAuth] Tried env keys:', Object.values(SECRET_ENV_MAP).flatMap(m => Object.keys(m)).join(', '))
-    console.warn('[OAuth] Solution: Set VITE_OAUTH_GOOGLE_DRIVE_CLIENT_SECRET in .env')
+  if (foundSecrets.length === 0) {
+    console.error('[OAuth] No client secrets found in environment. Google token exchange will fail.')
   }
 }
 
