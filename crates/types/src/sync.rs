@@ -9,6 +9,7 @@ pub enum SyncBackendType {
     GoogleDrive,
     GooglePhotos,
     Telegram,
+    Mega,
 }
 
 impl std::fmt::Display for SyncBackendType {
@@ -20,6 +21,7 @@ impl std::fmt::Display for SyncBackendType {
             Self::GoogleDrive => write!(f, "googleDrive"),
             Self::GooglePhotos => write!(f, "googlePhotos"),
             Self::Telegram => write!(f, "telegram"),
+            Self::Mega => write!(f, "mega"),
         }
     }
 }

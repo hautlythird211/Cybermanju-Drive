@@ -2,7 +2,7 @@
 name = "cybermanju-cli"
 version = "0.1.0"
 edition = "2021"
-description = "Cybermanju Drive — Command-Line Interface"
+description = "Cybermanju Drive — Command-Line Interface & TUI"
 
 [[bin]]
 name = "cybermanju"
@@ -14,10 +14,18 @@ cybermanju-types = { path = "../types" }
 cybermanju-crypto = { path = "../crypto" }
 cybermanju-compression = { path = "../compression" }
 cybermanju-db = { path = "../db" }
+cybermanju-portable-db = { path = "../portable-db" }
 
-# CLI
+# CLI + TUI
 clap = { version = "4", features = ["derive"] }
 anstyle = "1"
+ratatui = { version = "0.29", features = ["crossterm"] }
+crossterm = "0.28"
+
+# HTTP
+reqwest = { version = "0.12", features = ["blocking", "json", "multipart"] }
+urlencoding = "2"
+megalib = "0.11"
 
 # General
 anyhow = "1"
