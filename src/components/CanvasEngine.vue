@@ -260,7 +260,7 @@ function drawCloudChamber() {
       const density = (n * 0.6 + n2 * 0.4)
       const alpha = 0.15 + density * 0.5 + mouseDist * 0.25
       const hue = (baseHue + density * 80 + n2 * 40) % 360
-      const light = 35 + density * 25 + mouseDist * 10
+      const light = gb(35) + density * 25 + mouseDist * 10
 
       ctx.fillStyle = `hsla(${hue|0},${gs(50)},${light|0},${Math.min(alpha, 0.85)})`
       ctx.fillRect(x, y, step + 1, step + 1)
@@ -661,7 +661,7 @@ function drawMandala() {
       ctx.moveTo(cx + warpX + fastCos(a1) * r1, cy + warpY + fastSin(a1) * r1)
       ctx.lineTo(cx + warpX + fastCos(a3) * r2, cy + warpY + fastSin(a3) * r2)
     }
-    ctx.strokeStyle = `hsla(${((layerHue + 30) % 360)|0},55,45,0.1)`
+    ctx.strokeStyle = `hsla(${((layerHue + 30) % 360)|0},${gs(55)},${gb(45)},0.1)`
     ctx.lineWidth = 0.4
     ctx.stroke()
   }
@@ -780,7 +780,7 @@ function drawCore() {
   // Outer glow
   const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 5)
   grad.addColorStop(0, `hsla(${baseHue|0},${gs(65)},${gb(55)},${0.25 + pulse * 0.15})`)
-  grad.addColorStop(0.3, `hsla(${((baseHue+30)%360)|0},55,45,0.1)`)
+  grad.addColorStop(0.3, `hsla(${((baseHue+30)%360)|0},${gs(55)},${gb(45)},0.1)`)
   grad.addColorStop(1, 'rgba(0,0,0,0)')
   ctx.fillStyle = grad
   ctx.fillRect(cx - coreR * 5, cy - coreR * 5, coreR * 10, coreR * 10)
@@ -817,7 +817,7 @@ function drawWarpField() {
     const alpha = (1 - i / 10) * 0.2
     ctx.beginPath()
     ctx.arc(mouseSmoothX, mouseSmoothY, r, 0, 6.283)
-    ctx.strokeStyle = `hsla(${((baseHue + i * 18) % 360)|0},55,50,${alpha})`
+    ctx.strokeStyle = `hsla(${((baseHue + i * 18) % 360)|0},${gs(55)},${gb(50)},${alpha})`
     ctx.lineWidth = 0.5
     ctx.stroke()
   }
@@ -874,12 +874,12 @@ function drawDisintegration() {
 
     ctx.beginPath()
     ctx.arc(disX[i] - 2, disY[i] - 1, sz * 0.6, 0, 6.283)
-    ctx.fillStyle = `hsla(${((hue+40)%360)|0},55,50,${alpha * 0.35})`
+    ctx.fillStyle = `hsla(${((hue+40)%360)|0},${gs(55)},${gb(50)},${alpha * 0.35})`
     ctx.fill()
 
     ctx.beginPath()
     ctx.arc(disX[i] + 2, disY[i] + 1, sz * 0.6, 0, 6.283)
-    ctx.fillStyle = `hsla(${((hue-40+360)%360)|0},55,50,${alpha * 0.35})`
+    ctx.fillStyle = `hsla(${((hue-40+360)%360)|0},${gs(55)},${gb(50)},${alpha * 0.35})`
     ctx.fill()
   }
 }
@@ -903,7 +903,7 @@ function drawScreenTear() {
     for (let i = 0; i < 20; i++) {
       const x = Math.random() * w
       const y = tearY + Math.random() * tearH
-      ctx.fillStyle = `hsla(${(tearHue + i * 18)|0},55,50,0.25)`
+      ctx.fillStyle = `hsla(${(tearHue + i * 18)|0},${gs(55)},${gb(50)},0.25)`
       ctx.fillRect(x, y, 10 + Math.random() * 80, 1 + Math.random() * 2)
     }
     ctx.restore()
@@ -1029,7 +1029,7 @@ function drawMatrixRain() {
       if (trailY < -18) break
       const trailAlpha = 0.4 * (1 - t2 / trailLen) * (1 - t2 / trailLen)
       const trailChar = RAIN_CHARS[(Math.random() * RAIN_CHARS.length) | 0]
-      ctx.fillStyle = `hsla(${hue|0},${gs(70)},${gb(55 - t2 * 2|0)},${Math.min(trailAlpha, 0.4)})`
+      ctx.fillStyle = `hsla(${hue|0},${gs(70)},${gb(55) - t2 * 2|0},${Math.min(trailAlpha, 0.4)})`
       ctx.fillText(trailChar, x, trailY)
     }
 
@@ -1171,7 +1171,7 @@ function drawStardust() {
     const nh = ((baseHue + n * 50 + fastSin(t * 0.006 * speedMul + n) * 30) % 360 + 360) % 360
     const grad = ctx.createRadialGradient(nx, ny, 0, nx, ny, nr)
     grad.addColorStop(0, `hsla(${nh|0},${gs(45)},${gb(45)},0.06)`)
-    grad.addColorStop(0.5, `hsla(${((nh + 40) % 360)|0},35,35,0.035)`)
+    grad.addColorStop(0.5, `hsla(${((nh + 40) % 360)|0},${gs(35)},${gb(35)},0.035)`)
     grad.addColorStop(1, 'rgba(0,0,0,0)')
     ctx.fillStyle = grad
     ctx.fillRect(nx - nr, ny - nr, nr * 2, nr * 2)
@@ -1199,7 +1199,7 @@ function drawStardust() {
     const hue = ((baseHue + i * 3 + twinkle * 20) % 360 + 360) % 360
     ctx.beginPath()
     ctx.arc(sx, sy, s.size * twinkle, 0, 6.283)
-    ctx.fillStyle = `hsla(${hue|0},${gs(55)},${${gb(45)} + twinkle * 20|0},${alpha})`
+    ctx.fillStyle = `hsla(${hue|0},${gs(55)},${gb(45) + twinkle * 20|0},${alpha})`
     ctx.fill()
 
     ctx.beginPath()

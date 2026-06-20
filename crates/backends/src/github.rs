@@ -1,13 +1,24 @@
+use crate::git_lfs::GitLfsClient;
+use crate::repo_layout::RepoLayoutManager;
 use crate::util::http_client;
 use base64::Engine;
-use cybermanju_types::sync::{RemoteFile, StorageBackend, SyncBackendType};
+use cybermanju_types::sync::{RemoteFile, RepoLayout, StorageBackend, SyncBackendType};
 use std::fs;
 use std::path::Path;
+
+/// LFS threshold: files >= 1MB use Git LFS
+const LFS_SIZE_THRESHOLD: u64 = 1_048_576;
 
 pub struct GitHubBackend {
     token: String,
     repo: String,
     branch: String,
+    /// Whether to use Git LFS for large files
+    use_lfs: bool,
+    /// Repo layout (flat, sharded, split)
+    layout: RepoLayout,
+    /// Separate LFS blob repo (for split layout)
+    lfs_repo: Option<String>,
 }
 
 impl GitHubBackend {
@@ -16,7 +27,25 @@ impl GitHubBackend {
             token: token.to_string(),
             repo: repo.to_string(),
             branch: branch.to_string(),
+            use_lfs: false,
+            layout: RepoLayout::Flat,
+            lfs_repo: None,
         }
+    }
+
+    pub fn with_lfs(mut self, use_lfs: bool) -> Self {
+        self.use_lfs = use_lfs;
+        self
+    }
+
+    pub fn with_layout(mut self, layout: RepoLayout) -> Self {
+        self.layout = layout;
+        self
+    }
+
+    pub fn with_lfs_repo(mut self, lfs_repo: Option<String>) -> Self {
+        self.lfs_repo = lfs_repo;
+        self
     }
 
     fn parse_repo(&self) -> Result<(String, String), String> {
@@ -26,22 +55,32 @@ impl GitHubBackend {
         }
         Ok((parts[0].to_string(), parts[1].to_string()))
     }
-}
 
-impl StorageBackend for GitHubBackend {
-    fn name(&self) -> &str {
-        "GitHub"
-    }
-    fn backend_type(&self) -> SyncBackendType {
-        SyncBackendType::GitHub
+    /// Build the layout manager for computing remote paths.
+    fn layout_mgr(&self) -> RepoLayoutManager {
+        RepoLayoutManager::new(
+            self.layout.clone(),
+            &self.repo,
+            self.lfs_repo.clone(),
+            &self.branch,
+        )
     }
 
-    fn upload_file(&self, local_path: &str, remote_path: &str) -> Result<String, String> {
+    /// Decide if a file should use LFS based on size and config.
+    fn should_use_lfs(&self, size: u64) -> bool {
+        self.use_lfs && size >= LFS_SIZE_THRESHOLD
+    }
+
+    /// Upload a file via the standard Contents API (for small files).
+    fn upload_via_contents_api(
+        &self,
+        data: &[u8],
+        remote_path: &str,
+    ) -> Result<String, String> {
         let (owner, repo) = self.parse_repo()?;
-        let data = fs::read(local_path).map_err(|e| format!("read: {}", e))?;
-        let b64 = base64::engine::general_purpose::STANDARD.encode(&data);
+        let b64 = base64::engine::general_purpose::STANDARD.encode(data);
         let body = serde_json::json!({
-            "message": format!("CLI upload: {}", remote_path),
+            "message": format!("Upload: {}", remote_path),
             "content": b64,
             "branch": self.branch,
         });
@@ -66,6 +105,41 @@ impl StorageBackend for GitHubBackend {
             serde_json::from_str(&body_text).map_err(|e| format!("parse: {}", e))?;
         Ok(v["content"]["download_url"].as_str().unwrap_or("").into())
     }
+}
+
+impl StorageBackend for GitHubBackend {
+    fn name(&self) -> &str {
+        "GitHub"
+    }
+    fn backend_type(&self) -> SyncBackendType {
+        SyncBackendType::GitHub
+    }
+
+    fn upload_file(&self, local_path: &str, remote_path: &str) -> Result<String, String> {
+        let data = fs::read(local_path).map_err(|e| format!("read: {}", e))?;
+        let file_size = data.len() as u64;
+
+        // Compute layout-aware remote path
+        let layout_mgr = self.layout_mgr();
+        let hash = GitLfsClient::compute_oid(&data);
+        let effective_path = layout_mgr.compute_remote_path(remote_path, Some(&hash), file_size > 1024);
+
+        if self.should_use_lfs(file_size) {
+            // Upload via Git LFS
+            let lfs = GitLfsClient::new("https://github.com", &self.token, &self.repo);
+            let oid = lfs.upload_via_lfs(local_path, true, None)?;
+
+            // Create LFS pointer file and upload it via Contents API
+            let pointer = GitLfsClient::create_pointer(&oid, file_size);
+            let pointer_content = pointer.to_string();
+
+            // Upload the pointer file to the remote path
+            self.upload_via_contents_api(pointer_content.as_bytes(), &effective_path)
+        } else {
+            // Direct upload via Contents API
+            self.upload_via_contents_api(&data, &effective_path)
+        }
+    }
 
     fn download_file(&self, remote_path: &str, local_path: &str) -> Result<(), String> {
         let (owner, repo) = self.parse_repo()?;
@@ -89,6 +163,17 @@ impl StorageBackend for GitHubBackend {
         let data = base64::engine::general_purpose::STANDARD
             .decode(&clean)
             .map_err(|e| format!("b64: {}", e))?;
+
+        // Check if it's an LFS pointer file
+        if self.use_lfs && GitLfsClient::is_lfs_pointer(data.as_slice()) {
+            let pointer_str = String::from_utf8_lossy(&data);
+            let pointer = cybermanju_types::sync::LfsPointer::from_string(&pointer_str)?;
+
+            // Download the actual content via LFS
+            let lfs = GitLfsClient::new("https://github.com", &self.token, &self.repo);
+            return lfs.download_via_lfs(&pointer.oid, pointer.size, local_path, true, None);
+        }
+
         if let Some(p) = Path::new(local_path).parent() {
             fs::create_dir_all(p).map_err(|e| format!("mkdir: {}", e))?;
         }
@@ -115,7 +200,7 @@ impl StorageBackend for GitHubBackend {
         let v: serde_json::Value = get.json().map_err(|e| format!("parse: {}", e))?;
         let sha = v["sha"].as_str().ok_or("no sha")?;
         let body = serde_json::json!({
-            "message": format!("CLI delete: {}", remote_path),
+            "message": format!("Delete: {}", remote_path),
             "sha": sha,
             "branch": self.branch,
         });
