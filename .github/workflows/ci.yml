@@ -448,7 +448,7 @@ jobs:
           sudo -u builder bash -c '
             mkdir -p dist-arch
             cp target/release/bundle/deb/*.deb dist-arch/ 2>/dev/null || true
-            cp target/release/bundle/appimage/*.AppImage dist-arch/ 2>/dev/null || true
+            cp target/release/bundle/rpm/*.rpm dist-arch/ 2>/dev/null || true
           '
 
       - name: Upload Arch build artifacts
@@ -693,79 +693,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate release notes
-        run: |
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -n "$LAST_TAG" ]; then
-            COMMITS=$(git log "$LAST_TAG"..HEAD --oneline --no-decorate 2>/dev/null | head -100 || true)
-          else
-            COMMITS=$(git log --oneline --no-decorate -50 2>/dev/null || true)
-          fi
-
-          TAG="${{ steps.version.outputs.version }}"
-          VERSION="${TAG#v}"
-          REPO="${{ github.repository }}"
-          RELEASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
-
-          cat > release_body.md << EOF
-          # Cybermanju Drive
-
-          **Quantum-resistant encrypted file manager** — desktop, mobile, web, Docker, and headless server.
-
-          ## Quick Downloads
-
-          ### Desktop
-
-          | Platform | File | Description |
-          |----------|------|-------------|
-          | **Windows** | [cybermanju-drive_${VERSION}_x64-setup.exe](${RELEASE_URL}/cybermanju-drive_${VERSION}_x64-setup.exe) | NSIS installer (recommended) |
-          | **Windows** | [cybermanju-drive_${VERSION}_x64.msi](${RELEASE_URL}/cybermanju-drive_${VERSION}_x64.msi) | MSI installer (enterprise/GPO) |
-          | **macOS** | [cybermanju-drive_${VERSION}_aarch64.dmg](${RELEASE_URL}/cybermanju-drive_${VERSION}_aarch64.dmg) | DMG for Apple Silicon (M1/M2/M3/M4) |
-          | **Linux (Debian/Ubuntu)** | [cybermanju-drive_${VERSION}_amd64.deb](${RELEASE_URL}/cybermanju-drive_${VERSION}_amd64.deb) | Debian/Ubuntu package |
-          | **Linux (Fedora/RHEL)** | [cybermanju-drive-${VERSION}-1.x86_64.rpm](${RELEASE_URL}/cybermanju-drive-${VERSION}-1.x86_64.rpm) | RPM package |
-          | **Linux (Universal)** | [cybermanju-drive_${VERSION}_amd64.AppImage](${RELEASE_URL}/cybermanju-drive_${VERSION}_amd64.AppImage) | Run anywhere — no install needed |
-          | **Linux (Flatpak)** | [cybermanju-drive.flatpak](${RELEASE_URL}/cybermanju-drive.flatpak) | Sandboxed — Flathub-compatible |
-
-          ### Mobile
-
-          | Platform | File | Description |
-          |----------|------|-------------|
-          | **Android** | [cybermanju-drive.apk](${RELEASE_URL}/cybermanju-drive.apk) | APK for Android 10+ (arm64) |
-
-          ### Web & Containers
-
-          | Platform | File | Description |
-          |----------|------|-------------|
-          | **Web (WASM)** | [dist-wasm.zip](${RELEASE_URL}/dist-wasm.zip) | Static site — deploy anywhere |
-          | **Docker** | \`docker pull cybermanju-drive:latest\` | Pre-built container image |
-
-          EOF
-
-          # Append features from RELEASE_NOTES.md
-          if [ -f RELEASE_NOTES.md ]; then
-            awk '/^## Features/,/^## (Current Limitations|Roadmap)/' RELEASE_NOTES.md | \
-              head -n -2 >> release_body.md 2>/dev/null || true
-          fi
-
-          cat >> release_body.md << 'EOF'
-
-          ## Change Log
-
-          EOF
-
-          if [ -n "$COMMITS" ]; then
-            echo '```' >> release_body.md
-            echo "$COMMITS" >> release_body.md
-            echo '```' >> release_body.md
-          else
-            echo "_No new commits since last release._" >> release_body.md
-          fi
-
-          # Append limitations and roadmap
-          if [ -f RELEASE_NOTES.md ]; then
-            awk '/^## (Current Limitations|Roadmap)/,0' RELEASE_NOTES.md >> release_body.md 2>/dev/null || true
-          fi
-
       - name: Download all release artifacts
         continue-on-error: true
         uses: actions/download-artifact@v6
@@ -786,30 +713,152 @@ jobs:
         run: |
           mkdir -p packages
 
+          # Debug: show artifact directory structure
+          echo "=== Artifact structure ==="
+          find artifacts/ -maxdepth 3 -type f | head -50
+
           # Windows: .exe and .msi
-          find artifacts/release-windows -maxdepth 1 -name '*.exe' -exec cp {} packages/ \; 2>/dev/null || true
-          find artifacts/release-windows -maxdepth 1 -name '*.msi' -exec cp {} packages/ \; 2>/dev/null || true
+          find artifacts/release-windows -name '*.exe' -exec cp {} packages/ \; 2>/dev/null || true
+          find artifacts/release-windows -name '*.msi' -exec cp {} packages/ \; 2>/dev/null || true
 
           # Linux: .deb, .rpm, .AppImage
-          find artifacts/release-linux -maxdepth 1 -name '*.deb' -exec cp {} packages/ \; 2>/dev/null || true
-          find artifacts/release-linux -maxdepth 1 -name '*.rpm' -exec cp {} packages/ \; 2>/dev/null || true
-          find artifacts/release-linux -maxdepth 1 -name '*.AppImage' -exec cp {} packages/ \; 2>/dev/null || true
+          find artifacts/release-linux -name '*.deb' -exec cp {} packages/ \; 2>/dev/null || true
+          find artifacts/release-linux -name '*.rpm' -exec cp {} packages/ \; 2>/dev/null || true
+          find artifacts/release-linux -name '*.AppImage' -exec cp {} packages/ \; 2>/dev/null || true
 
           # Flatpak
-          find artifacts/release-flatpak -maxdepth 1 -name '*.flatpak' -exec cp {} packages/ \; 2>/dev/null || true
+          find artifacts/release-flatpak -name '*.flatpak' -exec cp {} packages/ \; 2>/dev/null || true
 
-          # macOS: .dmg and .app
-          find artifacts/release-macos -maxdepth 1 -name '*.dmg' -exec cp {} packages/ \; 2>/dev/null || true
-          find artifacts/release-macos -maxdepth 1 -name '*.app' -exec cp {} packages/ \; 2>/dev/null || true
+          # macOS: .dmg
+          find artifacts/release-macos -name '*.dmg' -exec cp {} packages/ \; 2>/dev/null || true
 
           # Android: .apk
-          find artifacts/release-android -maxdepth 3 -name '*.apk' -exec cp {} packages/ \; 2>/dev/null || true
+          find artifacts/release-android -name '*.apk' -exec cp {} packages/ \; 2>/dev/null || true
 
           # WASM web files (zip the folder since it contains many small files)
           [ -d "artifacts/dist-wasm" ] && \
             (cd "artifacts/dist-wasm" && zip -r "../../packages/dist-wasm.zip" .) || true
 
+          echo "=== Packages to upload ==="
           ls -la packages/
+
+      - name: Generate release notes
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            COMMITS=$(git log "$LAST_TAG"..HEAD --oneline --no-decorate 2>/dev/null | head -100 || true)
+          else
+            COMMITS=$(git log --oneline --no-decorate -50 2>/dev/null || true)
+          fi
+
+          TAG="${{ steps.version.outputs.version }}"
+          REPO="${{ github.repository }}"
+          RELEASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
+
+          {
+            echo "# Cybermanju Drive"
+            echo ""
+            echo "**Quantum-resistant encrypted file manager** — desktop, mobile, web, Docker, and headless server."
+            echo ""
+            echo "## Downloads"
+            echo ""
+
+            # Build table from actual packages/ contents
+            FOUND=0
+
+            for f in packages/*.exe; do
+              [ -f "$f" ] || continue
+              [ "$FOUND" -eq 0 ] && { echo "| Platform | File | Description |"; echo "|----------|------|-------------|"; FOUND=1; }
+              NAME=$(basename "$f")
+              echo "| **Windows** | [${NAME}](${RELEASE_URL}/${NAME}) | NSIS installer (recommended) |"
+            done
+
+            for f in packages/*.msi; do
+              [ -f "$f" ] || continue
+              [ "$FOUND" -eq 0 ] && { echo "| Platform | File | Description |"; echo "|----------|------|-------------|"; FOUND=1; }
+              NAME=$(basename "$f")
+              echo "| **Windows** | [${NAME}](${RELEASE_URL}/${NAME}) | MSI installer (enterprise/GPO) |"
+            done
+
+            for f in packages/*.dmg; do
+              [ -f "$f" ] || continue
+              [ "$FOUND" -eq 0 ] && { echo "| Platform | File | Description |"; echo "|----------|------|-------------|"; FOUND=1; }
+              NAME=$(basename "$f")
+              echo "| **macOS** | [${NAME}](${RELEASE_URL}/${NAME}) | DMG |"
+            done
+
+            for f in packages/*.deb; do
+              [ -f "$f" ] || continue
+              [ "$FOUND" -eq 0 ] && { echo "| Platform | File | Description |"; echo "|----------|------|-------------|"; FOUND=1; }
+              NAME=$(basename "$f")
+              echo "| **Linux (Debian/Ubuntu)** | [${NAME}](${RELEASE_URL}/${NAME}) | Debian/Ubuntu package |"
+            done
+
+            for f in packages/*.rpm; do
+              [ -f "$f" ] || continue
+              [ "$FOUND" -eq 0 ] && { echo "| Platform | File | Description |"; echo "|----------|------|-------------|"; FOUND=1; }
+              NAME=$(basename "$f")
+              echo "| **Linux (Fedora/RHEL)** | [${NAME}](${RELEASE_URL}/${NAME}) | RPM package |"
+            done
+
+            for f in packages/*.AppImage; do
+              [ -f "$f" ] || continue
+              [ "$FOUND" -eq 0 ] && { echo "| Platform | File | Description |"; echo "|----------|------|-------------|"; FOUND=1; }
+              NAME=$(basename "$f")
+              echo "| **Linux (Universal)** | [${NAME}](${RELEASE_URL}/${NAME}) | Run anywhere — no install needed |"
+            done
+
+            for f in packages/*.flatpak; do
+              [ -f "$f" ] || continue
+              [ "$FOUND" -eq 0 ] && { echo "| Platform | File | Description |"; echo "|----------|------|-------------|"; FOUND=1; }
+              NAME=$(basename "$f")
+              echo "| **Linux (Flatpak)** | [${NAME}](${RELEASE_URL}/${NAME}) | Sandboxed — Flathub-compatible |"
+            done
+
+            for f in packages/*.apk; do
+              [ -f "$f" ] || continue
+              [ "$FOUND" -eq 0 ] && { echo "| Platform | File | Description |"; echo "|----------|------|-------------|"; FOUND=1; }
+              NAME=$(basename "$f")
+              echo "| **Android** | [${NAME}](${RELEASE_URL}/${NAME}) | APK for Android 10+ |"
+            done
+
+            for f in packages/dist-wasm.zip; do
+              [ -f "$f" ] || continue
+              [ "$FOUND" -eq 0 ] && { echo "| Platform | File | Description |"; echo "|----------|------|-------------|"; FOUND=1; }
+              echo "| **Web (WASM)** | [dist-wasm.zip](${RELEASE_URL}/dist-wasm.zip) | Static site — deploy anywhere |"
+            done
+
+            if [ "$FOUND" -eq 0 ]; then
+              echo "_No build artifacts available for this release._"
+            fi
+
+            echo ""
+            echo "---"
+            echo ""
+
+            # Append features from RELEASE_NOTES.md
+            if [ -f RELEASE_NOTES.md ]; then
+              awk '/^## Features/,/^## (Current Limitations|Roadmap)/' RELEASE_NOTES.md | \
+                head -n -2 2>/dev/null || true
+            fi
+
+            echo ""
+            echo "## Change Log"
+            echo ""
+
+            if [ -n "$COMMITS" ]; then
+              echo '```'
+              echo "$COMMITS"
+              echo '```'
+            else
+              echo "_No new commits since last release._"
+            fi
+
+            # Append limitations and roadmap
+            if [ -f RELEASE_NOTES.md ]; then
+              awk '/^## (Current Limitations|Roadmap)/,0' RELEASE_NOTES.md 2>/dev/null || true
+            fi
+          } > release_body.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
