@@ -16,74 +16,73 @@ fn staging_dir() -> PathBuf {
 }
 
 pub fn run_harvest(backends: Vec<StoredBackend>, tx: Sender<TaskMessage>) {
-    run_harvest_with_output(backends, tx, None);
+    run_harvest_with_output(backends, tx, None, 0);
 }
 
-pub fn run_harvest_with_output(backends: Vec<StoredBackend>, tx: Sender<TaskMessage>, output_path: Option<String>) {
+pub fn run_harvest_with_output(backends: Vec<StoredBackend>, tx: Sender<TaskMessage>, output_path: Option<String>, seq: u64) {
     let total = backends.len();
     let mut completed = 0usize;
     let mut grand_files = 0usize;
     let mut grand_bytes = 0u64;
+    let mut grand_errors = 0usize;
     let stamp = Utc::now().format("%Y%m%d-%H%M%S").to_string();
 
     for sb in &backends {
         let be = match create_backend(sb.backend_type, &sb.token, &sb.config) {
             Some(b) => b,
             None => {
-                let _ = tx.send(TaskMessage::HarvestError(sb.name.clone(), "failed to create backend".into()));
+                let _ = tx.send(TaskMessage::HarvestError(seq, sb.name.clone(), "failed to create backend".into()));
                 completed += 1;
                 continue;
             }
         };
 
         if let Err(e) = be.test_connection() {
-            let _ = tx.send(TaskMessage::HarvestError(sb.name.clone(), format!("connection: {}", e)));
+            let _ = tx.send(TaskMessage::HarvestError(seq, sb.name.clone(), format!("connection: {}", e)));
             completed += 1;
             continue;
         }
 
-        let _ = tx.send(TaskMessage::HarvestProgress(sb.name.clone(), 0, 0, 0, "listing files...".into()));
+        let _ = tx.send(TaskMessage::HarvestProgress(seq, sb.name.clone(), 0, 0, 0, "listing files...".into()));
 
         let files = match be.list_files("") {
             Ok(f) => f,
             Err(e) => {
-                let _ = tx.send(TaskMessage::HarvestError(sb.name.clone(), format!("list: {}", e)));
+                let _ = tx.send(TaskMessage::HarvestError(seq, sb.name.clone(), format!("list: {}", e)));
                 completed += 1;
                 continue;
             }
         };
 
         let total_files = files.len();
-        let _ = tx.send(TaskMessage::HarvestProgress(sb.name.clone(), 0, total_files, 0, format!("found {} files", total_files)));
+        let _ = tx.send(TaskMessage::HarvestProgress(seq, sb.name.clone(), 0, total_files, 0, format!("found {} files", total_files)));
 
         let backend_dir = staging_dir().join(&sb.name);
         let _ = fs::create_dir_all(&backend_dir);
 
         let mut dl_bytes = 0u64;
         let mut dl_ok = 0usize;
-        for (i, f) in files.iter().enumerate() {
+        for f in &files {
             let local = backend_dir.join(&f.name);
             match be.download_file(&f.path, local.to_str().unwrap_or("")) {
                 Ok(_) => {
                     dl_ok += 1;
                     dl_bytes += f.size_bytes;
+                    let _ = tx.send(TaskMessage::HarvestProgress(seq, sb.name.clone(), dl_ok, total_files, dl_bytes, format!("{}/{} files", dl_ok, total_files)));
                 }
                 Err(e) => {
-                    let _ = tx.send(TaskMessage::HarvestProgress(
-                        sb.name.clone(), i + 1, total_files, dl_bytes,
-                        format!("download error for {}: {} (continuing)", f.name, e),
-                    ));
+                    grand_errors += 1;
+                    let _ = tx.send(TaskMessage::HarvestError(seq, sb.name.clone(), format!("download error for {}: {}", f.name, e)));
                 }
             }
-            let _ = tx.send(TaskMessage::HarvestProgress(sb.name.clone(), i + 1, total_files, dl_bytes, format!("{}/{} files", i + 1, total_files)));
         }
 
-        let _ = tx.send(TaskMessage::HarvestDone(sb.name.clone(), dl_ok, dl_bytes));
+        let _ = tx.send(TaskMessage::HarvestDone(seq, sb.name.clone(), dl_ok, dl_bytes));
         completed += 1;
         grand_files += dl_ok;
         grand_bytes += dl_bytes;
         let pct = completed as f64 / total as f64;
-        let _ = tx.send(TaskMessage::HarvestOverall(pct, format!("{}/{} backends done", completed, total)));
+        let _ = tx.send(TaskMessage::HarvestOverall(seq, pct, format!("{}/{} backends done", completed, total)));
     }
 
     // Determine output path
@@ -92,7 +91,7 @@ pub fn run_harvest_with_output(backends: Vec<StoredBackend>, tx: Sender<TaskMess
         Some(p) => PathBuf::from(p),
         None => harvest_dir.join(format!("harvest-{}.cybermanju", stamp)),
     };
-    let _ = tx.send(TaskMessage::HarvestOverall(0.95, "packing .cybermanju...".into()));
+    let _ = tx.send(TaskMessage::HarvestOverall(seq, 0.95, "packing .cybermanju...".into()));
 
     // Create portable database with all harvested files as recovery entries
     if let Some(parent) = pdb_path.parent() {
@@ -123,15 +122,15 @@ pub fn run_harvest_with_output(backends: Vec<StoredBackend>, tx: Sender<TaskMess
                     let _ = fs::remove_file(&redb_path);
                 }
                 Err(e) => {
-                    let _ = tx.send(TaskMessage::HarvestOverall(1.0, format!("db error: {}", e)));
+                    let _ = tx.send(TaskMessage::HarvestOverall(seq, 1.0, format!("db error: {}", e)));
                 }
             }
         }
         Err(e) => {
-            let _ = tx.send(TaskMessage::HarvestOverall(1.0, format!("portable error: {}", e)));
+            let _ = tx.send(TaskMessage::HarvestOverall(seq, 1.0, format!("portable error: {}", e)));
         }
     }
 
-    let _ = tx.send(TaskMessage::HarvestOverall(1.0, format!("done — output: {}", pdb_path.display())));
-    let _ = tx.send(TaskMessage::HarvestComplete(grand_files, grand_bytes));
+    let _ = tx.send(TaskMessage::HarvestOverall(seq, 1.0, format!("done — output: {}", pdb_path.display())));
+    let _ = tx.send(TaskMessage::HarvestComplete(seq, grand_files, grand_bytes));
 }

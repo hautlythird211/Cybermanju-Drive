@@ -140,22 +140,22 @@ fn cmd_harvest_cli(output: Option<PathBuf>) -> Result<()> {
     let backends = cfg.backends.clone();
     let out_str = output.as_ref().map(|p| p.to_string_lossy().to_string());
     println!(" Harvesting from {} backends...", backends.len());
-    std::thread::spawn(move || harvest::run_harvest_with_output(backends, tx, out_str));
+    std::thread::spawn(move || harvest::run_harvest_with_output(backends, tx, out_str, 0));
     while let Ok(msg) = rx.recv() {
         match msg {
-            tui::TaskMessage::HarvestProgress(_, _, _, s) => {
+            tui::TaskMessage::HarvestProgress(_, _, _, _, _, s) => {
                 println!("  {}", s);
             }
-            tui::TaskMessage::HarvestOverall(p, s) => {
+            tui::TaskMessage::HarvestOverall(_, p, s) => {
                 println!("  {:.0}% — {}", p * 100.0, s);
             }
-            tui::TaskMessage::HarvestDone(name, files, bytes) => {
+            tui::TaskMessage::HarvestDone(_, name, files, bytes) => {
                 println!("  \x1b[32m{}: {} files, {} bytes\x1b[0m", name, files, bytes);
             }
-            tui::TaskMessage::HarvestError(name, err) => {
+            tui::TaskMessage::HarvestError(_, name, err) => {
                 println!("  \x1b[31m{}: {}\x1b[0m", name, err);
             }
-            tui::TaskMessage::HarvestComplete(files, bytes) => {
+            tui::TaskMessage::HarvestComplete(_, files, bytes) => {
                 println!(" \x1b[32mDone — {} files, {} bytes harvested\x1b[0m", files, bytes);
                 break;
             }

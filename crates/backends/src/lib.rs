@@ -70,7 +70,7 @@ pub fn create_backend(
                 .get("password")
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
-            MegaBackend::new(token, password).map(|b| Box::new(b) as Box<dyn StorageBackend>)
+            MegaBackend::new_with_email_password(token, password).map(|b| Box::new(b) as Box<dyn StorageBackend>)
         }
     }
 }

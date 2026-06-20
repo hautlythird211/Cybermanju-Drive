@@ -72,7 +72,7 @@ pub enum Screen {
     Menu,
     BackendList,
     BackendAdd,
-    Harvest { backends: Vec<HarvestBackend>, overall_progress: f64, status_line: String, running: bool },
+    Harvest { backends: Vec<HarvestBackend>, overall_progress: f64, status_line: String, running: bool, id: u64, output_path: String },
     Transfer { source_idx: usize, dest_idx: usize, status: String, progress: f64, running: bool },
     Portable { mode: PortableMode, status: String, path: String, progress: f64, running: bool },
 }
@@ -96,11 +96,11 @@ pub enum PortableMode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TaskMessage {
-    HarvestProgress(String, usize, usize, u64, String), // backend_name, files_done, total_files, bytes, status
-    HarvestDone(String, usize, u64),
-    HarvestError(String, String),
-    HarvestOverall(f64, String),
-    HarvestComplete(usize, u64),
+    HarvestProgress(u64, String, usize, usize, u64, String), // seq, backend_name, files_done, total_files, bytes, status
+    HarvestDone(u64, String, usize, u64),
+    HarvestError(u64, String, String),
+    HarvestOverall(u64, f64, String),
+    HarvestComplete(u64, usize, u64),
     TransferProgress(f64, String),
     TransferDone,
     TransferError(String),
@@ -121,6 +121,7 @@ pub struct App {
     backend_add_state: BackendAddState,
     tab_index: usize,
     harvest_detail_idx: usize,
+    harvest_seq: u64,
 }
 
 struct BackendAddState {
@@ -155,6 +156,7 @@ impl App {
             },
             tab_index: 0,
             harvest_detail_idx: 0,
+            harvest_seq: 0,
         };
         s.backend_list_state.select(Some(0));
         s
@@ -197,8 +199,9 @@ impl App {
     fn check_tasks(&mut self) {
         while let Ok(msg) = self.task_rx.try_recv() {
             match msg {
-                TaskMessage::HarvestProgress(name, files, total, bytes, status) => {
-                    if let Screen::Harvest { ref mut backends, .. } = self.screen {
+                TaskMessage::HarvestProgress(seq, name, files, total, bytes, status) => {
+                    if let Screen::Harvest { ref mut backends, id, .. } = self.screen {
+                        if seq != id { continue; }
                         for b in backends.iter_mut() {
                             if b.name == name {
                                 b.files_downloaded = files;
@@ -209,8 +212,9 @@ impl App {
                         }
                     }
                 }
-                TaskMessage::HarvestDone(name, files, bytes) => {
-                    if let Screen::Harvest { ref mut backends, .. } = self.screen {
+                TaskMessage::HarvestDone(seq, name, files, bytes) => {
+                    if let Screen::Harvest { ref mut backends, id, .. } = self.screen {
+                        if seq != id { continue; }
                         for b in backends.iter_mut() {
                             if b.name == name {
                                 b.status = "done".into();
@@ -220,7 +224,10 @@ impl App {
                         }
                     }
                 }
-                TaskMessage::HarvestError(name, err) => {
+                TaskMessage::HarvestError(seq, name, err) => {
+                    if let Screen::Harvest { id, .. } = self.screen {
+                        if seq != id { continue; }
+                    }
                     self.status_log.push(format!("{} harvest error: {}", name, err));
                     if let Screen::Harvest { ref mut backends, .. } = self.screen {
                         for b in backends.iter_mut() {
@@ -230,14 +237,16 @@ impl App {
                         }
                     }
                 }
-                TaskMessage::HarvestOverall(p, s) => {
-                    if let Screen::Harvest { ref mut overall_progress, ref mut status_line, .. } = self.screen {
+                TaskMessage::HarvestOverall(seq, p, s) => {
+                    if let Screen::Harvest { ref mut overall_progress, ref mut status_line, id, .. } = self.screen {
+                        if seq != id { continue; }
                         *overall_progress = p;
                         *status_line = s;
                     }
                 }
-                TaskMessage::HarvestComplete(files, bytes) => {
-                    if let Screen::Harvest { ref mut running, ref mut status_line, .. } = self.screen {
+                TaskMessage::HarvestComplete(seq, files, bytes) => {
+                    if let Screen::Harvest { ref mut running, ref mut status_line, id, .. } = self.screen {
+                        if seq != id { continue; }
                         *running = false;
                         *status_line = format!("Done — {} files, {} bytes harvested", files, bytes);
                     }
@@ -450,6 +459,16 @@ impl App {
                 self.harvest_detail_idx = (self.harvest_detail_idx + 1).min(max);
             }
             KeyCode::Char('h') => self.start_harvest(),
+            KeyCode::Char(c) => {
+                if let Screen::Harvest { ref mut output_path, .. } = self.screen {
+                    output_path.push(c);
+                }
+            }
+            KeyCode::Backspace => {
+                if let Screen::Harvest { ref mut output_path, .. } = self.screen {
+                    output_path.pop();
+                }
+            }
             KeyCode::Esc => self.screen = Screen::Menu,
             _ => {}
         }
@@ -522,6 +541,11 @@ impl App {
         let tx = self.task_tx.clone();
         let backends = self.backends.backends.clone();
         if backends.is_empty() { return; }
+        self.harvest_seq += 1;
+        let seq = self.harvest_seq;
+        let output_path = if let Screen::Harvest { ref output_path, .. } = self.screen {
+            if output_path.is_empty() { None } else { Some(output_path.clone()) }
+        } else { None };
         let hb: Vec<HarvestBackend> = backends.iter().map(|b| HarvestBackend {
             name: b.name.clone(),
             files_found: 0,
@@ -535,10 +559,13 @@ impl App {
             overall_progress: 0.0,
             status_line: "Starting harvest...".into(),
             running: true,
+            id: seq,
+            output_path: output_path.clone().unwrap_or_default(),
         };
         self.harvest_detail_idx = 0;
+        let out_str = output_path;
         std::thread::spawn(move || {
-            harvest::run_harvest(backends, tx);
+            harvest::run_harvest_with_output(backends, tx, out_str, seq);
         });
     }
 
@@ -676,10 +703,10 @@ impl App {
     }
 
     fn render_harvest(&self, f: &mut Frame) {
-        if let Screen::Harvest { ref backends, overall_progress, ref status_line, running } = self.screen {
+        if let Screen::Harvest { ref backends, overall_progress, ref status_line, running, ref output_path, .. } = self.screen {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Length(3), Constraint::Min(1), Constraint::Length(3)])
+                .constraints([Constraint::Length(3), Constraint::Length(3), Constraint::Min(1), Constraint::Length(3)])
                 .split(f.area());
 
             let gauge = Gauge::default()
@@ -689,6 +716,13 @@ impl App {
                 .label(format!("{} — {}%", status_line, (overall_progress * 100.0) as u16));
             f.render_widget(gauge, chunks[0]);
 
+            let out_style = if running { Style::new().fg(Color::Rgb(100, 100, 100)) } else { Style::new().fg(Color::Rgb(0, 255, 65)) };
+            let out_line = Paragraph::new(Line::from(vec![
+                Span::styled(" Output: ", Style::new().fg(Color::Rgb(100, 100, 100))),
+                Span::styled(if output_path.is_empty() { "(auto)" } else { output_path.as_str() }, out_style),
+            ])).block(Block::default().borders(Borders::ALL).border_style(Style::new().fg(Color::Rgb(0, 255, 65))));
+            f.render_widget(out_line, chunks[1]);
+
             let items: Vec<ListItem> = backends.iter().map(|b| {
                 let color = match b.status.as_str() {
                     "done" => Color::Rgb(0, 200, 100),
@@ -696,22 +730,23 @@ impl App {
                     "waiting" => Color::Rgb(100, 100, 100),
                     _ => Color::Rgb(0, 255, 65),
                 };
-                let pct = if b.files_found > 0 { (b.downloaded_bytes as f64 / b.total_bytes.max(1) as f64 * 100.0) as u16 } else { 0 };
-                ListItem::new(format!(" {:<20} {:>4} files {:>8} bytes {:>3}%  {}", b.name, b.files_downloaded, b.downloaded_bytes, pct, b.status))
+                let pct = if b.files_found > 0 { (b.files_downloaded as f64 / b.files_found as f64 * 100.0) as u16 } else { 0 };
+                ListItem::new(format!(" {:<20} {:>4}/{} files {:>8} bytes {:>3}%  {}", b.name, b.files_downloaded, b.files_found, b.downloaded_bytes, pct, b.status))
                     .style(Style::new().fg(color))
             }).collect();
             let list = List::new(items)
                 .block(Block::default().title(" Backends ").borders(Borders::ALL).border_style(Style::new().fg(Color::Rgb(0, 255, 65))))
                 .highlight_style(Style::new().fg(Color::Rgb(0, 255, 65)).bg(Color::Rgb(0, 40, 0)));
             let mut state = ListState::default().with_selected(Some(self.harvest_detail_idx));
-            f.render_stateful_widget(list, chunks[1], &mut state);
+            f.render_stateful_widget(list, chunks[2], &mut state);
 
             let help = Paragraph::new(Line::from(vec![
                 Span::styled(" h restart  ", Style::new().fg(Color::Rgb(0, 255, 65))),
                 Span::styled("Esc back  ", Style::new().fg(Color::Rgb(100, 100, 100))),
                 if running { Span::styled(" [running]", Style::new().fg(Color::Rgb(255, 200, 0))) } else { Span::styled(" [idle]", Style::new().fg(Color::Rgb(100, 100, 100))) },
+                Span::styled("  type output path then h  ", Style::new().fg(Color::Rgb(80, 80, 80))),
             ]));
-            f.render_widget(help, chunks[2]);
+            f.render_widget(help, chunks[3]);
         }
     }
 

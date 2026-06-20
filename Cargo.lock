@@ -1377,6 +1377,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "cybermanju-backends"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "cybermanju-types",
+ "log",
+ "megalib",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "tokio",
+ "urlencoding",
+]
+
+[[package]]
 name = "cybermanju-cli"
 version = "0.1.0"
 dependencies = [
@@ -1387,6 +1403,7 @@ dependencies = [
  "chrono",
  "clap",
  "crossterm",
+ "cybermanju-backends",
  "cybermanju-compression",
  "cybermanju-crypto",
  "cybermanju-db",
@@ -1463,6 +1480,7 @@ dependencies = [
  "base64 0.22.1",
  "blake3",
  "chrono",
+ "cybermanju-backends",
  "cybermanju-compression",
  "cybermanju-crypto",
  "cybermanju-db",

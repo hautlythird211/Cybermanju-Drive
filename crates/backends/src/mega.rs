@@ -12,14 +12,14 @@ pub struct MegaBackend {
 }
 
 impl MegaBackend {
-    pub fn new(token: &str, password: &str) -> Result<Self, String> {
-        if token.is_empty() || password.is_empty() {
+    pub fn new(email: &str, password: &str) -> Result<Self, String> {
+        if email.is_empty() || password.is_empty() {
             return Err("Mega backend requires email and password".to_string());
         }
         let rt = tokio::runtime::Runtime::new()
             .map_err(|e| format!("Failed to create tokio runtime: {}", e))?;
         Ok(Self {
-            email: token.to_string(),
+            email: email.to_string(),
             password: password.to_string(),
             rt,
         })
