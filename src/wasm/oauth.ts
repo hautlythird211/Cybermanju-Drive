@@ -11,6 +11,7 @@ export interface OAuthToken {
 
 export interface OAuthConfig {
   clientId: string
+  clientSecret: string
   redirectUri: string
   scopes: string[]
   authUrl: string
@@ -30,6 +31,7 @@ function computeRedirectUri(): string {
 const PROVIDER_CONFIGS: Record<OAuthProvider, OAuthConfig> = {
   googleDrive: {
     clientId: '',
+    clientSecret: '',
     redirectUri: computeRedirectUri(),
     scopes: ['https://www.googleapis.com/auth/drive.file'],
     authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
@@ -37,6 +39,7 @@ const PROVIDER_CONFIGS: Record<OAuthProvider, OAuthConfig> = {
   },
   googlePhotos: {
     clientId: '',
+    clientSecret: '',
     redirectUri: computeRedirectUri(),
     scopes: ['https://www.googleapis.com/auth/photoslibrary.appendonly'],
     authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
@@ -44,6 +47,7 @@ const PROVIDER_CONFIGS: Record<OAuthProvider, OAuthConfig> = {
   },
   github: {
     clientId: '',
+    clientSecret: '',
     redirectUri: computeRedirectUri(),
     scopes: ['repo'],
     authUrl: 'https://github.com/login/oauth/authorize',
@@ -51,6 +55,7 @@ const PROVIDER_CONFIGS: Record<OAuthProvider, OAuthConfig> = {
   },
   gitlab: {
     clientId: '',
+    clientSecret: '',
     redirectUri: computeRedirectUri(),
     scopes: ['api'],
     authUrl: 'https://gitlab.com/oauth/authorize',
@@ -58,6 +63,7 @@ const PROVIDER_CONFIGS: Record<OAuthProvider, OAuthConfig> = {
   },
   telegram: {
     clientId: '',
+    clientSecret: '',
     redirectUri: computeRedirectUri(),
     scopes: ['bot'],
     authUrl: 'https://oauth.telegram.org/auth',
@@ -100,20 +106,52 @@ const ENV_MAP: Record<string, OAuthProvider>[] = [
   },
 ]
 
+// Client secret env vars — Google requires client_secret for token exchange
+const SECRET_ENV_MAP: Record<string, OAuthProvider>[] = [
+  {
+    VITE_OAUTH_GOOGLE_DRIVE_CLIENT_SECRET: 'googleDrive',
+    VITE_OAUTH_GOOGLE_PHOTOS_CLIENT_SECRET: 'googlePhotos',
+    VITE_OAUTH_GITHUB_CLIENT_SECRET: 'github',
+    VITE_OAUTH_GITLAB_CLIENT_SECRET: 'gitlab',
+    VITE_OAUTH_TELEGRAM_CLIENT_SECRET: 'telegram',
+  },
+  {
+    VITE_GOOGLE_DRIVE_CLIENT_SECRET: 'googleDrive',
+    VITE_GOOGLE_PHOTOS_CLIENT_SECRET: 'googlePhotos',
+    VITE_GITHUB_CLIENT_SECRET: 'github',
+    VITE_GITLAB_CLIENT_SECRET: 'gitlab',
+    VITE_TELEGRAM_CLIENT_SECRET: 'telegram',
+  },
+  {
+    GOOGLE_DRIVE_CLIENT_SECRET: 'googleDrive',
+    GOOGLE_PHOTOS_CLIENT_SECRET: 'googlePhotos',
+    GITHUB_CLIENT_SECRET: 'github',
+    GITLAB_CLIENT_SECRET: 'gitlab',
+    TELEGRAM_CLIENT_SECRET: 'telegram',
+  },
+  {
+    VITE_OAUTH_GOOGLE_CLIENT_SECRET: 'googleDrive',
+    VITE_GOOGLE_CLIENT_SECRET: 'googleDrive',
+    GOOGLE_CLIENT_SECRET: 'googleDrive',
+  },
+]
+
 export function loadClientIdsFromEnv(): void {
   if (typeof import.meta === 'undefined' || !import.meta.env) {
     console.warn('[OAuth][DEBUG] import.meta.env is undefined — env vars unavailable')
     return
   }
   const env = import.meta.env as Record<string, string | undefined>
-  const found: string[] = []
-  const allKeys = Object.keys(env).filter(k => k.startsWith('VITE_') || k.includes('CLIENT_ID') || k.includes('OAUTH'))
+  const foundIds: string[] = []
+  const foundSecrets: string[] = []
+  const allKeys = Object.keys(env).filter(k => k.startsWith('VITE_') || k.includes('CLIENT_') || k.includes('OAUTH'))
 
   console.log('[OAuth][DEBUG] ── ENV VAR SCAN ──')
   console.log('[OAuth][DEBUG] Total env keys:', Object.keys(env).length)
-  console.log('[OAuth][DEBUG] VITE_*/CLIENT_ID/OAUTH keys:', allKeys.length ? allKeys.join(', ') : '(none found)')
-  console.log('[OAuth][DEBUG] Checking provider client IDs:')
+  console.log('[OAuth][DEBUG] Relevant keys:', allKeys.length ? allKeys.join(', ') : '(none found)')
 
+  // Load client IDs
+  console.log('[OAuth][DEBUG] Checking provider client IDs:')
   for (const map of ENV_MAP) {
     for (const [key, provider] of Object.entries(map)) {
       const val = env[key]
@@ -121,7 +159,21 @@ export function loadClientIdsFromEnv(): void {
       console.log(`[OAuth][DEBUG]   ${key} → ${provider}: ${status}`)
       if (val && !PROVIDER_CONFIGS[provider].clientId) {
         PROVIDER_CONFIGS[provider].clientId = val
-        found.push(`${key}=${val.slice(0, 8)}...`)
+        foundIds.push(`${key}=${val.slice(0, 8)}...`)
+      }
+    }
+  }
+
+  // Load client secrets
+  console.log('[OAuth][DEBUG] Checking provider client secrets:')
+  for (const map of SECRET_ENV_MAP) {
+    for (const [key, provider] of Object.entries(map)) {
+      const val = env[key]
+      const status = val ? `SET (${val.slice(0, 4)}...${val.slice(-3)})` : 'NOT SET'
+      console.log(`[OAuth][DEBUG]   ${key} → ${provider}: ${status}`)
+      if (val && !PROVIDER_CONFIGS[provider].clientSecret) {
+        PROVIDER_CONFIGS[provider].clientSecret = val
+        foundSecrets.push(`${key}=${val.slice(0, 6)}...`)
       }
     }
   }
@@ -131,20 +183,32 @@ export function loadClientIdsFromEnv(): void {
     PROVIDER_CONFIGS.googlePhotos.clientId = PROVIDER_CONFIGS.googleDrive.clientId
     console.log('[OAuth][DEBUG] googlePhotos inheriting clientId from googleDrive')
   }
-
-  console.log('[OAuth][DEBUG] ── FINAL CLIENT ID STATUS ──')
-  for (const [provider, config] of Object.entries(PROVIDER_CONFIGS)) {
-    const has = config.clientId ? `YES (${config.clientId.slice(0, 6)}...${config.clientId.slice(-3)})` : 'NO'
-    console.log(`[OAuth][DEBUG]   ${provider}: ${has}`)
+  if (PROVIDER_CONFIGS.googleDrive.clientSecret && !PROVIDER_CONFIGS.googlePhotos.clientSecret) {
+    PROVIDER_CONFIGS.googlePhotos.clientSecret = PROVIDER_CONFIGS.googleDrive.clientSecret
+    console.log('[OAuth][DEBUG] googlePhotos inheriting clientSecret from googleDrive')
   }
 
-  if (found.length > 0) {
-    console.log('[OAuth] Client IDs loaded:', found.join(', '))
+  console.log('[OAuth][DEBUG] ── FINAL STATUS ──')
+  for (const [provider, config] of Object.entries(PROVIDER_CONFIGS)) {
+    const id = config.clientId ? `ID:${config.clientId.slice(0, 6)}...` : 'ID:—'
+    const secret = config.clientSecret ? `SECRET:${config.clientSecret.slice(0, 4)}...` : 'SECRET:—'
+    console.log(`[OAuth][DEBUG]   ${provider}: ${id} ${secret}`)
+  }
+
+  if (foundIds.length > 0) {
+    console.log('[OAuth] Client IDs loaded:', foundIds.join(', '))
   } else {
     console.warn('[OAuth] ⚠ NO CLIENT IDs FOUND IN ENVIRONMENT')
     console.warn('[OAuth] Tried env keys:', Object.values(ENV_MAP).flatMap(m => Object.keys(m)).join(', '))
     console.warn('[OAuth] Solution: Create .env file from .env.example and fill in your OAuth client IDs')
     console.warn('[OAuth] Or set VITE_OAUTH_* env vars before running `npm run dev`')
+  }
+  if (foundSecrets.length > 0) {
+    console.log('[OAuth] Client secrets loaded:', foundSecrets.join(', '))
+  } else {
+    console.warn('[OAuth] ⚠ NO CLIENT SECRETS FOUND — Google token exchange will fail')
+    console.warn('[OAuth] Tried env keys:', Object.values(SECRET_ENV_MAP).flatMap(m => Object.keys(m)).join(', '))
+    console.warn('[OAuth] Solution: Set VITE_OAUTH_GOOGLE_DRIVE_CLIENT_SECRET in .env')
   }
 }
 
@@ -154,6 +218,14 @@ export function getProviderClientId(provider: OAuthProvider): string {
 
 export function setProviderClientId(provider: OAuthProvider, clientId: string): void {
   PROVIDER_CONFIGS[provider].clientId = clientId
+}
+
+export function getProviderClientSecret(provider: OAuthProvider): string {
+  return PROVIDER_CONFIGS[provider].clientSecret
+}
+
+export function setProviderClientSecret(provider: OAuthProvider, clientSecret: string): void {
+  PROVIDER_CONFIGS[provider].clientSecret = clientSecret
 }
 
 export function getProviderConfig(provider: OAuthProvider): OAuthConfig {
@@ -287,6 +359,7 @@ export async function exchangeCodeForToken(
   console.log(`[OAuth][DEBUG] exchangeCodeForToken(${provider})`)
   console.log(`[OAuth][DEBUG]   tokenUrl: ${config.tokenUrl}`)
   console.log(`[OAuth][DEBUG]   clientId: ${config.clientId ? `${config.clientId.slice(0, 6)}...${config.clientId.slice(-3)}` : '(EMPTY)'}`)
+  console.log(`[OAuth][DEBUG]   clientSecret: ${config.clientSecret ? 'SET' : '(EMPTY)'}`)
   console.log(`[OAuth][DEBUG]   code: ${code.slice(0, 8)}...`)
   console.log(`[OAuth][DEBUG]   redirectUri: ${redirectUri}`)
   console.log(`[OAuth][DEBUG]   verifier: ${verifier.slice(0, 12)}...`)
@@ -298,6 +371,10 @@ export async function exchangeCodeForToken(
     grant_type: 'authorization_code',
     code_verifier: verifier,
   })
+
+  if (config.clientSecret) {
+    params.set('client_secret', config.clientSecret)
+  }
 
   console.log(`[OAuth][DEBUG]   POST ${config.tokenUrl}`)
   console.log(`[OAuth][DEBUG]   Body params: ${[...params.keys()].join(', ')}`)
@@ -353,6 +430,10 @@ export async function refreshAccessToken(token: OAuthToken): Promise<OAuthToken>
     refresh_token: token.refreshToken,
     grant_type: 'refresh_token',
   })
+
+  if (config.clientSecret) {
+    params.set('client_secret', config.clientSecret)
+  }
 
   const response = await fetch(config.tokenUrl, {
     method: 'POST',
