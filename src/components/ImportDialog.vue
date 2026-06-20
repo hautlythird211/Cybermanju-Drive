@@ -353,7 +353,7 @@ watch(() => props.visible, (v) => {
   border: 1px solid #1a1a1a;
   border-radius: 4px;
   color: #555;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 8px;
   font-weight: 700;
   cursor: pointer;
@@ -464,7 +464,7 @@ watch(() => props.visible, (v) => {
   border: 1px solid #2a2a2a;
   border-radius: 6px;
   color: #888;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   padding: 7px 18px;

@@ -168,7 +168,7 @@ onMounted(checkCrash)
   border: 1px solid #1a1a1a;
   border-radius: 6px;
   color: #888;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
   padding: 8px 24px;

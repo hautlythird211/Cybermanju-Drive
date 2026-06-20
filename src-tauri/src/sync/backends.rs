@@ -22,12 +22,30 @@ pub fn create_backend(config: &SyncConfig) -> Result<Box<dyn StorageBackend>, St
             let cfg = serde_json::json!({
                 "repo": config.repo_name,
                 "branch": config.branch,
+                "use_git_lfs": config.use_git_lfs,
+                "repo_layout": config.repo_layout,
+                "lfs_repo": config.lfs_repo,
             });
             cybermanju_backends::create_backend(&config.backend_type, token, &cfg)
         }
         SyncBackendType::GitLab => {
             let cfg = serde_json::json!({
                 "project": config.repo_name,
+                "branch": config.branch,
+                "base_url": config.base_path,
+            });
+            cybermanju_backends::create_backend(&config.backend_type, token, &cfg)
+        }
+        SyncBackendType::Codeberg => {
+            let cfg = serde_json::json!({
+                "repo": config.repo_name,
+                "branch": config.branch,
+            });
+            cybermanju_backends::create_backend(&config.backend_type, token, &cfg)
+        }
+        SyncBackendType::Gitea => {
+            let cfg = serde_json::json!({
+                "repo": config.repo_name,
                 "branch": config.branch,
                 "base_url": config.base_path,
             });
@@ -62,6 +80,6 @@ pub fn create_backend(config: &SyncConfig) -> Result<Box<dyn StorageBackend>, St
 
 // Re-export all shared backend structs for any code that references them directly.
 pub use cybermanju_backends::{
-    transfer_files, GitHubBackend, GitLabBackend, GoogleDriveBackend, GooglePhotosBackend,
-    LocalBackend, MegaBackend, TelegramBackend,
+    transfer_files, CodebergBackend, GitHubBackend, GiteaBackend, GitLabBackend,
+    GoogleDriveBackend, GooglePhotosBackend, LocalBackend, MegaBackend, TelegramBackend,
 };

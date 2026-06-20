@@ -543,7 +543,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   background: #030308;
-  font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Courier New', monospace;
+  font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', var(--font-mono);
   outline: none;
   overflow: hidden;
   z-index: 999;
@@ -706,7 +706,7 @@ onUnmounted(() => {
   border: 1px solid rgba(0, 255, 65, 0.3);
   border-radius: 6px;
   color: #00ff41;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 700;
   padding: 10px 24px;

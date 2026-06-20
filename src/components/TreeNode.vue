@@ -71,7 +71,7 @@ function toggle() {
 }
 
 .tree-arrow {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 8px;
   width: 12px;
   flex-shrink: 0;

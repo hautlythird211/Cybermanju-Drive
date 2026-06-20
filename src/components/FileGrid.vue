@@ -558,7 +558,7 @@ async function handleRenameConfirm() {
 }
 
 .ft-info {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   color: rgba(0, 255, 65,0.5);
 }
@@ -578,7 +578,7 @@ async function handleRenameConfirm() {
   background: #0a0a0a;
   border: 2px solid #00ff41;
   color: #00ff41;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
   padding: 2px 4px;
   cursor: pointer;
@@ -588,7 +588,7 @@ async function handleRenameConfirm() {
   background: #0a0a0a;
   border: 2px solid #00ff41;
   color: #00ff41;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
   padding: 2px 6px;
   width: 100px;
@@ -609,7 +609,7 @@ async function handleRenameConfirm() {
 }
 
 .bulk-label {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   color: #0a0a0a;
@@ -618,7 +618,7 @@ async function handleRenameConfirm() {
 
 .bulk-btn {
   padding: 2px 8px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
   font-weight: 700;
   cursor: pointer;
@@ -644,7 +644,7 @@ async function handleRenameConfirm() {
   padding: 2px 6px;
   cursor: pointer;
   color: rgba(0, 255, 65,0.4);
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   border: 2px solid transparent;
@@ -717,7 +717,7 @@ async function handleRenameConfirm() {
 }
 
 .check-box {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 8px;
   color: #00ff41;
   border: 1px solid #00ff41;
@@ -740,7 +740,7 @@ async function handleRenameConfirm() {
 }
 
 .file-icon {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 18px;
   color: #00ff41;
 }
@@ -776,7 +776,7 @@ async function handleRenameConfirm() {
 
 .file-card-meta {
   font-size: 9px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   margin-top: 2px;
 }
 
@@ -790,7 +790,7 @@ async function handleRenameConfirm() {
 }
 
 .card-badge {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 8px;
   font-weight: 700;
   color: #00ff41;
@@ -881,7 +881,7 @@ async function handleRenameConfirm() {
 
 .masonry-meta {
   font-size: 9px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   margin-top: 4px;
 }
 
@@ -905,7 +905,7 @@ async function handleRenameConfirm() {
   background: #0a0a0a;
   border-bottom: 2px solid #00ff41;
   font-size: 9px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   letter-spacing: 0.5px;
   color: rgba(0, 255, 65,0.5);
@@ -965,10 +965,10 @@ async function handleRenameConfirm() {
 .lc-type { flex: 1.2; min-width: 60px; }
 .lc-date { flex: 1.2; min-width: 80px; }
 .lc-status { flex: 0.8; min-width: 50px; gap: 2px; }
-.lc-hash { flex: 1.2; min-width: 80px; font-size: 9px; font-family: 'Courier New', monospace; }
+.lc-hash { flex: 1.2; min-width: 80px; font-size: 9px; font-family: var(--font-mono); }
 
 .file-icon-sm {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   color: #00ff41;
   flex-shrink: 0;
@@ -978,7 +978,7 @@ async function handleRenameConfirm() {
 
 .badge-sm {
   font-size: 8px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   border: 1px solid #00ff41;
   padding: 0 2px;
@@ -999,7 +999,7 @@ async function handleRenameConfirm() {
   background: #0a0a0a;
   border: 2px solid #00ff41;
   min-width: 180px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   color: #00ff41;
   box-shadow: 4px 4px 0 rgba(0, 255, 65,0.15);
@@ -1071,7 +1071,7 @@ async function handleRenameConfirm() {
   border: 2px solid #00ff41;
   padding: 16px;
   width: 300px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   color: #00ff41;
   box-shadow: 4px 4px 0 rgba(0, 255, 65,0.15);
 }
@@ -1088,7 +1088,7 @@ async function handleRenameConfirm() {
   background: #0a0a0a;
   border: 2px solid #00ff41;
   color: #00ff41;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   padding: 6px 8px;
   margin-bottom: 10px;
@@ -1105,7 +1105,7 @@ async function handleRenameConfirm() {
   border: 2px solid #00ff41;
   color: #00ff41;
   padding: 4px 12px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   cursor: pointer;

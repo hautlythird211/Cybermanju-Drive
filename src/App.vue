@@ -640,7 +640,7 @@ function handleLandingLaunch() {
   border: 1px solid #ff5f57;
   border-radius: 8px;
   color: #ff5f57;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
   cursor: pointer;
@@ -669,7 +669,7 @@ function handleLandingLaunch() {
   box-shadow: 0 8px 32px rgba(0,0,0,0.6);
   padding: 20px;
   width: 300px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
 }
 
 .mini-header {

@@ -200,7 +200,7 @@ onUnmounted(() => {
   max-width: 300px;
   padding: 4px 0;
   border-radius: 6px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   color: #FFFFFF;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);

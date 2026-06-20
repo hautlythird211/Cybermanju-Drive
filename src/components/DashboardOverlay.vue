@@ -56,7 +56,7 @@ defineEmits<{ close: [] }>()
   padding: 24px;
   max-width: 400px;
   width: 90%;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   color: #FFFFFF;
 }
 
@@ -86,7 +86,7 @@ defineEmits<{ close: [] }>()
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   font-size: 10px;
 }
@@ -107,14 +107,14 @@ defineEmits<{ close: [] }>()
   text-align: center;
 }
 
-.mono { font-family: 'Courier New', monospace; font-size: 12px; font-weight: 700; }
+.mono { font-family: var(--font-mono); font-size: 12px; font-weight: 700; }
 .bw-btn {
   background: transparent;
   border: 2px solid #FFFFFF;
   color: #FFFFFF;
   padding: 4px 12px;
   cursor: pointer;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
 }

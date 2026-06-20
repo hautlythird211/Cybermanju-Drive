@@ -62,7 +62,7 @@ function handleAction(n: Notification) {
   border: 2px solid #000000;
   box-shadow: 3px 3px 0 #000000;
   color: #000000;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
   cursor: default;
@@ -97,7 +97,7 @@ function handleAction(n: Notification) {
   border: 2px solid #000000;
   color: #FFFFFF;
   padding: 4px 10px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
   font-weight: 700;
   cursor: pointer;
@@ -124,7 +124,7 @@ function handleAction(n: Notification) {
   font-weight: 700;
   cursor: pointer;
   flex-shrink: 0;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
 }
 
 .notif-close:hover {

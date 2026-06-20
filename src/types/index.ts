@@ -330,7 +330,7 @@ export const COMPRESSION_INFO: Record<CompressionType, { name: string; descripti
   triple: { name: 'Triple-Layer', description: 'LZ4 -> ZSTD-15 -> Brotli-11 cascading. Maximum compression for archival.', color: '#ffd700', speed: 'Slow' },
 }
 
-export type SyncBackendType = 'local' | 'github' | 'gitlab' | 'googleDrive' | 'googlePhotos' | 'telegram' | 'mega'
+export type SyncBackendType = 'local' | 'github' | 'gitlab' | 'codeberg' | 'gitea' | 'googleDrive' | 'googlePhotos' | 'telegram' | 'mega'
 export type SyncStatusType = 'idle' | 'scanning' | 'compressing' | 'uploading' | 'linking' | 'cleaning' | 'error' | 'done'
 
 export interface SyncConfig {
@@ -351,6 +351,9 @@ export interface SyncConfig {
   createPreviews: boolean
   deleteRawAfterSync: boolean
   maxConcurrentUploads: number
+  useGitLfs?: boolean
+  lfsRepo?: string
+  repoLayout?: 'flat' | 'sharded' | 'split'
   createdAt?: string
   updatedAt?: string
 }
@@ -445,15 +448,27 @@ export const SYNC_BACKEND_INFO: Record<SyncBackendType, { name: string; descript
   },
   github: {
     name: 'GitHub',
-    description: 'Sync files to a GitHub repository using the Contents API. Supports releases for large files.',
+    description: 'Sync files to a GitHub repository using the Contents API + Git LFS for large files.',
     color: '#f0f0f0',
     icon: 'Github',
   },
   gitlab: {
     name: 'GitLab',
-    description: 'Sync files to a GitLab project repository. Full CRUD via GitLab API v4.',
+    description: 'Sync files to a GitLab project repository. Full CRUD via GitLab API v4 with LFS support.',
     color: '#ff6b9d',
     icon: 'GitBranch',
+  },
+  codeberg: {
+    name: 'Codeberg',
+    description: 'Sync files to Codeberg (Forgejo) repositories. Free, privacy-focused, open-source git hosting.',
+    color: '#30d158',
+    icon: 'Code',
+  },
+  gitea: {
+    name: 'Gitea/Forgejo',
+    description: 'Sync files to any Gitea or Forgejo instance. Self-hosted git with API v1.',
+    color: '#5af0ff',
+    icon: 'Server',
   },
   googleDrive: {
     name: 'Google Drive',

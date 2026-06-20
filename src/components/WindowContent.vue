@@ -238,7 +238,7 @@ function highlightTerms(text: string, query: string): string {
 }
 
 .panel-title {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
   color: #e0e0e0;
@@ -247,7 +247,7 @@ function highlightTerms(text: string, query: string): string {
 }
 
 .panel-hint {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
   color: #555;
   margin-bottom: 12px;
@@ -258,7 +258,7 @@ function highlightTerms(text: string, query: string): string {
   border: 1px solid #333;
   color: #999;
   padding: 2px 8px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
   font-weight: 700;
   cursor: pointer;
@@ -278,7 +278,7 @@ function highlightTerms(text: string, query: string): string {
 }
 
 .bw-title {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
   color: #e0e0e0;
@@ -306,7 +306,7 @@ function highlightTerms(text: string, query: string): string {
   gap: 10px;
   padding: 24px;
   color: #555;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
 }
 
@@ -329,7 +329,7 @@ function highlightTerms(text: string, query: string): string {
   background: #111;
   border: 1px solid #333;
   color: #ccc;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
   padding: 2px 4px;
   cursor: pointer;
@@ -394,7 +394,7 @@ function highlightTerms(text: string, query: string): string {
 }
 
 .search-result-name {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-weight: 600;
   color: #e0e0e0;
   margin-bottom: 2px;
@@ -410,7 +410,7 @@ function highlightTerms(text: string, query: string): string {
 }
 
 .search-result-score {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
   color: #555;
   white-space: nowrap;
@@ -423,7 +423,7 @@ function highlightTerms(text: string, query: string): string {
   border: 1px solid #333;
   border-radius: 6px;
   color: #999;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   cursor: pointer;
@@ -457,7 +457,7 @@ function highlightTerms(text: string, query: string): string {
   font-size: 10px;
   cursor: pointer;
   border: 1px solid transparent;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   color: #ccc;
   border-radius: 4px;
 }
@@ -637,7 +637,7 @@ function highlightTerms(text: string, query: string): string {
   display: inline-block;
   padding: 2px 8px;
   font-size: 9px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-weight: 600;
   border: 1px solid #333;
   border-radius: 4px;

@@ -225,7 +225,7 @@ watch(() => store.commandPaletteOpen, async (v: boolean) => {
 
 .cp-prompt {
   color: #FFFFFF;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 700;
 }
@@ -235,7 +235,7 @@ watch(() => store.commandPaletteOpen, async (v: boolean) => {
   background: transparent;
   border: none;
   color: #FFFFFF;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   outline: none;
 }
@@ -256,7 +256,7 @@ watch(() => store.commandPaletteOpen, async (v: boolean) => {
 
 .cp-group-label {
   padding: 4px 12px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
   font-weight: 700;
   color: rgba(0, 0, 0, 0.4);
@@ -269,7 +269,7 @@ watch(() => store.commandPaletteOpen, async (v: boolean) => {
   gap: 8px;
   padding: 6px 12px;
   cursor: pointer;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   color: #000000;
 }

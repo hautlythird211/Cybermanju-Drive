@@ -342,7 +342,7 @@ const themeStyles = computed(() => {
     case 'psych': return {
       bg: 'linear-gradient(135deg, #ff00ff33, #00ffff33, #ffff0033)',
       accent: '#ff00ff',
-      font: "'Courier New', monospace",
+      font: "var(--font-mono)",
       glow: '0 0 20px rgba(255,0,255,0.5)',
     }
     case 'vintage': return {
@@ -354,7 +354,7 @@ const themeStyles = computed(() => {
     default: return {
       bg: 'linear-gradient(135deg, #0a000d, #100520, #0d0015)',
       accent: '#b388ff',
-      font: "'Courier New', monospace",
+      font: "var(--font-mono)",
       glow: '0 0 20px rgba(179,136,255,0.4)',
     }
   }

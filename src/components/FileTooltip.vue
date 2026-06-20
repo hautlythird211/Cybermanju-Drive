@@ -71,7 +71,7 @@ const icon = getIcon
   min-width: 200px;
   max-width: 280px;
   pointer-events: none;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   color: #FFFFFF;
   transform: translate(12px, -50%);
   box-shadow: 3px 3px 0 rgba(255,255,255,0.15);

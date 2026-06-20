@@ -201,7 +201,7 @@ onMounted(loadPlugins)
   height: 100%;
   background: #0a0a0a;
   color: #e0e0e0;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
 }
 .pc-sidebar {
   width: 200px;
@@ -271,7 +271,7 @@ onMounted(loadPlugins)
   color: #28c840;
   font-size: 13px;
   font-weight: 700;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   outline: none;
   padding: 4px 0;
 }
@@ -283,7 +283,7 @@ onMounted(loadPlugins)
   color: #aaa;
   padding: 2px 8px;
   font-size: 8px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   cursor: pointer;
   border-radius: 4px;
@@ -307,7 +307,7 @@ onMounted(loadPlugins)
   font-size: 9px;
   padding: 3px 6px;
   border-radius: 4px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   cursor: pointer;
 }
 .pc-input-sm {
@@ -317,7 +317,7 @@ onMounted(loadPlugins)
   font-size: 9px;
   padding: 3px 6px;
   border-radius: 4px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   width: 80px;
 }
 .pc-input {
@@ -327,7 +327,7 @@ onMounted(loadPlugins)
   font-size: 9px;
   padding: 3px 6px;
   border-radius: 4px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   flex: 1;
   min-width: 150px;
 }
@@ -347,7 +347,7 @@ onMounted(loadPlugins)
   color: #aaa;
   padding: 2px 8px;
   font-size: 8px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   cursor: pointer;
   border-radius: 4px;
@@ -360,7 +360,7 @@ onMounted(loadPlugins)
   border: none;
   color: #28c840;
   font-size: 11px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   line-height: 1.6;
   resize: none;
   outline: none;
@@ -395,7 +395,7 @@ onMounted(loadPlugins)
   color: #28c840;
   padding: 6px 12px;
   font-size: 9px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   cursor: pointer;
   border-radius: 4px;

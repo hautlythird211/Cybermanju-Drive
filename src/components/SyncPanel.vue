@@ -19,6 +19,8 @@
           <div class="cfg-meta text-muted">
             <span v-if="cfg.basePath">PATH: {{ cfg.basePath }}</span>
             <span v-if="cfg.repoName">REPO: {{ cfg.repoName }}</span>
+            <span v-if="cfg.useGitLfs" class="lfs-badge">LFS</span>
+            <span v-if="cfg.repoLayout" class="layout-badge">{{ cfg.repoLayout }}</span>
           </div>
           <div class="cfg-actions">
             <button class="bw-btn-sm" @click="startSyncForCfg(cfg.id)" :disabled="syncActive">[SYNC]</button>
@@ -34,10 +36,23 @@
           <option value="local">LOCAL</option>
           <option value="github">GITHUB</option>
           <option value="gitlab">GITLAB</option>
+          <option value="codeberg">CODEBERG</option>
+          <option value="gitea">GITEA/FORGEJO</option>
           <option value="googleDrive">GOOGLE DRIVE</option>
           <option value="googlePhotos">GOOGLE PHOTOS</option>
           <option value="mega">MEGA</option>
         </select>
+        <div v-if="isGitType" class="lfs-options">
+          <label class="lfs-toggle">
+            <input type="checkbox" v-model="newUseLfs" />
+            <span>LFS</span>
+          </label>
+          <select v-model="newRepoLayout" class="bw-select-sm">
+            <option value="flat">FLAT</option>
+            <option value="sharded">SHARDED</option>
+            <option value="split">SPLIT</option>
+          </select>
+        </div>
         <button class="bw-btn-sm" @click="addConfig">[SAVE]</button>
       </div>
     </div>
@@ -97,6 +112,9 @@ const syncActive = computed(() => {
 const showAddConfig = ref(false)
 const newConfigName = ref('')
 const newConfigType = ref('local')
+const newUseLfs = ref(false)
+const newRepoLayout = ref<'flat' | 'sharded' | 'split'>('flat')
+const isGitType = computed(() => ['github', 'gitlab', 'codeberg', 'gitea'].includes(newConfigType.value))
 const syncSummary = ref<{
   totalFiles: number; syncedFiles: number; changedFiles: number; errorFiles: number; totalBytes: number
 } | null>(null)
@@ -138,7 +156,7 @@ async function refreshSummary() {
 async function addConfig() {
   if (!newConfigName.value.trim()) return
   try {
-    await store.createSyncConfig({
+    const config: Record<string, any> = {
       name: newConfigName.value,
       backendType: newConfigType.value,
       enabled: true,
@@ -146,8 +164,15 @@ async function addConfig() {
       autoSync: false,
       compressBeforeUpload: false,
       maxConcurrentUploads: 1,
-    } as any)
+    }
+    if (isGitType.value) {
+      config.useGitLfs = newUseLfs.value
+      config.repoLayout = newRepoLayout.value
+    }
+    await store.createSyncConfig(config as any)
     newConfigName.value = ''
+    newUseLfs.value = false
+    newRepoLayout.value = 'flat'
     showAddConfig.value = false
     notify('success', 'SYNC CONFIG CREATED')
   } catch (e) {
@@ -262,7 +287,16 @@ function formatSize(bytes: number): string {
 .cfg-type { font-size: 9px; color: var(--text-muted); }
 .cfg-status { font-size: 9px; font-weight: 600; border: 1px solid var(--border-medium); padding: 1px 6px; color: var(--text-muted); border-radius: var(--radius-sm); }
 .cfg-status.on { background: var(--accent-dim); color: var(--text-accent); border-color: var(--border-accent); }
-.cfg-meta { font-size: 9px; color: var(--text-muted); }
+.cfg-meta { font-size: 9px; color: var(--text-muted); display: flex; gap: 4px; flex-wrap: wrap; }
+.lfs-badge, .layout-badge {
+  font-size: 8px;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-accent);
+  color: var(--text-accent);
+  background: var(--accent-dim);
+}
 
 .progress-card {
   border: 1px solid var(--border-glass);
@@ -327,6 +361,22 @@ function formatSize(bytes: number): string {
   font-size: 9px;
   padding: 5px;
   border-radius: var(--radius-sm);
+}
+.lfs-options {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.lfs-toggle {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.lfs-toggle input {
+  margin: 0;
 }
 .p-actions { margin-top: 6px; display: flex; gap: 4px; }
 .local-sync-actions { display: flex; gap: 6px; }

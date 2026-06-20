@@ -134,7 +134,7 @@ async function startUpload() {
   align-items: center;
   justify-content: center;
   z-index: 200;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
 }
 
 .upload-modal {
@@ -165,7 +165,7 @@ async function startUpload() {
   color: #FFFFFF;
   padding: 2px 6px;
   cursor: pointer;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
 }
 
@@ -248,7 +248,7 @@ async function startUpload() {
   color: #FFFFFF;
   padding: 4px 12px;
   cursor: pointer;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
 }

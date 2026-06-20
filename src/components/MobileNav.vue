@@ -27,7 +27,7 @@ const store = useAppStore()
   -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   z-index: 100;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
 }
 
 .mn-btn {

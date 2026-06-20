@@ -188,6 +188,42 @@ export const ART_MAKER_PRESETS: Record<string, Partial<ArtMakerSettings>> = {
       fractalTree: { enabled: false, opacity: 0.6, speed: 1 },
     },
   },
+  cyberpunk: {
+    globalSpeed: 1.2,
+    globalHueShift: 0,
+    globalSaturation: 70,
+    globalBrightness: 55,
+    palette: 'cyberpunk',
+    mouseMode: 'warp',
+    layers: {
+      hexGrid: { enabled: true, opacity: 0.6, speed: 0.8 },
+      neuralNetwork: { enabled: true, opacity: 0.7, speed: 1 },
+      moireGrid: { enabled: true, opacity: 0.5, speed: 1.2 },
+      core: { enabled: true, opacity: 0.6, speed: 1 },
+      matrixRain: { enabled: true, opacity: 0.5, speed: 1 },
+      crtOverlay: { enabled: true, opacity: 0.4, speed: 1 },
+      screenTear: { enabled: false, opacity: 0.5, speed: 2 },
+      aurora: { enabled: false, opacity: 0.3, speed: 1 },
+    },
+  },
+  auroraBorealis: {
+    globalSpeed: 0.4,
+    globalHueShift: 180,
+    globalSaturation: 50,
+    globalBrightness: 40,
+    palette: 'aurora',
+    mouseMode: 'wind',
+    layers: {
+      aurora: { enabled: true, opacity: 0.8, speed: 0.5 },
+      cloudChamber: { enabled: true, opacity: 0.5, speed: 0.5 },
+      stardust: { enabled: true, opacity: 0.6, speed: 0.3 },
+      moireGrid: { enabled: true, opacity: 0.3, speed: 0.5 },
+      core: { enabled: true, opacity: 0.5, speed: 0.4 },
+      hexGrid: { enabled: true, opacity: 0.2, speed: 0.4 },
+      fractalTree: { enabled: false, opacity: 0.6, speed: 0.5 },
+      screenTear: { enabled: false, opacity: 0.4, speed: 1 },
+    },
+  },
 }
 
 export const LAYER_LABELS: Record<string, string> = {

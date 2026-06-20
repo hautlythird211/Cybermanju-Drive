@@ -80,6 +80,8 @@
           <button class="am-preset-btn" @click="applyPreset('glitchCore')">GLITCH CORE</button>
           <button class="am-preset-btn" @click="applyPreset('heavenly')">HEAVENLY</button>
           <button class="am-preset-btn" @click="applyPreset('neuralDream')">NEURAL DREAM</button>
+          <button class="am-preset-btn" @click="applyPreset('cyberpunk')">CYBERPUNK</button>
+          <button class="am-preset-btn" @click="applyPreset('auroraBorealis')">AURORA</button>
           <button class="am-preset-btn am-randomize" @click="randomize">RANDOMIZE</button>
           <button class="am-preset-btn am-reset" @click="resetDefaults">RESET</button>
         </div>
@@ -158,7 +160,7 @@ function resetDefaults() {
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   color: #e0e0e0;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   overflow: hidden;
 }
 
@@ -265,7 +267,7 @@ function resetDefaults() {
 
 .am-palette-btn {
   padding: 4px 10px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 8px;
   font-weight: 700;
   letter-spacing: 1px;
@@ -301,7 +303,7 @@ function resetDefaults() {
 
 .am-preset-btn {
   padding: 5px 12px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 8px;
   font-weight: 800;
   letter-spacing: 1.5px;
@@ -367,7 +369,7 @@ function resetDefaults() {
 }
 
 .am-layer-toggle {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 7px;
   font-weight: 800;
   letter-spacing: 1px;

@@ -291,7 +291,7 @@ function openCollection(col: { id: string; name: string; itemIds: string[] }) {
 }
 
 .sidebar-account-name {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   color: #FFFFFF;
@@ -314,7 +314,7 @@ function openCollection(col: { id: string; name: string; itemIds: string[] }) {
   cursor: pointer;
   color: rgba(255,255,255,0.5);
   font-size: 10px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   border: 2px solid transparent;
 }
@@ -330,7 +330,7 @@ function openCollection(col: { id: string; name: string; itemIds: string[] }) {
 }
 
 .tab-icon {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   width: 20px;
   text-align: center;
@@ -351,7 +351,7 @@ function openCollection(col: { id: string; name: string; itemIds: string[] }) {
 .ql-item {
   display: block;
   padding: 6px 10px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   color: rgba(255,255,255,0.7);
   cursor: pointer;
@@ -377,7 +377,7 @@ function openCollection(col: { id: string; name: string; itemIds: string[] }) {
 }
 
 .section-header {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 1px;
@@ -428,7 +428,7 @@ function openCollection(col: { id: string; name: string; itemIds: string[] }) {
 
 .item-meta {
   font-size: 9px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
 }
 
 .avatar-circle {
@@ -454,7 +454,7 @@ function openCollection(col: { id: string; name: string; itemIds: string[] }) {
   display: inline-block;
   padding: 2px 6px;
   font-size: 9px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   border: 2px solid #FFFFFF;
   color: #FFFFFF;
@@ -490,7 +490,7 @@ function openCollection(col: { id: string; name: string; itemIds: string[] }) {
 }
 
 .tree-name {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
 }
 
 .empty-section {
@@ -509,7 +509,7 @@ function openCollection(col: { id: string; name: string; itemIds: string[] }) {
 .qa-btn {
   flex: 1;
   padding: 4px 2px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 8px;
   font-weight: 700;
   color: rgba(255,255,255,0.6);
@@ -540,7 +540,7 @@ function openCollection(col: { id: string; name: string; itemIds: string[] }) {
   z-index: 20;
   color: #FFFFFF;
   font-size: 9px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   padding: 0;
 }
 

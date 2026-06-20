@@ -1,4 +1,4 @@
-export type OAuthProvider = 'googleDrive' | 'googlePhotos' | 'github' | 'gitlab' | 'telegram'
+export type OAuthProvider = 'googleDrive' | 'googlePhotos' | 'github' | 'gitlab' | 'codeberg' | 'gitea' | 'telegram'
 
 export interface OAuthToken {
   accessToken: string
@@ -61,6 +61,22 @@ const PROVIDER_CONFIGS: Record<OAuthProvider, OAuthConfig> = {
     authUrl: 'https://gitlab.com/oauth/authorize',
     tokenUrl: 'https://gitlab.com/oauth/token',
   },
+  codeberg: {
+    clientId: '',
+    clientSecret: '',
+    redirectUri: computeRedirectUri(),
+    scopes: ['read:repository', 'write:repository', 'read:user'],
+    authUrl: 'https://codeberg.org/login/oauth/authorize',
+    tokenUrl: 'https://codeberg.org/login/oauth/access_token',
+  },
+  gitea: {
+    clientId: '',
+    clientSecret: '',
+    redirectUri: computeRedirectUri(),
+    scopes: ['read:repository', 'write:repository', 'read:user'],
+    authUrl: 'https://try.gitea.io/login/oauth/authorize',
+    tokenUrl: 'https://try.gitea.io/login/oauth/access_token',
+  },
   telegram: {
     clientId: '',
     clientSecret: '',
@@ -80,6 +96,8 @@ const ENV_MAP: Record<string, OAuthProvider>[] = [
     VITE_OAUTH_GOOGLE_PHOTOS_CLIENT_ID: 'googlePhotos',
     VITE_OAUTH_GITHUB_CLIENT_ID: 'github',
     VITE_OAUTH_GITLAB_CLIENT_ID: 'gitlab',
+    VITE_OAUTH_CODEBERG_CLIENT_ID: 'codeberg',
+    VITE_OAUTH_GITEA_CLIENT_ID: 'gitea',
     VITE_OAUTH_TELEGRAM_CLIENT_ID: 'telegram',
   },
   // 2. VITE_ prefix without OAUTH segment
@@ -88,6 +106,8 @@ const ENV_MAP: Record<string, OAuthProvider>[] = [
     VITE_GOOGLE_PHOTOS_CLIENT_ID: 'googlePhotos',
     VITE_GITHUB_CLIENT_ID: 'github',
     VITE_GITLAB_CLIENT_ID: 'gitlab',
+    VITE_CODEBERG_CLIENT_ID: 'codeberg',
+    VITE_GITEA_CLIENT_ID: 'gitea',
     VITE_TELEGRAM_CLIENT_ID: 'telegram',
   },
   // 3. Bare names (no VITE_ prefix — won't be exposed by Vite but may be set at runtime)
@@ -96,6 +116,8 @@ const ENV_MAP: Record<string, OAuthProvider>[] = [
     GOOGLE_PHOTOS_CLIENT_ID: 'googlePhotos',
     GITHUB_CLIENT_ID: 'github',
     GITLAB_CLIENT_ID: 'gitlab',
+    CODEBERG_CLIENT_ID: 'codeberg',
+    GITEA_CLIENT_ID: 'gitea',
     TELEGRAM_CLIENT_ID: 'telegram',
   },
   // 4. Single Google client ID for both Drive & Photos
@@ -113,6 +135,8 @@ const SECRET_ENV_MAP: Record<string, OAuthProvider>[] = [
     VITE_OAUTH_GOOGLE_PHOTOS_CLIENT_SECRET: 'googlePhotos',
     VITE_OAUTH_GITHUB_CLIENT_SECRET: 'github',
     VITE_OAUTH_GITLAB_CLIENT_SECRET: 'gitlab',
+    VITE_OAUTH_CODEBERG_CLIENT_SECRET: 'codeberg',
+    VITE_OAUTH_GITEA_CLIENT_SECRET: 'gitea',
     VITE_OAUTH_TELEGRAM_CLIENT_SECRET: 'telegram',
   },
   {
@@ -120,6 +144,8 @@ const SECRET_ENV_MAP: Record<string, OAuthProvider>[] = [
     VITE_GOOGLE_PHOTOS_CLIENT_SECRET: 'googlePhotos',
     VITE_GITHUB_CLIENT_SECRET: 'github',
     VITE_GITLAB_CLIENT_SECRET: 'gitlab',
+    VITE_CODEBERG_CLIENT_SECRET: 'codeberg',
+    VITE_GITEA_CLIENT_SECRET: 'gitea',
     VITE_TELEGRAM_CLIENT_SECRET: 'telegram',
   },
   {
@@ -127,6 +153,8 @@ const SECRET_ENV_MAP: Record<string, OAuthProvider>[] = [
     GOOGLE_PHOTOS_CLIENT_SECRET: 'googlePhotos',
     GITHUB_CLIENT_SECRET: 'github',
     GITLAB_CLIENT_SECRET: 'gitlab',
+    CODEBERG_CLIENT_SECRET: 'codeberg',
+    GITEA_CLIENT_SECRET: 'gitea',
     TELEGRAM_CLIENT_SECRET: 'telegram',
   },
   {

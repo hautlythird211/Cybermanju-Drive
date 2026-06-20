@@ -801,7 +801,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Courier New', monospace;
+  font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', var(--font-mono);
   overflow: hidden;
 }
 
@@ -990,7 +990,7 @@ onUnmounted(() => {
 }
 
 .skip-text {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   color: rgba(255, 255, 255, 0.3);
   letter-spacing: 2px;
@@ -1032,7 +1032,7 @@ onUnmounted(() => {
   border: 1px solid #ff5f57;
   border-radius: 4px;
   color: #ff5f57;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   padding: 6px 20px;
@@ -1062,7 +1062,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Courier New', monospace;
+  font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', var(--font-mono);
   background: rgba(3, 3, 8, 0.97);
   outline: none;
 }
@@ -1140,7 +1140,7 @@ onUnmounted(() => {
   border: 1px solid #1a1a2e;
   border-radius: 6px;
   color: #00ff41;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 14px;
   padding: 10px 14px;
   outline: none;
@@ -1164,7 +1164,7 @@ onUnmounted(() => {
   border: 1px solid #00ff41;
   border-radius: 6px;
   color: #00ff41;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
   padding: 10px 20px;
@@ -1279,7 +1279,7 @@ onUnmounted(() => {
   border: 1px solid #334;
   border-radius: 4px;
   color: #889;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   padding: 6px 10px;
@@ -1306,7 +1306,7 @@ onUnmounted(() => {
   border: 1px solid #2a2a3e;
   border-radius: 4px;
   color: #dde;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   padding: 6px 10px;
   outline: none;
@@ -1319,7 +1319,7 @@ onUnmounted(() => {
   border: 1px solid #334;
   border-radius: 4px;
   color: #889;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   padding: 6px 14px;

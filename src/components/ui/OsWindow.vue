@@ -153,7 +153,6 @@ onUnmounted(() => { stopDrag() })
   display: flex;
   flex-direction: column;
   border-radius: 12px;
-  overflow: hidden;
   transition: box-shadow 0.2s, border-color 0.2s, border-radius 0.2s;
   will-change: transform, opacity, box-shadow;
   contain: layout style;

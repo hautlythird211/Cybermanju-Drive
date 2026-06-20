@@ -441,7 +441,7 @@ async function doOAuth(provider: OAuthProvider, storageKey: OAuthProvider, oauth
   border: 1px solid #1a1a1a;
   border-radius: 6px;
   color: #e0e0e0;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   padding: 8px 10px 8px 32px;
   outline: none;
@@ -474,7 +474,7 @@ async function doOAuth(provider: OAuthProvider, storageKey: OAuthProvider, oauth
   flex: 1;
   padding: 8px 14px;
   border-radius: 6px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 1px;
@@ -539,7 +539,7 @@ async function doOAuth(provider: OAuthProvider, storageKey: OAuthProvider, oauth
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   text-align: left;
 }
 

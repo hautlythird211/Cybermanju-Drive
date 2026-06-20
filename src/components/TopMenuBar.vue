@@ -408,13 +408,11 @@ onUnmounted(() => {
   backdrop-filter: blur(30px) saturate(1.8);
   -webkit-backdrop-filter: blur(30px) saturate(1.8);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  z-index: 100;
+  z-index: 1000;
   position: relative;
   gap: 8px;
   -webkit-app-region: drag;
   user-select: none;
-  isolation: isolate;
-  overflow: hidden;
 }
 
 /* Subtle cyberpunk accent line */
@@ -559,7 +557,7 @@ onUnmounted(() => {
   border-radius: var(--radius-lg);
   padding: 4px;
   box-shadow: var(--shadow-elevated);
-  z-index: 200;
+  z-index: 1100;
   will-change: transform, opacity;
 }
 
@@ -694,7 +692,7 @@ onUnmounted(() => {
   border-radius: var(--radius-md);
   max-height: 200px;
   overflow-y: auto;
-  z-index: 1000;
+  z-index: 1200;
 }
 
 .suggestion-item {
@@ -844,7 +842,7 @@ onUnmounted(() => {
   border-radius: var(--radius-lg);
   padding: 4px;
   box-shadow: var(--shadow-elevated);
-  z-index: 300;
+  z-index: 1300;
 }
 
 .clip-header {
