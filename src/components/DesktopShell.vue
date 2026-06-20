@@ -303,7 +303,7 @@ onUnmounted(() => {
   width: 100vw;
   position: relative;
   overflow: hidden;
-  contain: layout style;
+  isolation: isolate;
 }
 
 .desktop-wallpaper {
@@ -461,7 +461,7 @@ onUnmounted(() => {
 
 .desktop-dock {
   position: fixed;
-  bottom: 8px;
+  bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 200;

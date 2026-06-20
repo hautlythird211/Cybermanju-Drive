@@ -197,7 +197,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 48px;
+  height: 60px;
   padding: 0 12px;
   z-index: 50;
   pointer-events: none;
@@ -208,93 +208,69 @@ onUnmounted(() => {
 .dock {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 4px 10px;
-  background: rgba(8, 8, 12, 0.88);
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 14px;
+  gap: 3px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(40px) saturate(1.6);
+  -webkit-backdrop-filter: blur(40px) saturate(1.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
   box-shadow:
-    0 4px 28px rgba(0, 0, 0, 0.5),
-    0 0 1px rgba(0, 255, 65, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    0 8px 32px rgba(0, 0, 0, 0.25),
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   pointer-events: auto;
   position: relative;
   isolation: isolate;
 }
 
-/* Velvet texture overlay */
+/* Subtle top highlight */
 .dock::before {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  z-index: -1;
-  background:
-    repeating-radial-gradient(circle at 50% 50%, transparent 0, rgba(255,255,255,0.018) 1px, transparent 2px),
-    repeating-conic-gradient(rgba(255,255,255,0.01) 0% 25%, transparent 0% 50%) 0 0 / 3px 3px,
-    radial-gradient(ellipse at 50% 0%, rgba(0,255,65,0.05) 0%, transparent 50%),
-    radial-gradient(ellipse at 20% 100%, rgba(90,240,255,0.04) 0%, transparent 40%),
-    radial-gradient(ellipse at 80% 100%, rgba(179,136,255,0.03) 0%, transparent 40%);
-  pointer-events: none;
-  mix-blend-mode: screen;
-}
-
-/* Bottom psychedelic glow line */
-.dock::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
+  top: 0;
   left: 10%;
   right: 10%;
   height: 1px;
-  background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(0, 255, 65, 0.2) 25%,
-    rgba(90, 240, 255, 0.25) 50%,
-    rgba(179, 136, 255, 0.2) 75%,
-    transparent 100%);
-  background-size: 200% 100%;
-  animation: dock-shimmer 5s ease-in-out infinite;
-  border-radius: 0 0 14px 14px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  border-radius: 20px 20px 0 0;
+  pointer-events: none;
 }
 
 .dock-item {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: 12px;
   position: relative;
   will-change: transform;
   outline: none;
-  transition: all 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: background 0.2s ease, transform 0.15s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .dock-item:focus-visible {
-  box-shadow: 0 0 0 2px rgba(0, 255, 65, 0.4);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
 }
 
 .dock-item:hover {
-  transform: translateY(-1px);
-  background: rgba(0, 255, 65, 0.05);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .dock-item:active {
-  transform: scale(0.92);
+  transform: scale(0.9);
 }
 
 .dock-item.active {
-  background: rgba(0, 255, 65, 0.08);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .dock-icon {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -302,17 +278,16 @@ onUnmounted(() => {
 }
 
 .dock-iconify {
-  color: rgba(255, 255, 255, 0.55);
-  transition: all 0.15s;
+  color: rgba(255, 255, 255, 0.65);
+  transition: color 0.2s ease;
 }
 
 .dock-item.active .dock-iconify {
-  color: rgba(0, 255, 65, 0.9);
-  filter: drop-shadow(0 0 6px rgba(0, 255, 65, 0.3));
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .dock-item:hover .dock-iconify {
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .dock-icon.minimized {
@@ -321,46 +296,46 @@ onUnmounted(() => {
 
 .dock-badge {
   position: absolute;
-  top: -3px;
-  right: -5px;
-  background: #ff5f57;
+  top: -2px;
+  right: -4px;
+  background: #ff453a;
   color: #fff;
   font-family: var(--font-mono);
-  font-size: 7px;
-  font-weight: 700;
-  min-width: 14px;
-  height: 14px;
+  font-size: 9px;
+  font-weight: 600;
+  min-width: 16px;
+  height: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 7px;
-  padding: 0 3px;
-  border: 1.5px solid rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
+  padding: 0 4px;
+  border: 2px solid rgba(0, 0, 0, 0.3);
   pointer-events: none;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(255, 69, 58, 0.35);
 }
 
 .dock-indicator {
   position: absolute;
-  bottom: -2px;
+  bottom: -3px;
   left: 50%;
   transform: translateX(-50%);
 }
 
 .indicator-dot {
-  width: 3px;
-  height: 3px;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.2);
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .indicator-dot.active {
-  background: rgba(0, 255, 65, 0.7);
-  width: 12px;
+  background: rgba(255, 255, 255, 0.8);
+  width: 14px;
   border-radius: 2px;
-  height: 2.5px;
-  box-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
+  height: 3px;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.15);
 }
 
 .indicator-dot.muted {
@@ -373,18 +348,12 @@ onUnmounted(() => {
 
 .dock-divider {
   width: 1px;
-  height: 20px;
-  background: rgba(255, 255, 255, 0.06);
+  height: 22px;
+  background: rgba(255, 255, 255, 0.1);
   margin: 0 4px;
 }
 
 .dock-label {
   display: none;
-}
-
-@keyframes dock-shimmer {
-  0% { background-position: 200% 0; }
-  50% { background-position: 0% 0; }
-  100% { background-position: -200% 0; }
 }
 </style>
