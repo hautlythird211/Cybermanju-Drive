@@ -3,6 +3,8 @@
 
 pub mod schema;
 pub mod sync;
+pub mod resolution;
 
 pub use schema::*;
 pub use sync::*;
+pub use resolution::*;

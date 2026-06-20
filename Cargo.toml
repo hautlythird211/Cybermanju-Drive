@@ -12,6 +12,10 @@ members = [
     "crates/drive-wasm",
     "crates/cli",
     "crates/backends",
+    "crates/media",
+    "crates/erasure",
+    "crates/resolutions",
+    "crates/preview-keys",
     "src-tauri",
 ]
 resolver = "2"

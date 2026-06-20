@@ -1486,6 +1486,7 @@ dependencies = [
  "cybermanju-crypto",
  "cybermanju-db",
  "cybermanju-faces",
+ "cybermanju-media",
  "cybermanju-portable-db",
  "cybermanju-search",
  "cybermanju-types",
@@ -1561,6 +1562,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "cybermanju-erasure"
+version = "0.1.0"
+dependencies = [
+ "cybermanju-types",
+ "rand 0.8.6",
+ "rand_chacha 0.3.1",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "cybermanju-faces"
 version = "0.1.0"
 dependencies = [
@@ -1579,6 +1590,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "cybermanju-media"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "blake3",
+ "fast_image_resize",
+ "image",
+ "infer 0.16.0",
+ "kamadak-exif",
+ "log",
+ "mime_guess",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
 name = "cybermanju-portable-db"
 version = "0.1.0"
 dependencies = [
@@ -1592,6 +1621,41 @@ dependencies = [
  "log",
  "serde",
  "serde_json",
+ "uuid",
+]
+
+[[package]]
+name = "cybermanju-preview-keys"
+version = "0.1.0"
+dependencies = [
+ "aes-gcm",
+ "blake3",
+ "chacha20poly1305",
+ "chrono",
+ "cybermanju-types",
+ "hkdf",
+ "hmac",
+ "rand 0.8.6",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.18",
+ "uuid",
+]
+
+[[package]]
+name = "cybermanju-resolutions"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "chrono",
+ "cybermanju-compression",
+ "cybermanju-crypto",
+ "cybermanju-types",
+ "hex",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
  "uuid",
 ]
 
@@ -1627,6 +1691,7 @@ dependencies = [
 name = "cybermanju-types"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "serde",
  "serde_json",
 ]
@@ -1850,6 +1915,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.118",
+]
+
+[[package]]
+name = "document-features"
+version = "0.2.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4b8a88685455ed29a21542a33abd9cb6510b6b129abadabdcef0f4c55bc8f61"
+dependencies = [
+ "litrs",
 ]
 
 [[package]]
@@ -2113,6 +2187,18 @@ dependencies = [
  "rayon-core",
  "smallvec",
  "zune-inflate",
+]
+
+[[package]]
+name = "fast_image_resize"
+version = "5.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fbc7fe45cf92b43817ff62a3723e862b85bd1d06288f63007f7645d1d2f7a060"
+dependencies = [
+ "cfg-if",
+ "document-features",
+ "num-traits",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -3639,6 +3725,12 @@ name = "litemap"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "92daf443525c4cce67b150400bc2316076100ce0b3686209eb8cf3c31612e6f0"
+
+[[package]]
+name = "litrs"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11d3d7f243d5c5a8b9bb5d6dd2b1602c0cb0b9db1621bafc7ed66e35ff9fe092"
 
 [[package]]
 name = "lock_api"

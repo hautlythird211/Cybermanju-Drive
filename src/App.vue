@@ -30,6 +30,7 @@ import UnboxDialog from '@/components/UnboxDialog.vue'
 import MobileNav from '@/components/MobileNav.vue'
 import ContextMenu from '@/components/ContextMenu.vue'
 import CrashReporter from '@/components/CrashReporter.vue'
+import MediaOverlay from '@/components/MediaOverlay.vue'
 import type { PanelType, FileNode } from '@/types'
 
 const store = useAppStore()
@@ -259,16 +260,35 @@ function fileTypeContextMenu(file: any) {
   ]
   const typeActions: Record<string, any[]> = {
     image: [
-      { id: 'rotate_cw', label: 'ROTATE CW', icon: 'rename-outline', shortcut: shortcuts.getShortcut('rotate_cw'), action: () => file?.rotate?.('cw') },
+      { id: 'view', label: 'OPEN IN VIEWER', icon: 'image-outline', action: () => {
+        if (file) {
+          const mime = file.mimeType || 'image/*'
+          const fileData = { fileId: file.id || '', filename: file.name, mimeType: mime, isImage: true, isVideo: false, isAudio: false, availableResolutions: [{ level: 'r3', keyTier: 'content', encrypted: true }], selectedResolution: 'r3' }
+          openMediaOverlay('image', fileData as any, new Uint8Array(0))
+        }
+      }},
+      { id: 'rotate_cw', label: 'ROTATE CW', icon: 'rotate-right', shortcut: shortcuts.getShortcut('rotate_cw'), action: () => file?.rotate?.('cw') },
       { id: 'rotate_ccw', label: 'ROTATE CCW', icon: 'rotate-left', shortcut: shortcuts.getShortcut('rotate_ccw'), action: () => file?.rotate?.('ccw') },
       { id: 'div_i1', label: '', divider: true },
     ],
     audio: [
-      { id: 'play', label: 'PLAY', icon: 'play-outline', action: () => file?.play?.() },
+      { id: 'play', label: 'PLAY', icon: 'play-outline', action: () => {
+        if (file) {
+          const mime = file.mimeType || 'audio/*'
+          const fileData = { fileId: file.id || '', filename: file.name, mimeType: mime, isImage: false, isVideo: false, isAudio: true, availableResolutions: [{ level: 'r3', keyTier: 'content', encrypted: true }], selectedResolution: 'r3' }
+          openMediaOverlay('audio', fileData as any, new Uint8Array(0))
+        }
+      }},
       { id: 'div_a1', label: '', divider: true },
     ],
     video: [
-      { id: 'play', label: 'PLAY', icon: 'play-outline', action: () => file?.play?.() },
+      { id: 'play', label: 'PLAY', icon: 'play-outline', action: () => {
+        if (file) {
+          const mime = file.mimeType || 'video/*'
+          const fileData = { fileId: file.id || '', filename: file.name, mimeType: mime, isImage: false, isVideo: true, isAudio: false, availableResolutions: [{ level: 'r2', keyTier: 'content', encrypted: true }, { level: 'r3', keyTier: 'content', encrypted: true }], selectedResolution: 'r2' }
+          openMediaOverlay('video', fileData as any, new Uint8Array(0))
+        }
+      }},
       { id: 'div_v1', label: '', divider: true },
     ],
     archive: [
@@ -321,6 +341,13 @@ function fileTypeContextMenu(file: any) {
 ctx.registerContext('file_grid_item', [
   { id: 'open', label: 'OPEN', icon: 'arrow-right-bold', shortcut: shortcuts.getShortcut('open'), action: (d) => d?.select?.() },
   { id: 'preview', label: 'PREVIEW', icon: 'eye-outline', shortcut: shortcuts.getShortcut('preview'), action: (d) => d?.preview?.() },
+  { id: 'view_media', label: 'OPEN IN VIEWER', icon: 'image-outline', action: (d) => {
+    if (d?.mime?.startsWith('image/') || d?.mime?.startsWith('video/') || d?.mime?.startsWith('audio/')) {
+      const type = d.mime.startsWith('image/') ? 'image' : d.mime.startsWith('video/') ? 'video' : 'audio'
+      const fileData = { fileId: d.id || '', filename: d.name || '', mimeType: d.mime || '', isImage: d.mime?.startsWith('image/'), isVideo: d.mime?.startsWith('video/'), isAudio: d.mime?.startsWith('audio/'), availableResolutions: [{ level: 'r3', keyTier: 'content', encrypted: true }], selectedResolution: 'r3' }
+      openMediaOverlay(type, fileData as any, new Uint8Array(0))
+    }
+  }},
   { id: 'div0', label: '', divider: true },
   { id: 'download', label: 'DOWNLOAD', icon: 'download-outline', shortcut: shortcuts.getShortcut('download'), action: (d) => d?.download?.() },
   { id: 'star', label: 'STAR', icon: 'star-outline', shortcut: shortcuts.getShortcut('star_file'), action: (d) => d?.star?.() },
@@ -512,8 +539,10 @@ function handleUpload() {
 }
 
 import { useLogin } from '@/composables/useLogin'
+import { useMedia } from '@/composables/useMedia'
 
 const { restoreSession } = useLogin()
+const { mediaOverlayVisible, mediaOverlayType, mediaFileData, mediaFileBytes, openMediaOverlay, closeMediaOverlay } = useMedia()
 
 const bootPhase = ref<'boot' | 'desktop'>('boot')
 
@@ -611,6 +640,10 @@ function handleLandingLaunch() {
         <MobileNav />
         <ContextMenu />
         <CrashReporter />
+        <MediaOverlay
+          :visible="mediaOverlayVisible"
+          @close="closeMediaOverlay"
+        />
     </template>
   </div>
 </template>

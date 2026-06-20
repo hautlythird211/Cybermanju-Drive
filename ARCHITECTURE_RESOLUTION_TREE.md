@@ -2,7 +2,9 @@
 
 > Machine-readable architecture context for `.cybermanju` v2: a distributed,
 > indexed, multi-shard container system with resolution-based file decomposition,
-> cross-backend erasure coding, preview-without-decrypt, and byte-level recovery.
+> cross-backend erasure coding, fully encrypted at rest, and byte-level recovery.
+> All layers (index, preview, content) are encrypted. Without the index key,
+> shards are opaque — indistinguishable from random bytes.
 
 ---
 
@@ -11,7 +13,7 @@
 1. [Core Architecture Model](#1-core-architecture-model)
 2. [`.cybermanju` Shard Format](#2-cybermanju-shard-format)
 3. [`root.cybermanju` Master Index](#3-rootcybermanju-master-index)
-4. [Index Layer: Read Without Decrypt](#4-index-layer-read-without-decrypt)
+4. [Index Layer: Encrypted But Separate](#4-index-layer-encrypted-but-separate)
 5. [Content Layer: Encrypted Blob Store](#5-content-layer-encrypted-blob-store)
 6. [Resolution Merkle Tree](#6-resolution-merkle-tree)
 7. [Three-Tier Key System](#7-three-tier-key-system)
@@ -52,48 +54,89 @@ My Library (10,000 files, 50GB)
 
 ### What Each Shard Contains
 
-Each `.cybermanju` file is a **self-contained, indexed, encrypted container**:
+Each `.cybermanju` file is a **fully opaque, encrypted container**.
+Without the index key, the entire file is indistinguishable from random bytes:
 
 ```
-.shard.cybermanju
-├── [HEADER]           Magic, version, shard_id, root_hash_backlink
-├── [INDEX LAYER]      File manifest, blob map, resolution map — READABLE
+.shard.cybermanju  (to an attacker: opaque blob)
+├── [HEADER]           Magic + minimal routing metadata (plaintext, 64 bytes)
+├── [INDEX LAYER]      File manifest, blob map, resolution map — ENCRYPTED
 ├── [CONTENT LAYER]    Encrypted blobs: r0, r1, r2, r3, parity — ENCRYPTED
-└── [FOOTER]           BLAKE3 checksums, signature, erasure metadata
+└── [FOOTER]           BLAKE3 checksums, signature — ENCRYPTED
 ```
 
-**Key insight**: The INDEX layer is separate from the CONTENT layer.
-You can read the index (browse files, see metadata, view previews) WITHOUT
-ever decrypting the content. The index is either:
+**Security model**: ALL layers inside `.cybermanju` are encrypted.
+The only plaintext information is:
+- Magic bytes (file identification, 32 bytes)
+- Shard ID (routing, 16 bytes)
+- Total size (for allocation, 8 bytes)
+- Root hash backlink (for verification, 32 bytes)
 
-1. **Unencrypted** — anyone can see file names, sizes, hashes
-2. **Index-key encrypted** — only index key holders can browse
-3. **Partially encrypted** — public metadata visible, private metadata hidden
+Total plaintext: **~88 bytes** out of potentially gigabytes.
+An attacker sees: random bytes with a header. Cannot parse index, cannot
+extract previews, cannot read file names, cannot reconstruct content.
 
 ### Recovery Model
 
 Each shard contains **minimized recovery bytes**. Any sufficient subset of
-shards can reconstruct the entire library:
+shards can reconstruct the entire library — but ONLY with the proper keys:
 
 ```
 Recovery threshold:
-├── Index reconstruction:  root.cybermanju + any 1 shard
-├── File reconstruction:   any k shards with the file's data
-├── Preview reconstruction: preview_shard.cybermanju (self-contained)
-└── Full library:          root.cybermanju + enough shards for all files
+├── Index reconstruction:  root.cybermanju + index_key + any 1 shard
+├── File reconstruction:   root.cybermanju + index_key + content_key + k shards
+├── Preview reconstruction: shard + index_key + preview_key
+└── Full library:          root.cybermanju + index_key + content_key + enough shards
 ```
+
+Without keys, an attacker cannot:
+- Identify which shard contains which file (index encrypted)
+- Extract previews from any shard (preview blobs encrypted)
+- Reconstruct original files (content blobs encrypted)
+- Determine file names, sizes, or structure (index encrypted)
 
 ### Access Patterns
 
-| Action | What You Need | What You DON'T Need |
-|--------|--------------|---------------------|
-| Browse file list | root.cybermanju | No content key |
-| See file metadata | root.cybermanju | No content key |
-| View thumbnail (r0) | shard + preview_key | No content_key |
-| View preview (r1) | shard + preview_key | No content_key |
-| Stream video (r2) | shard + content_key | No full decrypt |
-| Download original (r3) | shard + content_key | No full library |
-| Recover lost shard | root + k other shards | No original data |
+| Action | Keys Required | What App Does |
+|--------|--------------|---------------|
+| Browse file list | index_key | Decrypts shard index, parses manifest |
+| See file metadata | index_key | Reads from decrypted index |
+| View thumbnail (r0) | index_key + preview_key | Decrypts index → finds r0 offset → decrypts r0 blob |
+| View preview (r1) | index_key + preview_key | Decrypts index → finds r1 offset → decrypts r1 blob |
+| Stream video (r2) | index_key + content_key | Decrypts index → finds r2 offset → decrypts chunks |
+| Download original (r3) | index_key + content_key | Decrypts index → finds r3 offset → decrypts all chunks |
+| Recover lost shard | index_key + content_key + k shards | Reconstructs from erasure coding |
+
+### What an Attacker Sees
+
+```
+Without ANY key:
+├── Shard file on GitHub/MEGA/etc.
+├── Reads: 88 bytes of header (magic, shard_id, size, root_hash)
+├── Rest: encrypted bytes (looks like random data)
+├── Cannot: parse index, find files, extract previews, read names
+├── Cannot: determine what type of files are stored
+└── Verdict: OPAQUE — useless without index_key
+
+With index_key only:
+├── Can: parse shard index, see file names, metadata, structure
+├── Cannot: decrypt preview blobs (need preview_key)
+├── Cannot: decrypt content blobs (need content_key)
+├── Can: see file names which may be sensitive ("passport_scan.pdf")
+└── Verdict: METADATA EXPOSED — but content safe
+
+With index_key + preview_key:
+├── Can: see file names, metadata, thumbnails, previews
+├── Cannot: decrypt r2/r3 content (need content_key)
+├── Can: view 640x480 previews of photos
+├── Cannot: download originals
+└── Verdict: VISUAL CONTENT EXPOSED — but originals safe
+
+With index_key + content_key:
+├── Can: see everything, download everything
+├── Can: reconstruct from erasure coding
+├── Verdict: FULL COMPROMISE
+```
 
 ---
 
@@ -102,20 +145,23 @@ Recovery threshold:
 ### Binary Layout
 
 ```
-Offset    Size      Field
-─────────────────────────────────────────────────────────────
-[0..32)   32B       Magic: "CYBSHARD_V2\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
-[32..36)  4B        header_len (u32 LE)
-[36..+h)  variable  header_json (ShardHeader)
-[h..+i)   variable  index_json_len (u32 LE)
-[+i..+j)  variable  index_json (ShardIndex) — THE READABLE LAYER
-[j..+c)   variable  content_json_len (u32 LE)
-[+c..+e)  variable  content_map_json (ContentMap) — byte ranges into content
-[e..+f)   variable  erasure_json_len (u32 LE)
-[+f..+g)  variable  erasure_json (ErasureMeta) — shard parity info
-[g..+s)   variable  signature_len (u32 LE)
-[+s..+k)  variable  shard_signature (ML-DSA-65 over everything above)
-[k..)     variable  content_blobs — ENCRYPTED r0/r1/r2/r3/parity data
+Offset    Size      Field                           Encryption
+──────────────────────────────────────────────────────────────
+[0..32)   32B       Magic: "CYBSHARD_V2..."         PLAINTEXT
+[32..36)  4B        header_len (u32 LE)             PLAINTEXT
+[36..+h)  variable  header_json (ShardHeader)       PLAINTEXT (minimal)
+[h..+i)   4B        encrypted_index_len (u32 LE)    PLAINTEXT
+[+i..+j)  variable  encrypted_index_blob            ENCRYPTED (index_key)
+[j..+c)   4B        encrypted_content_map_len       PLAINTEXT
+[+c..+e)  variable  encrypted_content_map_blob      ENCRYPTED (index_key)
+[e..+f)   4B        encrypted_erasure_len           PLAINTEXT
+[+f..+g)  variable  encrypted_erasure_blob          ENCRYPTED (index_key)
+[g..+s)   4B        signature_len (u32 LE)          PLAINTEXT
+[+s..+k)  variable  shard_signature                 PLAINTEXT (ML-DSA-65)
+[k..)     variable  content_blobs                   ENCRYPTED (content/preview keys)
+
+Total plaintext: ~88 bytes (magic + lengths + signature)
+Everything else: encrypted at rest
 ```
 
 ### ShardHeader
@@ -130,11 +176,11 @@ Offset    Size      Field
   "modified_at": "2026-06-20T12:00:00Z",
   "app_version": "0.2.0",
   "shard_type": "content",
-  "file_count": 47,
-  "total_size_bytes": 268435456,
-  "index_encrypted": false,
-  "content_encrypted": true,
+  "encrypted_index_len": 15360,
+  "encrypted_content_map_len": 4096,
+  "encrypted_erasure_len": 2048,
   "content_algorithm": "ml-kem-1024+chacha20poly1305",
+  "index_algorithm": "aes-256-gcm",
   "compression": "lz4+zstd15+brotli11",
   "erasure_codec": "clay-codes",
   "erasure_params": { "k": 3, "m": 1, "d": 4 },
@@ -142,10 +188,14 @@ Offset    Size      Field
 }
 ```
 
-### ShardIndex (THE READABLE LAYER)
+**Note**: Header is intentionally minimal — only routing/identification data.
+No file names, no sizes, no metadata. An attacker cannot determine what's
+inside from the header alone. Total plaintext per shard: ~88 bytes.
 
-This is the key innovation. The index is a complete manifest of everything
-inside the shard, readable WITHOUT decrypting any content.
+### ShardIndex (Encrypted — Needs index_key)
+
+This section is ENCRYPTED with the index_key. Without it, this is
+indistinguishable from random bytes. The app decrypts it on load.
 
 ```json
 {
@@ -299,24 +349,31 @@ The root file is the **single source of truth** that knows about every shard,
 every file, every resolution, every backend. It is small (1-5MB for 10K files)
 and can be replicated everywhere.
 
+**Security**: The root file is also encrypted. Only the magic bytes, version,
+and library_id are plaintext. Everything else (library name, file counts,
+shard distribution, file manifest) is encrypted with the index_key.
+
 ### Binary Layout
 
 ```
-Offset    Size      Field
-─────────────────────────────────────────────────────────────
-[0..32)   32B       Magic: "CYBROOT__V2\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"
-[32..36)  4B        header_len (u32 LE)
-[36..+h)  variable  header_json (RootHeader)
-[h..+i)   variable  shard_index_len (u32 LE)
-[+i..+j)  variable  shard_index_json (ShardIndex) — ALL SHARDS
-[j..+k)   variable  file_manifest_len (u32 LE)
-[+k..+m)  variable  file_manifest_json (FileManifest) — ALL FILES
-[m..+n)   variable  distribution_len (u32 LE)
-[+n..+p)  variable  distribution_json (DistributionPolicy)
-[p..+q)   variable  revocation_len (u32 LE)
-[q..+r)   variable  revocation_merkle_root (32B)
-[r..+s)   variable  signature_len (u32 LE)
-[s..+t)   variable  root_signature (ML-DSA-65)
+Offset    Size      Field                           Encryption
+──────────────────────────────────────────────────────────────
+[0..32)   32B       Magic: "CYBROOT__V2..."         PLAINTEXT
+[32..36)  4B        header_len (u32 LE)             PLAINTEXT
+[36..+h)  variable  header_json (RootHeader)        PLAINTEXT (minimal)
+[h..+i)   4B        encrypted_shard_index_len      PLAINTEXT
+[+i..+j)  variable  encrypted_shard_index_blob     ENCRYPTED (index_key)
+[j..+k)   4B        encrypted_file_manifest_len    PLAINTEXT
+[+k..+m)  variable  encrypted_file_manifest_blob   ENCRYPTED (index_key)
+[m..+n)   4B        encrypted_distribution_len     PLAINTEXT
+[+n..+p)  variable  encrypted_distribution_blob    ENCRYPTED (index_key)
+[p..+q)   4B        revocation_merkle_root_len     PLAINTEXT
+[q..+r)   32B       revocation_merkle_root         PLAINTEXT (for verification)
+[r..+s)   4B        signature_len (u32 LE)         PLAINTEXT
+[s..+t)   variable  root_signature                 PLAINTEXT (ML-DSA-65)
+
+Total plaintext: ~128 bytes (magic + lengths + revocation root + signature)
+Shard index, file manifest, distribution: ALL ENCRYPTED
 ```
 
 ### RootHeader
@@ -326,6 +383,19 @@ Offset    Size      Field
   "magic": "CYBROOT__V2",
   "version": "2.0",
   "library_id": "lib_001",
+  "encrypted_payload_len": 1048576,
+  "signature_len": 3200
+}
+```
+
+**Note**: Header is intentionally minimal — only identification and routing data.
+Library name, file counts, shard distribution, encryption keys — all encrypted.
+An attacker cannot determine library contents from the header.
+
+### RootPayload (Encrypted — Needs index_key)
+
+```json
+{
   "library_name": "My Photo Library",
   "created_at": "2026-01-01T00:00:00Z",
   "modified_at": "2026-06-20T12:00:00Z",
@@ -359,7 +429,10 @@ Offset    Size      Field
 }
 ```
 
-### ShardIndex (All Shards)
+### ShardIndex (Encrypted — Needs index_key)
+
+This section is ENCRYPTED with the index_key. Without it, this is
+indistinguishable from random bytes.
 
 ```json
 {
@@ -406,7 +479,7 @@ Offset    Size      Field
 }
 ```
 
-### FileManifest (File → Shard Map)
+### FileManifest (Encrypted — Needs index_key)
 
 ```json
 {
@@ -455,7 +528,7 @@ Offset    Size      Field
 }
 ```
 
-### DistributionPolicy
+### DistributionPolicy (Encrypted — Needs index_key)
 
 ```json
 {
@@ -513,10 +586,11 @@ Offset    Size      Field
 
 ---
 
-## 4. Index Layer: Read Without Decrypt
+## 4. Index Layer: Encrypted But Separate
 
-This is the critical design principle. The index layer enables full browse,
-search, and preview capability WITHOUT ever decrypting the content layer.
+The index layer is encrypted with the index_key, separate from the content
+layer. This provides **key separation** — compromising one key doesn't
+compromise everything. But the shard is still opaque without the index_key.
 
 ### How It Works
 
@@ -525,20 +599,27 @@ search, and preview capability WITHOUT ever decrypting the content layer.
 │  .cybermanju SHARD                                   │
 │                                                      │
 │  ┌──────────────────────────────────────────────┐   │
-│  │  INDEX LAYER (readable without content key)   │   │
+│  │  HEADER (88 bytes, plaintext)                 │   │
+│  │                                               │   │
+│  │  Magic, shard_id, size, root_hash_backlink    │   │
+│  │  (minimal — no file names, no metadata)       │   │
+│  └──────────────────────────────────────────────┘   │
+│                                                      │
+│  ┌──────────────────────────────────────────────┐   │
+│  │  INDEX LAYER (encrypted with INDEX KEY)        │   │
 │  │                                               │   │
 │  │  • File names, sizes, dates, folders          │   │
 │  │  • Tags, face groups, GPS coordinates         │   │
-│  │  • Thumbnail byte ranges + preview key        │   │
+│  │  • Thumbnail byte ranges + key tier           │   │
 │  │  • Resolution metadata (width, height, mime)  │   │
 │  │  • Erasure coding map                         │   │
 │  │  • Shard cross-references                     │   │
 │  │                                               │   │
-│  │  Encrypted with: INDEX KEY (or unencrypted)   │   │
+│  │  Encrypted with: INDEX KEY (AES-256-GCM)      │   │
 │  └──────────────────────────────────────────────┘   │
 │                                                      │
 │  ┌──────────────────────────────────────────────┐   │
-│  │  CONTENT LAYER (encrypted, separate keys)     │   │
+│  │  CONTENT LAYER (encrypted with separate keys) │   │
 │  │                                               │   │
 │  │  • r0 thumbnails: encrypted with PREVIEW KEY  │   │
 │  │  • r1 previews: encrypted with PREVIEW KEY    │   │
@@ -548,63 +629,58 @@ search, and preview capability WITHOUT ever decrypting the content layer.
 │  │                                               │   │
 │  │  Each chunk independently decryptable          │   │
 │  └──────────────────────────────────────────────┘   │
+│                                                      │
+│  ┌──────────────────────────────────────────────┐   │
+│  │  FOOTER (encrypted with INDEX KEY)            │   │
+│  │                                               │   │
+│  │  BLAKE3 checksums, erasure metadata           │   │
+│  │  ML-DSA-65 signature (plaintext for verify)   │   │
+│  └──────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────┘
 ```
 
-### Index Encryption Modes
+### Index Encryption (Always Encrypted)
+
+The index is ALWAYS encrypted. There is no plaintext option.
+The index_key is separate from the content_key and preview_key.
 
 ```rust
-enum IndexEncryption {
-    /// Index is fully readable — anyone with the shard can browse
-    /// Good for: public libraries, shared galleries
-    Plaintext,
-
-    /// Index encrypted with a separate index key
-    /// Good for: private libraries, access-controlled sharing
-    Encrypted {
-        key_id: String,
-        algorithm: String,  // "aes-256-gcm" or "chacha20poly1305"
-    },
-
-    /// Partial encryption: public metadata visible, private metadata hidden
-    /// Good for: mixed-access libraries
-    Partial {
-        public_fields: Vec<String>,  // ["name", "mime", "size", "folder"]
-        encrypted_fields: Vec<String>,  // ["gps", "face_groups", "tags"]
-    },
+struct IndexEncryption {
+    key_id: String,
+    algorithm: String,  // "aes-256-gcm"
 }
 ```
 
-### Browse Flow (No Content Key Needed)
+**Why always encrypted**: File names alone are sensitive. "passport_scan.pdf",
+"divorce_paperwork.docx", "medical_record.pdf" — these reveal everything
+without seeing the file content. The index must be opaque to attackers.
+
+### Browse Flow (Requires index_key)
 
 ```rust
-fn browse_shard(shard_path: &Path, index_key: Option<&Key>) -> ShardIndex {
-    // 1. Read shard header (always plaintext)
+fn browse_shard(shard_path: &Path, index_key: &Key) -> ShardIndex {
+    // 1. Read shard header (always plaintext, 88 bytes)
     let header = read_shard_header(shard_path);
 
-    // 2. Read index layer
-    let index_bytes = read_index_layer(shard_path, &header);
+    // 2. Read encrypted index blob
+    let encrypted_index = read_encrypted_index(shard_path, &header)?;
 
-    // 3. Decrypt index if needed (with index key, NOT content key)
-    let index = match &header.index_encrypted {
-        false => serde_json::from_slice(&index_bytes)?,
-        true => {
-            let key = index_key.expect("Index key required");
-            let decrypted = decrypt_index(&index_bytes, key)?;
-            serde_json::from_slice(&decrypted)?
-        }
-    };
+    // 3. Decrypt index with INDEX KEY (not content key, not preview key)
+    let index = decrypt_index(&encrypted_index, index_key)?;
 
     index
 }
 
-fn browse_all_files(root: &RootCybermanju, index_key: Option<&Key>) -> Vec<FileManifest> {
+fn browse_all_files(
+    root: &RootCybermanju,
+    index_key: &Key,
+) -> Vec<FileManifest> {
     let mut all_files = Vec::new();
 
     // 1. Read root index (small, maybe cached)
-    let root_index = read_root_index(root)?;
+    let root_index = read_root_index(root, index_key)?;
 
-    // 2. For each shard, read its index
+    // 2. For each shard, decrypt its index
     for shard_info in root_index.shards.values() {
         let shard_index = browse_shard(&shard_info.local_path, index_key)?;
         all_files.extend(shard_index.files.values().cloned());
@@ -614,12 +690,13 @@ fn browse_all_files(root: &RootCybermanju, index_key: Option<&Key>) -> Vec<FileM
 }
 ```
 
-### Preview Flow (Preview Key Only, No Content Key)
+### Preview Flow (Requires index_key + preview_key)
 
 ```rust
 fn preview_file(
     root: &RootCybermanju,
     file_id: &str,
+    index_key: &Key,
     preview_key: &Key,
     target_resolution: ResolutionLevel,
 ) -> Result<Vec<u8>> {
@@ -628,8 +705,8 @@ fn preview_file(
     let shard_id = &file_entry.shard_assignments[&target_resolution][0];
     let shard_info = root.shard_index.get(shard_id)?;
 
-    // 2. Read shard index (no content key needed)
-    let shard_index = browse_shard(&shard_info.local_path, None)?;
+    // 2. Decrypt shard index (requires index_key)
+    let shard_index = browse_shard(&shard_info.local_path, index_key)?;
 
     // 3. Find the byte range for this resolution
     let resolution = shard_index.files[file_id].resolutions[&target_resolution];
@@ -650,18 +727,21 @@ fn preview_file(
 }
 ```
 
-### Search Flow (Index Only)
+### Search Flow (Requires index_key)
 
 ```rust
 fn search_files(
     root: &RootCybermanju,
     query: &str,
-    index_key: Option<&Key>,
+    index_key: &Key,
 ) -> Vec<FileManifest> {
     let mut results = Vec::new();
 
-    // 1. Search root index (tags, folders, names)
-    for (file_id, file) in root.file_manifest.files.iter() {
+    // 1. Decrypt root index
+    let root_index = read_root_index(root, index_key)?;
+
+    // 2. Search root index (tags, folders, names)
+    for (file_id, file) in root_index.file_manifest.files.iter() {
         if file.name.contains(query)
             || file.tags.iter().any(|t| t.contains(query))
             || file.folder.contains(query)
@@ -670,11 +750,10 @@ fn search_files(
         }
     }
 
-    // 2. Optionally search shard-level indexes for deeper metadata
-    for shard_info in root.shard_index.shards.values() {
+    // 3. Search shard-level indexes for deeper metadata
+    for shard_info in root_index.shard_index.shards.values() {
         let shard_index = browse_shard(&shard_info.local_path, index_key)?;
         for (file_id, file) in shard_index.files.iter() {
-            // Search face groups, GPS, custom metadata
             if file.face_groups.iter().any(|f| f.contains(query)) {
                 results.push(file.clone());
             }
@@ -957,12 +1036,17 @@ Revoke Token:
 
 | Layer | Master Key | Index Key | Content Key | Preview Key | View Token |
 |-------|-----------|-----------|-------------|-------------|------------|
+| Shard header | Read-only | Read-only | Read-only | Read-only | Read-only |
 | Index (metadata) | Full access | Full access | No access | No access | No access |
-| r0 (thumb) | Full access | Read-only | Full access | Full access | Time-limited, view-limited |
-| r1 (preview) | Full access | Read-only | Full access | Full access | No access |
-| r2 (medium) | Full access | Read-only | Full access | No access | No access |
-| r3 (original) | Full access | Read-only | Full access | No access | No access |
-| Parity shards | Full access | Read-only | Full access | No access | No access |
+| r0 (thumb) | Full access | Full access | Full access | Full access | Time-limited, view-limited |
+| r1 (preview) | Full access | Full access | Full access | Full access | No access |
+| r2 (medium) | Full access | Full access | Full access | No access | No access |
+| r3 (original) | Full access | Full access | Full access | No access | No access |
+| Parity shards | Full access | Full access | Full access | No access | No access |
+
+**Key insight**: Without index_key, you can't even find where r0/r1/r2/r3
+are stored inside the shard. The index is the map — without it, the shard
+is just encrypted bytes with no structure.
 
 ---
 
@@ -1660,17 +1744,18 @@ brotli = "8.0.4"
 **Rationale**: Each shard is portable, self-contained, and independently
 verifiable. A shard can be copied, moved, or recovered independently.
 
-### Decision 2: Index Layer Separate from Content Layer
+### Decision 2: Index Always Encrypted (No Plaintext Option)
 
-**Chosen**: Index readable without decrypting content.
+**Chosen**: Index is ALWAYS encrypted with index_key. No plaintext mode.
 
 **Alternatives considered**:
-- Single encrypted blob: Must decrypt to browse
-- Unencrypted index, encrypted content: Good, but index might leak metadata
+- Plaintext index: Convenient but leaks metadata (file names, GPS, faces)
+- Partial encryption: Public metadata visible, private hidden — complex
 - Encrypted index with separate key: Best balance
 
-**Rationale**: Enables browsing, searching, and previewing without ever
-exposing the content encryption key. The index key can be shared separately.
+**Rationale**: File names alone are sensitive ("passport_scan.pdf"). The index
+must be opaque to attackers. The index_key is separate from content_key and
+preview_key, providing defense in depth.
 
 ### Decision 3: Fixed 4 Resolution Levels
 
@@ -1842,21 +1927,71 @@ let key = hkdf_sha256(shared_secret, "cybermanju-content-v1", file_id);
 
 ## Appendix C: Security Considerations
 
-| Threat | Mitigation |
-|--------|-----------|
-| Quantum computer breaks ML-KEM | HPKE hybrid (ML-KEM + X25519) |
-| Master key compromise | Shamir split (3-of-5) across devices |
-| View token leak | Time-limited + view-limited + revocable |
-| Backend compromise | r3 encrypted, only parity on cheap backends |
-| Man-in-the-middle | All transfers over TLS + content verification |
-| Data corruption | BLAKE3 Merkle tree integrity verification |
-| Ransomware | r0 on ALL backends, parity for reconstruction |
-| Insider threat | Multi-user ACL with audit trail |
-| Index leak | Index key separate from content key |
-| Shard tampering | ML-DSA-65 signature on each shard |
+### Threat Model
+
+| Attacker | What They Have | What They Can Do | What Stops Them |
+|----------|---------------|-----------------|-----------------|
+| Casual | Shard file from backend | Nothing — 88 bytes of plaintext header only | Encryption |
+| With brute force | Shard + computing power | Nothing — AES-256-GCM is unbreakable | Key size |
+| With index_key | Index key only | See file names, metadata, structure | Content key still protects r2/r3 |
+| With preview_key | Preview key only | Cannot find previews without index_key | Index encryption |
+| With index+preview | Both keys | See thumbnails, previews (640x480) | Content key protects originals |
+| With content_key | Content key only | Cannot find content without index_key | Index encryption |
+| With all keys | All three keys | Full access — can read everything | Key management |
+| With master key | Master key | Can derive all keys — full compromise | Shamir split |
+
+### Security Properties
+
+1. **Shard opacity**: `.cybermanju` files are opaque without index_key
+   - 88 bytes of plaintext (magic, shard_id, size, root_hash)
+   - Rest is encrypted — indistinguishable from random bytes
+   - Cannot determine file types, names, or structure
+
+2. **Key separation**: Three independent keys for three purposes
+   - index_key: Controls metadata access
+   - preview_key: Controls preview access
+   - content_key: Controls full content access
+   - Compromising one doesn't compromise others
+
+3. **Preview safety**: Previews are encrypted inside the shard
+   - Cannot extract r0/r1 without both index_key AND preview_key
+   - Even with preview_key, you need index_key to find the byte ranges
+   - Previews are safe at rest on backends
+
+4. **Erasure coding safety**: Parity shards are encrypted
+   - Cannot reconstruct without content_key
+   - Cannot determine which shards have parity without index_key
+
+5. **Tamper detection**: ML-DSA-65 signatures on every shard
+   - Any modification is detectable
+   - Signature is plaintext for verification
+
+### What's NOT Protected
+
+1. **File names in plaintext header**: The shard_id is visible — this is
+   necessary for routing but reveals nothing about content.
+
+2. **Shard size**: Visible in header — reveals how much data is in the shard
+   but not what type of data.
+
+3. **Access patterns**: If an attacker monitors which shards you download,
+   they can infer usage patterns. Mitigate with: constant-size shards,
+   dummy downloads, Tor routing.
+
+4. **Timing attacks**: Decryption time may vary based on key correctness.
+   Mitigate with: constant-time operations, padding.
+
+### Recommendations
+
+1. **Never store master key on the same backend as shards**
+2. **Split master key via Shamir (3-of-5) across physical devices**
+3. **Rotate keys periodically** — re-encrypt shards with new keys
+4. **Use hardware security module (HSM) for key storage** if possible
+5. **Enable shard signatures** — detect tampering
+6. **Monitor shard integrity** — verify BLAKE3 hashes regularly
 
 ---
 
-*Document version: 2.1.0*
+*Document version: 2.2.0*
 *Last updated: 2026-06-20*
 *Status: Architecture proposal — pending review*

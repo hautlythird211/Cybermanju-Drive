@@ -1,0 +1,10 @@
+[package]
+name = "cybermanju-erasure"
+version = "0.1.0"
+edition = "2021"
+description = "Erasure coding and Shamir secret sharing for Cybermanju Drive"
+
+[dependencies]
+thiserror = "2"
+rand = "0.8"
+once_cell = "1"

@@ -201,7 +201,7 @@
           </div>
 
           <!-- Thumbnail / Icon -->
-          <div class="file-preview">
+          <div class="file-preview" :class="{ 'media-preview': getFileTypeClass(file) === 'image' || getFileTypeClass(file) === 'video' }">
             <img
               v-if="file.thumbnailPath"
               :src="file.thumbnailPath"
@@ -211,6 +211,19 @@
             />
             <div v-else class="file-icon-wrapper" :class="getFileTypeClass(file)">
               <Icon :icon="getFileIcon(file)" width="32" height="32" />
+            </div>
+
+            <!-- Media Play Overlay -->
+            <div v-if="getFileTypeClass(file) === 'video' || getFileTypeClass(file) === 'audio'" class="media-play-overlay">
+              <div class="play-circle">
+                <Icon :icon="getFileTypeClass(file) === 'video' ? 'mdi:play' : 'mdi:music'" width="24" height="24" />
+              </div>
+            </div>
+
+            <!-- Resolution Indicator for images -->
+            <div v-if="getFileTypeClass(file) === 'image'" class="resolution-indicator">
+              <Icon icon="mdi:quality-high" width="10" height="10" />
+              <span>R3</span>
             </div>
 
             <!-- File Type Badge -->
@@ -273,11 +286,13 @@
             <Icon v-if="allSelected" icon="mdi:check" width="10" height="10" />
           </div>
         </span>
+        <span class="lc lc-media"></span>
         <span class="lc lc-name" @click="setSort('name')">
           Name
           <Icon v-if="sortField === 'name'" :icon="sortDir === 'asc' ? 'mdi:chevron-up' : 'mdi:chevron-down'" width="12" height="12" />
         </span>
         <span class="lc lc-tags">Tags</span>
+        <span class="lc lc-res">Res</span>
         <span class="lc lc-size" @click="setSort('size')">
           Size
           <Icon v-if="sortField === 'size'" :icon="sortDir === 'asc' ? 'mdi:chevron-up' : 'mdi:chevron-down'" width="12" height="12" />
@@ -317,6 +332,12 @@
               <Icon v-if="store.selectedFileIds.includes(file.id)" icon="mdi:check" width="10" height="10" />
             </div>
           </span>
+          <span class="lc lc-media">
+            <div v-if="getFileTypeClass(file) === 'image' || getFileTypeClass(file) === 'video' || getFileTypeClass(file) === 'audio'" class="list-media-btn" :class="getFileTypeClass(file)" @click.stop="handleDoubleClick(file)" title="Open media">
+              <Icon :icon="getFileTypeClass(file) === 'image' ? 'mdi:image-outline' : getFileTypeClass(file) === 'video' ? 'mdi:play-circle-outline' : 'mdi:music-note-outline'" width="16" height="16" />
+            </div>
+            <img v-else-if="file.thumbnailPath" :src="file.thumbnailPath" class="list-thumb" :alt="file.name" />
+          </span>
           <span class="lc lc-name">
             <div class="list-icon" :class="getFileTypeClass(file)">
               <Icon :icon="getFileIcon(file)" width="18" height="18" />
@@ -334,6 +355,9 @@
               />
               <span v-if="file.tags.length > 2" class="tag-more small">+{{ file.tags.length - 2 }}</span>
             </div>
+          </span>
+          <span class="lc lc-res">
+            <span v-if="getFileTypeClass(file) === 'image' || getFileTypeClass(file) === 'video'" class="res-badge" :class="getFileTypeClass(file)">R3</span>
           </span>
           <span class="lc lc-size">{{ formatSize(file.sizeBytes) }}</span>
           <span class="lc lc-type">
@@ -389,11 +413,19 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
 import { useContextMenu } from '@/composables/useContextMenu'
+import { useMedia } from '@/composables/useMedia'
 import type { FileNode } from '@/types'
 import FileTooltip from './FileTooltip.vue'
 
 const store = useAppStore()
 const ctx = useContextMenu()
+const { getMediaInfo, openMediaOverlay } = useMedia()
+
+// Media viewer state
+const showMediaOverlay = ref(false)
+const mediaViewerType = ref<'image' | 'video' | 'audio'>('image')
+const mediaViewerData = ref<any>(null)
+const mediaViewerBytes = ref<Uint8Array | null>(null)
 
 // State
 const sortField = ref<'name' | 'size' | 'date' | 'type'>('name')
@@ -655,10 +687,35 @@ function handleClick(file: FileNode) {
 function handleDoubleClick(file: FileNode) {
   if (file.fileType === 'folder') {
     store.selectedFileId = file.id
-  } else {
-    store.selectedFileId = file.id
-    // Could open preview or file
+    return
   }
+
+  const mime = file.mimeType || ''
+  if (mime.startsWith('image/') || mime.startsWith('video/') || mime.startsWith('audio/')) {
+    const type = mime.startsWith('image/') ? 'image' : mime.startsWith('video/') ? 'video' : 'audio'
+    const fileData = {
+      fileId: file.id,
+      filename: file.name,
+      mimeType: mime,
+      isImage: mime.startsWith('image/'),
+      isVideo: mime.startsWith('video/'),
+      isAudio: mime.startsWith('audio/'),
+      imageInfo: undefined,
+      videoInfo: undefined,
+      availableResolutions: [
+        { level: 'r0', keyTier: 'preview', encrypted: true },
+        { level: 'r1', keyTier: 'preview', encrypted: true },
+        { level: 'r2', keyTier: 'content', encrypted: true },
+        { level: 'r3', keyTier: 'content', encrypted: true },
+      ],
+      selectedResolution: 'r3',
+    }
+    const emptyBytes = new Uint8Array(0)
+    openMediaOverlay(type, fileData as any, emptyBytes)
+    return
+  }
+
+  store.selectedFileId = file.id
 }
 
 // Tag filtering
@@ -1420,6 +1477,58 @@ onMounted(() => {
   border-bottom: 1px solid var(--border-light);
 }
 
+.file-preview.media-preview {
+  background: #000;
+}
+
+.media-play-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.file-card:hover .media-play-overlay {
+  opacity: 1;
+}
+
+.play-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0, 255, 65, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #08080a;
+  transition: transform 0.2s;
+}
+
+.file-card:hover .play-circle {
+  transform: scale(1.1);
+}
+
+.resolution-indicator {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 5px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  border-radius: 4px;
+  font-size: 8px;
+  font-weight: 700;
+  color: #00ff41;
+  letter-spacing: 0.5px;
+}
+
 .file-thumbnail {
   width: 100%;
   height: 100%;
@@ -1660,12 +1769,48 @@ onMounted(() => {
 }
 
 .lc-check { flex: 0 0 32px; justify-content: center; }
+.lc-media { flex: 0 0 36px; justify-content: center; }
 .lc-name { flex: 3; min-width: 0; gap: 12px; }
 .lc-tags { flex: 1; min-width: 80px; }
+.lc-res { flex: 0 0 40px; justify-content: center; }
 .lc-size { flex: 0.8; min-width: 70px; justify-content: flex-end; }
 .lc-type { flex: 1; min-width: 80px; }
 .lc-date { flex: 1; min-width: 100px; }
 .lc-status { flex: 0.5; min-width: 60px; gap: 6px; }
+
+.list-media-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.list-media-btn.image { background: rgba(255, 107, 157, 0.15); color: #ff6b9d; }
+.list-media-btn.video { background: rgba(0, 255, 65, 0.15); color: #00ff41; }
+.list-media-btn.audio { background: rgba(90, 240, 255, 0.15); color: #5af0ff; }
+.list-media-btn:hover { transform: scale(1.15); }
+
+.list-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.res-badge {
+  font-size: 8px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+}
+
+.res-badge.image { background: rgba(255, 107, 157, 0.1); color: #ff6b9d; }
+.res-badge.video { background: rgba(179, 136, 255, 0.1); color: #b388ff; }
 
 .list-icon {
   display: flex;

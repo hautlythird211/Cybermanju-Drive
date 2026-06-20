@@ -11,6 +11,7 @@ import type {
   SyncConfig, SyncProgress, SyncResult, RemoteFile,
   AuthResult, ModuleInfo, TrashItem, AuditEntry, FileVersion, User,
   DashboardStatus,
+  FileMediaData, ResolutionLevel,
 } from '@/types'
 import type { ArtMakerSettings } from '@/configs/artMaker'
 import { DEFAULT_SETTINGS } from '@/configs/artMaker'
@@ -111,6 +112,20 @@ export const useAppStore = defineStore('cybermanju', () => {
   const selectedFileIds = ref<string[]>([])
   const isMultiSelect = ref(false)
   const autoArrange = ref(true)
+
+  // ── Media State ──────────────────────────────────────────────
+  const mediaOverlayVisible = ref(false)
+  const mediaOverlayType = ref<'image' | 'video' | 'audio'>('image')
+  const mediaFileData = ref<FileMediaData | null>(null)
+  const mediaFileBytes = ref<Uint8Array | null>(null)
+  const mediaCurrentResolution = ref<ResolutionLevel>('r3')
+  const mediaPlaybackState = ref<'stopped' | 'playing' | 'paused'>('stopped')
+  const mediaPlaybackPosition = ref({ currentSecs: 0, totalSecs: 0, speed: 1 })
+  const mediaVolume = ref(1.0)
+  const mediaIsMuted = ref(false)
+  const mediaSlideshowActive = ref(false)
+  const mediaSlideshowInterval = ref(3000)
+  const showMediaConfigPanel = ref(false)
 
   // ── Module Helpers ─────────────────────────────────────────
   const currentModule = computed<ModuleInfo>(() =>
@@ -1067,6 +1082,11 @@ export const useAppStore = defineStore('cybermanju', () => {
     selectedFileIds, isMultiSelect, users, autoRefreshInterval, sortBy, autoArrange,
     trashCount: computed(() => trashItems.value.length),
     lastDeletedFileId, deleteConfirmVisible, pendingDeleteFileName, lastPendingDeleteId,
+    // Media State
+    mediaOverlayVisible, mediaOverlayType, mediaFileData, mediaFileBytes,
+    mediaCurrentResolution, mediaPlaybackState, mediaPlaybackPosition,
+    mediaVolume, mediaIsMuted, mediaSlideshowActive, mediaSlideshowInterval,
+    showMediaConfigPanel,
     // Computed
     currentUser, authToken, isAuthenticated, selectedFile, activeAccount, encryptedFiles, compressedFiles,
     starredFiles, folders, currentFolderFiles,

@@ -24,6 +24,9 @@ let copyNotifyTimeout: ReturnType<typeof setTimeout> | null = null
 const showCopyNotify = ref(false)
 const lastCopied = ref('')
 
+const isLockedToBottom = ref(true)
+const SCROLL_TOLERANCE = 5
+
 const aliases = ref<Record<string, string>>({
   'll': 'ls -l',
   'la': 'ls -la',
@@ -171,13 +174,13 @@ async function execHostCommand(rawLine: string): Promise<void> {
     // Stream stdout
     cmd.stdout.on('data', (line: string) => {
       logs.value.push(line)
-      nextTick(scrollToBottom)
+      nextTick(smartScroll)
     })
 
     // Stream stderr
     cmd.stderr.on('data', (line: string) => {
       logs.value.push(`\x1b[31m${line}\x1b[0m`)
-      nextTick(scrollToBottom)
+      nextTick(smartScroll)
     })
 
     // Execute
@@ -201,7 +204,7 @@ async function execHostCommand(rawLine: string): Promise<void> {
     logs.value.push(`\x1b[31m[host error]\x1b[0m ${e}`)
   } finally {
     hostRunning.value = false
-    nextTick(scrollToBottom)
+    nextTick(smartScroll)
   }
 }
 
@@ -269,7 +272,7 @@ async function processCmd() {
   // ── Host mode: forward to real shell ──
   if (hostMode.value && raw !== 'host') {
     await execHostCommand(raw)
-    nextTick(scrollToBottom)
+    nextTick(smartScroll)
     return
   }
 
@@ -284,13 +287,30 @@ async function processCmd() {
     }
   }
 
-  nextTick(scrollToBottom)
+  nextTick(smartScroll)
+}
+
+function isAtBottom(): boolean {
+  const el = document.querySelector('.term-output')
+  if (!el) return true
+  return el.scrollHeight - el.scrollTop - el.clientHeight <= SCROLL_TOLERANCE
+}
+
+function onOutputScroll() {
+  const atBottom = isAtBottom()
+  isLockedToBottom.value = atBottom
 }
 
 function scrollToBottom() {
   const el = document.querySelector('.term-output')
   if (el) el.scrollTop = el.scrollHeight
   focusInput()
+}
+
+function smartScroll() {
+  if (isLockedToBottom.value) {
+    nextTick(scrollToBottom)
+  }
 }
 
 // ── Command handlers ──
@@ -1102,6 +1122,7 @@ function onInputKeydown(e: KeyboardEvent) {
 function onInput(e: Event) {
   const target = e.target as HTMLInputElement
   input.value = target.value
+  nextTick(scrollToBottom)
 }
 
 function focusInput() {
@@ -1153,27 +1174,22 @@ onMounted(() => {
     `Last login: ${new Date().toLocaleString()} from 127.0.0.1`,
     '',
   ]
-  nextTick(() => focusInput())
+  nextTick(() => {
+    const el = document.querySelector('.term-output')
+    if (el) el.addEventListener('scroll', onOutputScroll, { passive: true })
+    scrollToBottom()
+  })
 })
 
 onUnmounted(() => {
+  const el = document.querySelector('.term-output')
+  if (el) el.removeEventListener('scroll', onOutputScroll)
   exitFuncs.forEach(f => f())
 })
 </script>
 
 <template>
   <div class="terminal" @click="focusInput" tabindex="0" autofocus>
-    <div class="term-header">
-      <div class="term-dots">
-        <span class="term-dot term-dot--close" @click="$emit('close')"></span>
-        <span class="term-dot term-dot--min"></span>
-        <span class="term-dot term-dot--max"></span>
-      </div>
-      <div class="term-title">
-        <span v-if="hostMode" class="host-badge">HOST</span>
-        {{ username }}@{{ hostname }}: {{ currentDir }}
-      </div>
-    </div>
     <div class="term-body">
       <div class="term-output" @mouseup="handleOutputMouseUp">
         <div v-for="(line, i) in logs" :key="i" class="term-line" v-html="renderLine(line)"></div>
@@ -1220,55 +1236,6 @@ onUnmounted(() => {
   font-family: var(--font-mono);
   contain: layout style;
   cursor: text;
-}
-
-.term-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.term-dots {
-  display: flex;
-  gap: 6px;
-}
-
-.term-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.term-dot--close { background: #ff5f57; }
-.term-dot--close:hover { filter: brightness(1.3); }
-.term-dot--min { background: #febc2e; }
-.term-dot--max { background: #00ff41; }
-
-.term-title {
-  flex: 1;
-  font-size: 10px;
-  color: var(--text-muted);
-  letter-spacing: 1px;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.host-badge {
-  background: rgba(255, 95, 87, 0.2);
-  color: #ff5f57;
-  font-size: 8px;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 3px;
-  border: 1px solid rgba(255, 95, 87, 0.3);
-  letter-spacing: 1px;
 }
 
 .term-body {

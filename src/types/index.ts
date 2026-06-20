@@ -1,5 +1,5 @@
 export type ViewMode = 'grid' | 'list' | 'masonry'
-export type PanelType = 'landing' | 'files' | 'preview' | 'encryption' | 'compression' | 'collections' | 'faces' | 'map' | 'code' | 'search' | 'style' | 'accounts' | 'loose-groups' | 'sync' | 'webdash' | 'users' | 'dashboard' | 'settings' | 'trash' | 'activity' | 'favorites' | 'recent' | 'storage' | 'history' | 'import' | 'transfer' | 'permissions' | 'system-monitor' | 'task-manager' | 'terminal' | 'duplicates' | 'browser' | 'book' | 'notes' | 'plugins' | 'art-maker'
+export type PanelType = 'landing' | 'files' | 'preview' | 'encryption' | 'compression' | 'collections' | 'faces' | 'map' | 'code' | 'search' | 'style' | 'accounts' | 'loose-groups' | 'sync' | 'webdash' | 'users' | 'dashboard' | 'settings' | 'trash' | 'activity' | 'favorites' | 'recent' | 'storage' | 'history' | 'import' | 'transfer' | 'permissions' | 'system-monitor' | 'task-manager' | 'terminal' | 'duplicates' | 'browser' | 'book' | 'notes' | 'plugins' | 'art-maker' | 'media-library'
 export type SidebarSection = 'tree' | 'locations' | 'collections' | 'people' | 'styles' | 'loose' | 'users' | 'sync' | 'dashboard' | 'landing' | 'tools'
 
 export interface ModuleInfo {
@@ -437,6 +437,7 @@ export const MODULE_METADATA: Record<PanelType, ModuleInfo> = {
   notes: { id: 'notes', label: 'NOTES', icon: 'mdi:note-text-outline', color: '#5af0ff', gradient: 'linear-gradient(135deg, #08080a 0%, #000c0c 50%, #08080a 100%)', description: 'Quick notes with clipboard integration', requiresAuth: true },
   plugins: { id: 'plugins', label: 'PLUGINS', icon: 'mdi:puzzle-outline', color: '#30d158', gradient: 'linear-gradient(135deg, #08080a 0%, #000c00 50%, #08080a 100%)', description: 'Visual plugin builder for Cybermanju OS workspace', requiresAuth: true },
   'art-maker': { id: 'art-maker', label: 'ART MAKER', icon: 'mdi:palette-outline', color: '#b388ff', gradient: 'linear-gradient(135deg, #08080a 0%, #0a0015 50%, #08080a 100%)', description: 'Real-time visual art canvas with interactive controls', requiresAuth: false },
+  'media-library': { id: 'media-library', label: 'MEDIA', icon: 'mdi:image-multiple-outline', color: '#ff6b9d', gradient: 'linear-gradient(135deg, #08080a 0%, #0c0008 50%, #08080a 100%)', description: 'Browse all images, videos, and audio files', requiresAuth: true },
 }
 
 export const SYNC_BACKEND_INFO: Record<SyncBackendType, { name: string; description: string; color: string; icon: string }> = {
@@ -523,4 +524,122 @@ export interface HistoryEntry {
   affectedFileIds: string[]
   undo: HistoryAction
   redo: HistoryAction
+}
+
+export type ResolutionLevel = 'r0' | 'r1' | 'r2' | 'r3'
+
+export interface ResolutionInfo {
+  level: ResolutionLevel
+  width?: number
+  height?: number
+  format?: string
+  sizeBytes?: number
+  keyTier: string
+  encrypted: boolean
+}
+
+export interface ImageInfo {
+  width: number
+  height: number
+  format: string
+  colorType: string
+  hasAlpha: boolean
+  bitsPerChannel: number
+  exif?: ExifData
+}
+
+export interface ExifData {
+  cameraMake?: string
+  cameraModel?: string
+  dateTaken?: string
+  gpsLat?: number
+  gpsLon?: number
+  exposureTime?: string
+  fNumber?: number
+  iso?: number
+  focalLength?: number
+  orientation?: number
+  imageWidth?: number
+  imageHeight?: number
+}
+
+export interface VideoInfo {
+  durationSecs: number
+  width: number
+  height: number
+  codec: string
+  fps: number
+  bitrate: number
+  audioCodec?: string
+  audioSampleRate?: number
+  audioChannels?: number
+  container: string
+  totalFrames?: number
+}
+
+export type PlaybackState = 'stopped' | 'playing' | 'paused' | 'buffering' | 'error'
+
+export interface PlaybackPosition {
+  currentSecs: number
+  totalSecs: number
+  speed: number
+}
+
+export interface TrackInfo {
+  index: number
+  trackType: string
+  codec: string
+  language?: string
+  title?: string
+  isDefault: boolean
+}
+
+export interface VideoPlayerState {
+  state: PlaybackState
+  position: PlaybackPosition
+  volume: number
+  isMuted: boolean
+  isFullscreen: boolean
+  currentTrack?: TrackInfo
+  availableTracks: TrackInfo[]
+}
+
+export interface FileMediaData {
+  fileId: string
+  filename: string
+  mimeType: string
+  isImage: boolean
+  isVideo: boolean
+  isAudio: boolean
+  imageInfo?: ImageInfo
+  videoInfo?: VideoInfo
+  availableResolutions: ResolutionInfo[]
+  selectedResolution: ResolutionLevel
+}
+
+export interface ResolutionData {
+  fileId: string
+  level: string
+  dataBase64: string
+  width: number
+  height: number
+  format: string
+}
+
+export interface MediaInfo {
+  mimeType: string
+  extension: string
+  isImage: boolean
+  isVideo: boolean
+  isAudio: boolean
+  supportedResolutions: string[]
+  estimatedFileType: string
+}
+
+export interface ThumbnailResult {
+  data: number[]
+  width: number
+  height: number
+  format: string
+  sizeBytes: number
 }
