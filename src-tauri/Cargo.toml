@@ -25,6 +25,7 @@ cybermanju-search = { path = "../crates/search" }
 cybermanju-db = { path = "../crates/db" }
 cybermanju-portable-db = { path = "../crates/portable-db" }
 cybermanju-faces = { path = "../crates/faces" }
+cybermanju-backends = { path = "../crates/backends" }
 
 # Tauri
 tauri = { version = "2", features = ["tray-icon"] }

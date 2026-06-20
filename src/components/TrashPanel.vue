@@ -269,33 +269,34 @@ function onContextMenu(e: MouseEvent, item: TrashItem) {
 }
 
 .panel-card {
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-  border-radius: 8px;
+  background: var(--bg-glass-light);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
   padding: 16px;
+  backdrop-filter: blur(var(--glass-blur-light));
 }
 
 .panel-title {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
-  color: #e0e0e0;
+  color: var(--text-primary);
   letter-spacing: 1px;
 }
 
 .panel-hint {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
-  color: #555;
+  color: var(--text-muted);
   margin-bottom: 12px;
 }
 
 .panel-btn {
   background: transparent;
-  border: 1px solid #333;
-  color: #999;
+  border: 1px solid var(--border-medium);
+  color: var(--text-muted);
   padding: 2px 8px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
   font-weight: 700;
   cursor: pointer;
@@ -304,9 +305,9 @@ function onContextMenu(e: MouseEvent, item: TrashItem) {
 }
 
 .panel-btn:hover {
-  border-color: #555;
-  color: #e0e0e0;
-  background: #222;
+  border-color: var(--border-accent);
+  color: var(--text-accent);
+  background: var(--accent-dim);
 }
 
 .panel-btn:disabled {
@@ -320,12 +321,12 @@ function onContextMenu(e: MouseEvent, item: TrashItem) {
 }
 
 .panel-btn-restore:hover {
-  border-color: #00ff41;
-  color: #00ff41;
+  border-color: var(--border-accent);
+  color: var(--text-accent);
 }
 
 .text-muted {
-  color: #555 !important;
+  color: var(--text-muted) !important;
 }
 
 .empty-state {
@@ -335,8 +336,8 @@ function onContextMenu(e: MouseEvent, item: TrashItem) {
   justify-content: center;
   gap: 10px;
   padding: 36px;
-  color: #555;
-  font-family: 'Courier New', monospace;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
   font-size: 10px;
 }
 
@@ -357,10 +358,10 @@ function onContextMenu(e: MouseEvent, item: TrashItem) {
 }
 
 .trash-count-badge {
-  background: rgba(0, 255, 65, 0.1);
-  border: 1px solid rgba(0, 255, 65, 0.2);
-  color: #00ff41;
-  font-family: 'Courier New', monospace;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
+  color: var(--text-accent);
+  font-family: var(--font-mono);
   font-size: 9px;
   font-weight: 700;
   padding: 0 6px;
@@ -384,10 +385,10 @@ function onContextMenu(e: MouseEvent, item: TrashItem) {
 
 .trash-search-input {
   width: 100%;
-  background: #111;
-  border: 1px solid #333;
-  color: #ccc;
-  font-family: 'Courier New', monospace;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
   font-size: 9px;
   padding: 3px 6px;
   border-radius: 4px;
@@ -396,14 +397,15 @@ function onContextMenu(e: MouseEvent, item: TrashItem) {
 }
 
 .trash-search-input:focus {
-  border-color: #555;
+  border-color: var(--border-accent);
+  outline: none;
 }
 
 .trash-sort-select {
-  background: #111;
-  border: 1px solid #333;
-  color: #ccc;
-  font-family: 'Courier New', monospace;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
   font-size: 9px;
   padding: 3px 4px;
   cursor: pointer;
@@ -430,9 +432,9 @@ function onContextMenu(e: MouseEvent, item: TrashItem) {
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  background: #151515;
+  background: var(--bg-surface);
   border-bottom: 1px solid #252525;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 8px;
   font-weight: 700;
   color: #666;
@@ -478,12 +480,12 @@ function onContextMenu(e: MouseEvent, item: TrashItem) {
 }
 
 .trash-item:hover {
-  background: #1a1a1a;
+  background: var(--bg-surface);
 }
 
 .trash-item-selected {
-  background: rgba(0, 255, 65, 0.04) !important;
-  border-left: 2px solid rgba(0, 255, 65, 0.3);
+  background: var(--bg-surface) !important;
+  border-left: 1px solid var(--border-glass);
 }
 
 .trash-checkbox-wrapper {
@@ -497,7 +499,7 @@ function onContextMenu(e: MouseEvent, item: TrashItem) {
   width: 12px;
   height: 12px;
   border: 1px solid #555;
-  background: #111;
+  background: var(--bg-surface);
   cursor: pointer;
   border-radius: 2px;
   margin: 0;
@@ -505,8 +507,8 @@ function onContextMenu(e: MouseEvent, item: TrashItem) {
 }
 
 .trash-checkbox:checked {
-  background: #00ff41;
-  border-color: #00ff41;
+  background: var(--accent);
+  border-color: var(--accent);
 }
 
 .trash-icon-group {
@@ -551,7 +553,7 @@ function onContextMenu(e: MouseEvent, item: TrashItem) {
 .trash-size {
   width: 72px;
   text-align: right;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
   flex-shrink: 0;
   overflow: hidden;
@@ -562,7 +564,7 @@ function onContextMenu(e: MouseEvent, item: TrashItem) {
 .trash-date {
   width: 72px;
   text-align: right;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
   flex-shrink: 0;
   overflow: hidden;
@@ -580,10 +582,10 @@ function onContextMenu(e: MouseEvent, item: TrashItem) {
 
 .trash-action-btn {
   background: transparent;
-  border: 1px solid #333;
-  color: #888;
+  border: 1px solid var(--border-medium);
+  color: var(--text-muted);
   padding: 1px 6px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 8px;
   font-weight: 700;
   cursor: pointer;
@@ -592,8 +594,8 @@ function onContextMenu(e: MouseEvent, item: TrashItem) {
 }
 
 .trash-action-btn:hover {
-  border-color: #555;
-  color: #e0e0e0;
+  border-color: var(--border-accent);
+  color: var(--text-accent);
 }
 
 .trash-action-btn.danger:hover {
@@ -607,7 +609,7 @@ function onContextMenu(e: MouseEvent, item: TrashItem) {
   align-items: center;
   justify-content: space-between;
   padding: 8px 4px 0;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
 }
 

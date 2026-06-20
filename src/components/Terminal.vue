@@ -1213,11 +1213,11 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #0a0a0a;
-  border: 1px solid #1a1a1a;
-  border-radius: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
   overflow: hidden;
-  font-family: 'Courier New', 'Fira Code', monospace;
+  font-family: var(--font-mono);
   contain: layout style;
   cursor: text;
 }
@@ -1227,8 +1227,8 @@ onUnmounted(() => {
   align-items: center;
   gap: 10px;
   padding: 8px 14px;
-  background: #111;
-  border-bottom: 1px solid #1a1a1a;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .term-dots {
@@ -1251,7 +1251,7 @@ onUnmounted(() => {
 .term-title {
   flex: 1;
   font-size: 10px;
-  color: #555;
+  color: var(--text-muted);
   letter-spacing: 1px;
   text-align: center;
   display: flex;
@@ -1276,7 +1276,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   padding: 10px 14px;
-  background: #050505;
+  background: var(--bg-deep);
   position: relative;
 }
 
@@ -1290,12 +1290,12 @@ onUnmounted(() => {
 
 .term-output::-webkit-scrollbar { width: 4px; }
 .term-output::-webkit-scrollbar-track { background: transparent; }
-.term-output::-webkit-scrollbar-thumb { background: #1a1a1a; border-radius: 2px; }
+.term-output::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: var(--radius-sm); }
 
 .term-line {
   font-size: 11px;
   line-height: 1.6;
-  color: #bbb;
+  color: var(--text-secondary);
   white-space: pre-wrap;
   word-break: break-all;
   user-select: text;
@@ -1303,8 +1303,8 @@ onUnmounted(() => {
 }
 
 .term-line ::selection {
-  background: rgba(0, 255, 65, 0.25);
-  color: #fff;
+  background: var(--accent-dim);
+  color: var(--text-primary);
 }
 
 .term-input-line {
@@ -1322,18 +1322,18 @@ onUnmounted(() => {
 
 .term-input-text {
   font-size: 11px;
-  color: #ddd;
+  color: var(--text-primary);
 }
 
 .term-suggestion {
   font-size: 11px;
-  color: #444;
+  color: var(--text-muted);
   pointer-events: none;
 }
 
 .term-cursor {
   font-size: 11px;
-  color: #00ff41;
+  color: var(--text-accent);
   animation: term-blink 0.8s step-end infinite;
 }
 
@@ -1356,13 +1356,13 @@ onUnmounted(() => {
   position: absolute;
   top: 8px;
   right: 12px;
-  background: rgba(0, 255, 65, 0.15);
-  border: 1px solid rgba(0, 255, 65, 0.3);
-  border-radius: 4px;
+  background: var(--accent-dim);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-sm);
   padding: 3px 10px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
-  color: #00ff41;
+  color: var(--text-accent);
   pointer-events: none;
   z-index: 10;
   backdrop-filter: blur(4px);

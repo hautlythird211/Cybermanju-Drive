@@ -92,10 +92,11 @@ function formatDetails(details: Record<string, unknown>): string {
 }
 
 .panel-card {
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-  border-radius: 8px;
+  background: var(--bg-glass-light);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
   padding: 16px;
+  backdrop-filter: blur(var(--glass-blur-light));
 }
 
 .panel-header {
@@ -106,27 +107,27 @@ function formatDetails(details: Record<string, unknown>): string {
 }
 
 .panel-title {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
-  color: #e0e0e0;
+  color: var(--text-primary);
   letter-spacing: 1px;
   margin-bottom: 8px;
 }
 
 .panel-hint {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
-  color: #555;
+  color: var(--text-muted);
   margin-bottom: 12px;
 }
 
 .panel-btn {
   background: transparent;
-  border: 1px solid #333;
-  color: #999;
+  border: 1px solid var(--border-medium);
+  color: var(--text-muted);
   padding: 2px 8px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
   font-weight: 700;
   cursor: pointer;
@@ -135,9 +136,9 @@ function formatDetails(details: Record<string, unknown>): string {
 }
 
 .panel-btn:hover {
-  border-color: #555;
-  color: #e0e0e0;
-  background: #222;
+  border-color: var(--border-accent);
+  color: var(--text-accent);
+  background: var(--accent-dim);
 }
 
 .empty-state {
@@ -147,8 +148,8 @@ function formatDetails(details: Record<string, unknown>): string {
   justify-content: center;
   gap: 10px;
   padding: 24px;
-  color: #555;
-  font-family: 'Courier New', monospace;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
   font-size: 10px;
   height: 80px;
 }
@@ -158,7 +159,7 @@ function formatDetails(details: Record<string, unknown>): string {
 }
 
 .text-muted {
-  color: #555 !important;
+  color: var(--text-muted) !important;
 }
 
 .activity-list {
@@ -178,12 +179,12 @@ function formatDetails(details: Record<string, unknown>): string {
 }
 
 .activity-item:hover {
-  border-color: #2a2a2a;
-  background: #111;
+  border-color: var(--border-glass);
+  background: var(--bg-surface);
 }
 
 .activity-icon {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   flex-shrink: 0;
@@ -192,7 +193,7 @@ function formatDetails(details: Record<string, unknown>): string {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #333;
+  border: 1px solid var(--border-medium);
   border-radius: 3px;
 }
 
@@ -215,7 +216,7 @@ function formatDetails(details: Record<string, unknown>): string {
 }
 
 .activity-action {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
   font-weight: 700;
 }
@@ -228,7 +229,7 @@ function formatDetails(details: Record<string, unknown>): string {
 
 .activity-entity {
   font-size: 8px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   text-transform: uppercase;
 }
 
@@ -240,7 +241,7 @@ function formatDetails(details: Record<string, unknown>): string {
 }
 
 .activity-filename {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   color: #ccc;
   overflow: hidden;
   text-overflow: ellipsis;

@@ -1,5 +1,5 @@
-use crate::backends::{create_backend, StoredBackend};
-use crate::tui::TaskMessage;
+use crate::backends::create_backend;
+use crate::tui::{StoredBackend, TaskMessage};
 use std::fs;
 use std::path::PathBuf;
 use std::sync::mpsc::Sender;

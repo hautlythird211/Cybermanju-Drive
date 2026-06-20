@@ -801,7 +801,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Courier New', 'Fira Code', monospace;
+  font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Courier New', monospace;
   overflow: hidden;
 }
 
@@ -1062,7 +1062,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Courier New', 'Fira Code', monospace;
+  font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Courier New', monospace;
   background: rgba(3, 3, 8, 0.97);
   outline: none;
 }

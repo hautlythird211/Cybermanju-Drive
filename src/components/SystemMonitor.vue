@@ -187,9 +187,10 @@ onUnmounted(() => {
 }
 
 .monitor-card {
-  background: var(--bg-glass);
+  background: var(--bg-glass-light);
+  backdrop-filter: blur(var(--glass-blur-light));
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -219,13 +220,13 @@ onUnmounted(() => {
 .monitor-value {
   font-size: 11px;
   font-weight: 700;
-  color: #00ff41;
-  font-family: 'Courier New', monospace;
+  color: var(--text-accent);
+  font-family: var(--font-mono);
 }
 
 .monitor-track {
   height: 4px;
-  background: #111;
+  background: var(--bg-surface);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -236,7 +237,7 @@ onUnmounted(() => {
   transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.cpu-fill { background: linear-gradient(90deg, #00ff41, #00ff88); box-shadow: 0 0 6px rgba(0, 255, 65, 0.3); }
+.cpu-fill { background: linear-gradient(90deg, var(--accent), var(--accent-dim)); box-shadow: 0 0 6px var(--accent-glow); }
 .ram-fill { background: linear-gradient(90deg, #5af0ff, #00d4ff); box-shadow: 0 0 6px rgba(90, 240, 255, 0.3); }
 .gpu-fill { background: linear-gradient(90deg, #ff6b9d, #ff3b6f); box-shadow: 0 0 6px rgba(255, 107, 157, 0.3); }
 
@@ -244,7 +245,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   font-size: 8px;
-  color: #444;
+  color: var(--text-muted);
   letter-spacing: 1px;
 }
 
@@ -263,7 +264,7 @@ onUnmounted(() => {
 .io-label {
   font-size: 9px;
   font-weight: 700;
-  color: #666;
+  color: var(--text-muted);
   width: 40px;
   letter-spacing: 1px;
 }
@@ -271,7 +272,7 @@ onUnmounted(() => {
 .io-track {
   flex: 1;
   height: 3px;
-  background: #111;
+  background: var(--bg-surface);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -284,13 +285,13 @@ onUnmounted(() => {
 
 .io-read { background: #5af0ff; box-shadow: 0 0 4px rgba(90, 240, 255, 0.3); }
 .io-write { background: #ff6b9d; box-shadow: 0 0 4px rgba(255, 107, 157, 0.3); }
-.io-rx { background: #00ff41; box-shadow: 0 0 4px rgba(0, 255, 65, 0.3); }
+.io-rx { background: var(--accent); box-shadow: 0 0 4px var(--accent-glow); }
 .io-tx { background: #b388ff; box-shadow: 0 0 4px rgba(179, 136, 255, 0.3); }
 
 .io-val {
   font-size: 9px;
-  color: #555;
-  font-family: 'Courier New', monospace;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
   width: 60px;
   text-align: right;
 }
@@ -310,9 +311,9 @@ onUnmounted(() => {
 .stat-num {
   font-size: 13px;
   font-weight: 700;
-  color: #00ff41;
-  font-family: 'Courier New', monospace;
-  text-shadow: 0 0 6px rgba(0, 255, 65, 0.2);
+  color: var(--text-accent);
+  font-family: var(--font-mono);
+  text-shadow: 0 0 6px var(--accent-glow);
 }
 
 .stat-lbl {

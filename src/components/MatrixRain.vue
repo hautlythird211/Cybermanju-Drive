@@ -8,10 +8,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
+import type { ArtMakerSettings } from '@/configs/artMaker'
 
 const props = withDefaults(defineProps<{
   enabled?: boolean
   opacity?: number
+  settings?: ArtMakerSettings
 }>(), {
   enabled: true,
   opacity: 0.08,
@@ -68,6 +70,8 @@ function draw(): void {
   if (!canvas || !ctx) return
   t++
 
+  const hs = props.settings?.globalHueShift ?? 0
+
   // Fade trail (darker = more visible characters)
   ctx.fillStyle = 'rgba(5, 5, 10, 0.08)'
   ctx.fillRect(0, 0, w, h)
@@ -76,7 +80,7 @@ function draw(): void {
   const fontSize = 14
   ctx.font = `${fontSize}px "Courier New", monospace`
 
-  const timeHue = (t * 0.5) % 360
+  const timeHue = (t * 0.5 + hs) % 360
   const colCount = columns.length
 
   for (let i = 0; i < colCount; i++) {
@@ -86,7 +90,7 @@ function draw(): void {
 
     // Per-column hue cycling (psychedelic)
     columnHue[i] = (columnHue[i] + 0.3 + hash(i + t) * 0.2) % 360
-    const hue = columnHue[i]
+    const hue = (columnHue[i] + hs) % 360
 
     // Distance to mouse for chromatic glow boost
     let mouseBoost = 0

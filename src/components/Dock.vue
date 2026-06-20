@@ -20,7 +20,7 @@
         :title="app.label"
       >
         <div class="dock-icon">
-          <Icon :icon="'mdi:' + app.icon" width="18" height="18" class="dock-iconify" />
+          <Icon :icon="'mdi:' + app.icon" width="20" height="20" class="dock-iconify" />
           <span
             v-if="app.panelType === 'trash' && store.trashCount > 0"
             class="dock-badge"
@@ -46,7 +46,7 @@
         :title="win.title + ' (minimized)'"
       >
         <div class="dock-icon minimized">
-          <Icon icon="mdi:window-minimize" width="18" height="18" class="dock-iconify" />
+          <Icon icon="mdi:window-minimize" width="20" height="20" class="dock-iconify" />
         </div>
         <div class="dock-indicator">
           <div class="indicator-dot muted" />
@@ -100,6 +100,7 @@ const dockApps = computed<DockApp[]>(() => [
   { panelType: 'users', label: 'Users', icon: 'account-group-outline', category: 'system' },
   { panelType: 'accounts', label: 'Accounts', icon: 'account-multiple-outline', category: 'system' },
   { panelType: 'terminal', label: 'Terminal', icon: 'console', category: 'system' },
+  { panelType: 'art-maker', label: 'Art Maker', icon: 'palette-outline', category: 'system' },
   { panelType: 'system-monitor', label: 'System Monitor', icon: 'chart-line-variant', category: 'system' },
   { panelType: 'webdash', label: 'Web Dashboard', icon: 'web', category: 'tools' },
   { panelType: 'loose-groups', label: 'Loose Groups', icon: 'shape-outline', category: 'organize' },
@@ -146,7 +147,7 @@ function handleDockContext(e: MouseEvent, panelType: PanelType) {
   }
 }
 
-// ── GSAP hover magnification with RAF throttling ──
+// ── GSAP hover magnification ──
 let magnifyRaf: number | null = null
 
 function onDockItemEnter(e: MouseEvent, idx: number) {
@@ -155,7 +156,7 @@ function onDockItemEnter(e: MouseEvent, idx: number) {
     const el = dockItemRefs.value[idx]
     if (el) {
       dockTweens.value.get(idx)?.kill()
-      const t = gsap.to(el, { scale: 1.4, duration: 0.2, ease: 'cubic-bezier(0.22, 1, 0.36, 1)', overwrite: 'auto', force3D: true })
+      const t = gsap.to(el, { scale: 1.35, y: -4, duration: 0.2, ease: 'cubic-bezier(0.22, 1, 0.36, 1)', overwrite: 'auto', force3D: true })
       dockTweens.value.set(idx, t)
     }
     magnifyRaf = null
@@ -168,7 +169,7 @@ function onDockItemLeave(e: MouseEvent, idx: number) {
     const el = dockItemRefs.value[idx]
     if (el) {
       dockTweens.value.get(idx)?.kill()
-      gsap.to(el, { scale: 1, duration: 0.2, ease: 'cubic-bezier(0.22, 1, 0.36, 1)', overwrite: 'auto', force3D: true })
+      gsap.to(el, { scale: 1, y: 0, duration: 0.2, ease: 'cubic-bezier(0.22, 1, 0.36, 1)', overwrite: 'auto', force3D: true })
       dockTweens.value.delete(idx)
     }
     magnifyRaf = null
@@ -208,17 +209,17 @@ onUnmounted(() => {
 .dock {
   display: flex;
   align-items: center;
-  gap: 3px;
-  padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(40px) saturate(1.6);
-  -webkit-backdrop-filter: blur(40px) saturate(1.6);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 20px;
+  gap: 4px;
+  padding: 6px 14px;
+  background: rgba(8, 8, 10, 0.6);
+  backdrop-filter: blur(50px) saturate(1.8);
+  -webkit-backdrop-filter: blur(50px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.25),
-    0 2px 8px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 0 0 1px rgba(255, 255, 255, 0.02),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
   pointer-events: auto;
   position: relative;
   isolation: isolate;
@@ -229,20 +230,36 @@ onUnmounted(() => {
   content: '';
   position: absolute;
   top: 0;
-  left: 10%;
-  right: 10%;
+  left: 15%;
+  right: 15%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
-  border-radius: 20px 20px 0 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  border-radius: 22px 22px 0 0;
   pointer-events: none;
+}
+
+/* Cyberpunk accent glow */
+.dock::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 23px;
+  background: linear-gradient(135deg,
+    rgba(0, 255, 65, 0.04),
+    transparent 30%,
+    transparent 70%,
+    rgba(0, 255, 65, 0.02));
+  pointer-events: none;
+  z-index: -1;
 }
 
 .dock-item {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  flex-direction: column;
+  width: 44px;
+  height: 44px;
   padding: 0;
   cursor: pointer;
   border-radius: 12px;
@@ -253,24 +270,24 @@ onUnmounted(() => {
 }
 
 .dock-item:focus-visible {
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 0 2px rgba(0, 255, 65, 0.25);
 }
 
 .dock-item:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .dock-item:active {
-  transform: scale(0.9);
+  transform: scale(0.92) !important;
 }
 
 .dock-item.active {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .dock-icon {
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -278,20 +295,21 @@ onUnmounted(() => {
 }
 
 .dock-iconify {
-  color: rgba(255, 255, 255, 0.65);
-  transition: color 0.2s ease;
+  color: rgba(255, 255, 255, 0.6);
+  transition: color 0.2s ease, filter 0.2s ease;
 }
 
 .dock-item.active .dock-iconify {
-  color: rgba(255, 255, 255, 0.95);
+  color: rgba(255, 255, 255, 0.9);
+  filter: drop-shadow(0 0 6px rgba(0, 255, 65, 0.15));
 }
 
 .dock-item:hover .dock-iconify {
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .dock-icon.minimized {
-  opacity: 0.35;
+  opacity: 0.3;
 }
 
 .dock-badge {
@@ -302,7 +320,7 @@ onUnmounted(() => {
   color: #fff;
   font-family: var(--font-mono);
   font-size: 9px;
-  font-weight: 600;
+  font-weight: 700;
   min-width: 16px;
   height: 16px;
   display: flex;
@@ -310,14 +328,14 @@ onUnmounted(() => {
   justify-content: center;
   border-radius: 8px;
   padding: 0 4px;
-  border: 2px solid rgba(0, 0, 0, 0.3);
+  border: 1.5px solid rgba(0, 0, 0, 0.3);
   pointer-events: none;
-  box-shadow: 0 2px 8px rgba(255, 69, 58, 0.35);
+  box-shadow: 0 2px 8px rgba(255, 69, 58, 0.3);
 }
 
 .dock-indicator {
   position: absolute;
-  bottom: -3px;
+  bottom: 2px;
   left: 50%;
   transform: translateX(-50%);
 }
@@ -326,30 +344,30 @@ onUnmounted(() => {
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
   transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .indicator-dot.active {
-  background: rgba(255, 255, 255, 0.8);
-  width: 14px;
+  background: var(--accent);
+  width: 16px;
   border-radius: 2px;
   height: 3px;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.2);
 }
 
 .indicator-dot.muted {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .minimized-item .dock-icon {
-  opacity: 0.3;
+  opacity: 0.25;
 }
 
 .dock-divider {
   width: 1px;
-  height: 22px;
-  background: rgba(255, 255, 255, 0.1);
+  height: 24px;
+  background: rgba(255, 255, 255, 0.08);
   margin: 0 4px;
 }
 

@@ -213,15 +213,17 @@ onMounted(loadBook)
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #0a0a0a;
+  background: transparent;
   color: #e0e0e0;
   font-family: 'Georgia', 'Times New Roman', serif;
 }
 
 .book-sidebar {
   width: 220px;
-  background: #111;
-  border-right: 1px solid #2a2a2a;
+  background: var(--bg-glass-light);
+  backdrop-filter: blur(var(--glass-blur-light));
+  border-right: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
   position: absolute;
@@ -236,8 +238,8 @@ onMounted(loadBook)
   align-items: center;
   gap: 8px;
   padding: 12px;
-  border-bottom: 1px solid #2a2a2a;
-  background: #1a1a1a;
+  border-bottom: 1px solid var(--border-glass);
+  background: var(--bg-surface);
 }
 
 .book-logo { font-size: 16px; }
@@ -245,8 +247,8 @@ onMounted(loadBook)
 .book-title {
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 1px;
-  color: #ffd700;
+  letter-spacing: 0.5px;
+  color: var(--text-accent);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -254,12 +256,12 @@ onMounted(loadBook)
 }
 
 .book-action-btn {
-  background: transparent;
-  border: 1px solid #333;
-  color: #ffd700;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: var(--text-inverse);
   width: 22px;
   height: 22px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 12px;
   font-weight: 700;
@@ -270,8 +272,8 @@ onMounted(loadBook)
 }
 
 .book-action-btn:hover {
-  border-color: #ffd700;
-  background: rgba(255, 215, 0, 0.1);
+  background: #00cc35;
+  border-color: #00cc35;
 }
 
 .chapter-list {
@@ -292,66 +294,68 @@ onMounted(loadBook)
 }
 
 .chapter-item:hover {
-  background: #1a1a1a;
-  border-color: #2a2a2a;
+  background: var(--accent-dim);
+  border-color: var(--border-accent);
 }
 
 .chapter-item.active {
-  background: rgba(255, 215, 0, 0.05);
-  border-color: rgba(255, 215, 0, 0.2);
+  background: var(--bg-surface);
+  border-color: var(--border-accent);
 }
 
 .ch-num {
   font-size: 8px;
   font-weight: 700;
-  color: #555;
+  color: var(--text-muted);
   width: 16px;
   text-align: center;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
 }
 
 .ch-title {
   flex: 1;
   font-size: 11px;
-  color: #ccc;
+  color: var(--text-primary);
 }
 
 .ch-words {
   font-size: 8px;
-  color: #555;
-  font-family: 'Courier New', monospace;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
 }
 
 .empty-chapters {
   text-align: center;
   padding: 20px 12px;
-  color: #555;
+  color: var(--text-muted);
   font-size: 10px;
 }
 
 .book-btn {
-  background: transparent;
-  border: 1px solid #333;
-  color: #ffd700;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: var(--text-inverse);
   padding: 6px 12px;
   font-size: 10px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   margin-top: 8px;
   transition: all 0.1s;
 }
 
 .book-btn:hover {
-  border-color: #ffd700;
-  background: rgba(255, 215, 0, 0.1);
+  background: #00cc35;
+  border-color: #00cc35;
 }
 
 .book-stats {
   padding: 10px 12px;
-  border-top: 1px solid #2a2a2a;
-  background: #111;
+  border-top: 1px solid var(--border-glass);
+  background: var(--bg-glass-light);
+  backdrop-filter: blur(var(--glass-blur-light));
+  border-radius: var(--radius-md);
 }
 
 .stat {
@@ -364,16 +368,16 @@ onMounted(loadBook)
 .stat-label {
   font-size: 8px;
   font-weight: 700;
-  color: #555;
+  color: var(--text-muted);
   letter-spacing: 0.5px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
 }
 
 .stat-value {
   font-size: 10px;
   font-weight: 700;
-  color: #ffd700;
-  font-family: 'Courier New', monospace;
+  color: var(--text-accent);
+  font-family: var(--font-mono);
 }
 
 .book-editor {
@@ -389,24 +393,32 @@ onMounted(loadBook)
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  border-bottom: 1px solid #2a2a2a;
-  background: #111;
+  border-bottom: 1px solid var(--border-glass);
+  background: var(--bg-glass-light);
+  backdrop-filter: blur(var(--glass-blur-light));
+  border-radius: var(--radius-md);
 }
 
 .book-title-input {
   flex: 1;
-  background: transparent;
-  border: none;
-  color: #ffd700;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: 700;
   font-family: 'Georgia', serif;
   outline: none;
-  padding: 4px 0;
+  padding: 4px 8px;
   letter-spacing: 0.5px;
+  border-radius: var(--radius-sm);
 }
 
-.book-title-input::placeholder { color: #555; }
+.book-title-input:focus {
+  border-color: var(--border-accent);
+  outline: none;
+}
+
+.book-title-input::placeholder { color: var(--text-muted); }
 
 .toolbar-actions {
   display: flex;
@@ -415,11 +427,11 @@ onMounted(loadBook)
 
 .tool-btn {
   background: transparent;
-  border: 1px solid #333;
-  color: #aaa;
+  border: 1px solid var(--border-medium);
+  color: var(--text-secondary);
   width: 28px;
   height: 28px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 12px;
   display: flex;
@@ -429,9 +441,9 @@ onMounted(loadBook)
 }
 
 .tool-btn:hover {
-  border-color: #555;
-  color: #e0e0e0;
-  background: #1a1a1a;
+  border-color: var(--border-accent);
+  color: var(--text-primary);
+  background: var(--accent-dim);
 }
 
 .chapter-editor {
@@ -444,17 +456,22 @@ onMounted(loadBook)
 .chapter-title-input {
   background: transparent;
   border: none;
-  color: #e0e0e0;
+  border-bottom: 1px solid var(--border-medium);
+  color: var(--text-primary);
   font-size: 20px;
   font-weight: 700;
   font-family: 'Georgia', serif;
   outline: none;
   padding: 4px 0;
   margin-bottom: 4px;
-  border-bottom: 1px solid #2a2a2a;
 }
 
-.chapter-title-input::placeholder { color: #444; }
+.chapter-title-input:focus {
+  border-bottom-color: var(--border-accent);
+  outline: none;
+}
+
+.chapter-title-input::placeholder { color: var(--text-muted); }
 
 .chapter-meta {
   display: flex;
@@ -465,24 +482,30 @@ onMounted(loadBook)
 
 .ch-meta-info {
   font-size: 9px;
-  color: #555;
-  font-family: 'Courier New', monospace;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
 }
 
 .chapter-content {
   flex: 1;
-  background: transparent;
-  border: none;
-  color: #ccc;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  color: var(--text-primary);
   font-size: 14px;
   font-family: 'Georgia', serif;
   line-height: 1.8;
   resize: none;
   outline: none;
-  padding: 8px 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
 }
 
-.chapter-content::placeholder { color: #333; }
+.chapter-content:focus {
+  border-color: var(--border-accent);
+  outline: none;
+}
+
+.chapter-content::placeholder { color: var(--text-muted); }
 
 .no-chapter-selected {
   flex: 1;
@@ -491,12 +514,12 @@ onMounted(loadBook)
   align-items: center;
   justify-content: center;
   gap: 12px;
-  color: #555;
+  color: var(--text-muted);
 }
 
 .empty-msg {
   font-size: 12px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
 }
 
 .chapter-nav {
@@ -504,8 +527,10 @@ onMounted(loadBook)
   align-items: center;
   justify-content: space-between;
   padding: 6px 12px;
-  border-top: 1px solid #2a2a2a;
-  background: #111;
+  border-top: 1px solid var(--border-glass);
+  background: var(--bg-glass-light);
+  backdrop-filter: blur(var(--glass-blur-light));
+  border-radius: var(--radius-md);
   position: absolute;
   bottom: 0;
   left: 0;
@@ -515,29 +540,29 @@ onMounted(loadBook)
 
 .nav-btn {
   background: transparent;
-  border: 1px solid #333;
-  color: #aaa;
+  border: 1px solid var(--border-medium);
+  color: var(--text-secondary);
   padding: 4px 12px;
   font-size: 9px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   transition: all 0.1s;
 }
 
 .nav-btn:hover:not(:disabled) {
-  border-color: #555;
-  color: #e0e0e0;
-  background: #1a1a1a;
+  border-color: var(--border-accent);
+  color: var(--text-primary);
+  background: var(--accent-dim);
 }
 
 .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
 .nav-info {
   font-size: 9px;
-  color: #555;
-  font-family: 'Courier New', monospace;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
 }
 
 .truncate {

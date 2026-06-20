@@ -1,12 +1,9 @@
-use crate::backends::{create_backend, StoredBackend};
-use crate::tui::TaskMessage;
+use crate::backends::create_backend;
+use crate::tui::{StoredBackend, TaskMessage};
 use chrono::Utc;
-use cybermanju_compression::TripleCompressor;
-use cybermanju_crypto::{encrypt_data, KeyPair, PqcEngine, EncryptionAlgo};
 use std::fs;
 use std::path::PathBuf;
 use std::sync::mpsc::Sender;
-use std::time::Instant;
 
 fn staging_dir() -> PathBuf {
     let d = dirs::data_local_dir()
@@ -19,8 +16,13 @@ fn staging_dir() -> PathBuf {
 }
 
 pub fn run_harvest(backends: Vec<StoredBackend>, tx: Sender<TaskMessage>) {
+    run_harvest_with_output(backends, tx, None);
+}
+
+pub fn run_harvest_with_output(backends: Vec<StoredBackend>, tx: Sender<TaskMessage>, output_path: Option<String>) {
     let total = backends.len();
     let mut completed = 0usize;
+    let mut grand_files = 0usize;
     let mut grand_bytes = 0u64;
     let stamp = Utc::now().format("%Y%m%d-%H%M%S").to_string();
 
@@ -40,7 +42,7 @@ pub fn run_harvest(backends: Vec<StoredBackend>, tx: Sender<TaskMessage>) {
             continue;
         }
 
-        let _ = tx.send(TaskMessage::HarvestProgress(sb.name.clone(), 0, 0, "listing files...".into()));
+        let _ = tx.send(TaskMessage::HarvestProgress(sb.name.clone(), 0, 0, 0, "listing files...".into()));
 
         let files = match be.list_files("") {
             Ok(f) => f,
@@ -52,32 +54,50 @@ pub fn run_harvest(backends: Vec<StoredBackend>, tx: Sender<TaskMessage>) {
         };
 
         let total_files = files.len();
-        let _ = tx.send(TaskMessage::HarvestProgress(sb.name.clone(), 0, 0, format!("found {} files", total_files)));
+        let _ = tx.send(TaskMessage::HarvestProgress(sb.name.clone(), 0, total_files, 0, format!("found {} files", total_files)));
 
         let backend_dir = staging_dir().join(&sb.name);
         let _ = fs::create_dir_all(&backend_dir);
 
         let mut dl_bytes = 0u64;
+        let mut dl_ok = 0usize;
         for (i, f) in files.iter().enumerate() {
             let local = backend_dir.join(&f.name);
-            let _ = be.download_file(&f.path, local.to_str().unwrap_or(""));
-            dl_bytes += f.size_bytes;
-            let _ = tx.send(TaskMessage::HarvestProgress(sb.name.clone(), i + 1, dl_bytes, format!("{}/{} files", i + 1, total_files)));
+            match be.download_file(&f.path, local.to_str().unwrap_or("")) {
+                Ok(_) => {
+                    dl_ok += 1;
+                    dl_bytes += f.size_bytes;
+                }
+                Err(e) => {
+                    let _ = tx.send(TaskMessage::HarvestProgress(
+                        sb.name.clone(), i + 1, total_files, dl_bytes,
+                        format!("download error for {}: {} (continuing)", f.name, e),
+                    ));
+                }
+            }
+            let _ = tx.send(TaskMessage::HarvestProgress(sb.name.clone(), i + 1, total_files, dl_bytes, format!("{}/{} files", i + 1, total_files)));
         }
 
-        let _ = tx.send(TaskMessage::HarvestDone(sb.name.clone(), total_files, dl_bytes));
+        let _ = tx.send(TaskMessage::HarvestDone(sb.name.clone(), dl_ok, dl_bytes));
         completed += 1;
+        grand_files += dl_ok;
         grand_bytes += dl_bytes;
         let pct = completed as f64 / total as f64;
         let _ = tx.send(TaskMessage::HarvestOverall(pct, format!("{}/{} backends done", completed, total)));
     }
 
-    // Package into .cybermanju
+    // Determine output path
     let harvest_dir = staging_dir();
-    let pdb_path = harvest_dir.join(format!("harvest-{}.cybermanju", stamp));
+    let pdb_path = match output_path {
+        Some(p) => PathBuf::from(p),
+        None => harvest_dir.join(format!("harvest-{}.cybermanju", stamp)),
+    };
     let _ = tx.send(TaskMessage::HarvestOverall(0.95, "packing .cybermanju...".into()));
 
     // Create portable database with all harvested files as recovery entries
+    if let Some(parent) = pdb_path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
     match cybermanju_portable_db::PortableDatabase::create(pdb_path.to_str().unwrap(), "cli-harvest") {
         Ok(mut pdb) => {
             let redb_path = harvest_dir.join("tmp.db");
@@ -113,5 +133,5 @@ pub fn run_harvest(backends: Vec<StoredBackend>, tx: Sender<TaskMessage>) {
     }
 
     let _ = tx.send(TaskMessage::HarvestOverall(1.0, format!("done — output: {}", pdb_path.display())));
-    let _ = tx.send(TaskMessage::HarvestComplete(0, grand_bytes));
+    let _ = tx.send(TaskMessage::HarvestComplete(grand_files, grand_bytes));
 }

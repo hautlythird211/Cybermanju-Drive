@@ -12,6 +12,8 @@ import type {
   AuthResult, ModuleInfo, TrashItem, AuditEntry, FileVersion, User,
   DashboardStatus,
 } from '@/types'
+import type { ArtMakerSettings } from '@/configs/artMaker'
+import { DEFAULT_SETTINGS } from '@/configs/artMaker'
 import { MODULE_METADATA } from '@/types'
 import { setAuthToken, kvGet, kvSet } from '@/composables/useTauri'
 import { useHistoryStore } from '@/stores/history'
@@ -96,6 +98,7 @@ export const useAppStore = defineStore('cybermanju', () => {
   const isLoading = ref(false)
   const lastError = ref<string | null>(null)
   const matrixRainEnabled = ref(true)
+  const artSettings = ref<ArtMakerSettings>({ ...DEFAULT_SETTINGS, layers: { ...DEFAULT_SETTINGS.layers } })
   const showEncryptionPanel = ref(false)
   const showCompressionPanel = ref(false)
   const showPermissionsPanel = ref(false)
@@ -219,6 +222,7 @@ export const useAppStore = defineStore('cybermanju', () => {
         if (typeof cfg.matrixRainEnabled === 'boolean') matrixRainEnabled.value = cfg.matrixRainEnabled
         if (cfg.sortBy) sortBy.value = cfg.sortBy
         if (typeof cfg.autoArrange === 'boolean') autoArrange.value = cfg.autoArrange
+        if (cfg.artSettings) artSettings.value = { ...cfg.artSettings, layers: { ...DEFAULT_SETTINGS.layers, ...cfg.artSettings.layers } }
       }
     } catch { /* skip on first load */ }
   }
@@ -232,6 +236,7 @@ export const useAppStore = defineStore('cybermanju', () => {
         matrixRainEnabled: matrixRainEnabled.value,
         sortBy: sortBy.value,
         autoArrange: autoArrange.value,
+        artSettings: artSettings.value,
       }))
     } catch { /* best-effort */ }
   }
@@ -239,6 +244,7 @@ export const useAppStore = defineStore('cybermanju', () => {
   ;[viewMode, sidebarCollapsed, autoRefreshInterval, matrixRainEnabled, sortBy, autoArrange].forEach(ref => {
     watch(ref, saveConfig, { deep: false })
   })
+  watch(artSettings, saveConfig, { deep: true })
 
   // ── Actions: Selection ────────────────────────────────────
   function selectFile(fileId: string | null) {
@@ -1055,7 +1061,7 @@ export const useAppStore = defineStore('cybermanju', () => {
     compressionStats, parseResult, syncConfigs, syncProgress,
     duplicateGroups, isLoadingDuplicates,
     trashItems, showTrashPanel, auditLog, fileVersions, dashboardStatus, shareLinks,
-    searchQuery, searchSuggestions, searchTotalResults, isSearching, isLoading, lastError, matrixRainEnabled,
+    searchQuery, searchSuggestions, searchTotalResults, isSearching, isLoading, lastError, matrixRainEnabled, artSettings,
     showEncryptionPanel, showCompressionPanel, showPermissionsPanel, commandPaletteOpen,
     showShortcutsHelp, createFolderPromptOpen, showLoginPopup,
     selectedFileIds, isMultiSelect, users, autoRefreshInterval, sortBy, autoArrange,

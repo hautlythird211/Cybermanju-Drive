@@ -54,12 +54,12 @@
 
     <div class="tmb-center">
       <div class="search-wrap" :class="{ searching: store.isSearching }">
-        <Icon icon="mdi:magnify" width="11" height="11" class="search-prompt" />
+        <Icon icon="mdi:magnify" width="12" height="12" class="search-prompt" />
         <input
           v-model="store.searchQuery"
           class="search-input"
           type="text"
-          placeholder="TANTIVY_SEARCH..."
+          placeholder="Search files..."
           aria-label="Search files"
           @keyup.enter="handleSearch"
           @input="handleSuggest"
@@ -92,7 +92,7 @@
         @click="wm.open('sync')"
         @keydown.enter="wm.open('sync')"
         @keydown.space.prevent="wm.open('sync')"
-      >{{ isSyncActive ? 'SYNC:' + store.syncProgress?.status.toUpperCase() : 'SYNC:IDLE' }}</span>
+      >{{ isSyncActive ? 'SYNC: ' + store.syncProgress?.status.toUpperCase() : 'SYNC: IDLE' }}</span>
 
       <span class="tmb-div">|</span>
 
@@ -151,8 +151,8 @@
           class="tray-icon"
           :class="{ active: store.matrixRainEnabled }"
           @click="store.matrixRainEnabled = !store.matrixRainEnabled"
-          :title="store.matrixRainEnabled ? 'GFX:ON' : 'GFX:OFF'"
-          :aria-label="store.matrixRainEnabled ? 'GFX:ON' : 'GFX:OFF'"
+          :title="store.matrixRainEnabled ? 'GFX: ON' : 'GFX: OFF'"
+          :aria-label="store.matrixRainEnabled ? 'GFX: ON' : 'GFX: OFF'"
         >
           <Icon icon="mdi:lightning-bolt-outline" width="14" height="14" />
         </button>
@@ -161,7 +161,7 @@
           class="tray-icon"
           :class="{ active: (store as any).autoArrange }"
           @click="(store as any).autoArrange = !(store as any).autoArrange"
-          :title="(store as any).autoArrange ? 'TILE:4-QUADRANT (ON)' : 'TILE:FREE (OFF)'"
+          :title="(store as any).autoArrange ? 'TILE: AUTO (ON)' : 'TILE: FREE (OFF)'"
           :aria-label="(store as any).autoArrange ? 'Auto-arrange tiles enabled' : 'Auto-arrange tiles disabled'"
         >
           <Icon icon="mdi:view-grid-outline" width="14" height="14" />
@@ -217,6 +217,7 @@ import { useAppStore } from '@/stores/app'
 import { useWindowManager } from '@/composables/useWindowManager'
 import { useGsapAnimation } from '@/composables/useGsapAnimation'
 import { isWebMode } from '@/composables/useTauri'
+import { getMenusForPanel } from '@/configs/windowMenus'
 import SystemTray from '@/components/SystemTray.vue'
 
 const anim = useGsapAnimation()
@@ -266,79 +267,13 @@ interface MenuGroup {
   children: MenuItem[]
 }
 
-const menuStructure = computed(() => { const m: MenuGroup[] = [
-  {
-    id: 'file',
-    label: 'File',
-    children: [
-      { id: 'new-folder', label: 'New Folder', icon: 'folder-plus-outline', shortcut: 'Ctrl+N', action: () => { store.createFolderPromptOpen = true } },
-      { id: 'upload', label: 'Upload Files', icon: 'upload-outline', action: () => { window.dispatchEvent(new CustomEvent('cybermanju:upload')) } },
-      { id: 'div1', divider: true },
-      { id: 'open-terminal', label: 'Open Terminal', icon: 'console', action: () => { wm.open('terminal') } },
-      { id: 'div2', divider: true },
-      { id: 'settings', label: 'Settings', icon: 'cog-outline', shortcut: 'Ctrl+,', action: () => { wm.open('settings') } },
-      { id: 'quit', label: 'Quit', icon: 'exit-to-app', action: () => {} },
-    ],
-  },
-  {
-    id: 'edit',
-    label: 'Edit',
-    children: [
-      { id: 'cut', label: 'Cut', icon: 'content-cut', shortcut: 'Ctrl+X', action: () => {} },
-      { id: 'copy', label: 'Copy', icon: 'content-copy', shortcut: 'Ctrl+C', action: () => {} },
-      { id: 'paste', label: 'Paste', icon: 'content-paste', shortcut: 'Ctrl+V', action: () => {} },
-      { id: 'div1', divider: true },
-      { id: 'select-all', label: 'Select All', icon: 'select-all', shortcut: 'Ctrl+A', action: () => { store.selectedFileIds = store.files.map(f => f.id) } },
-      { id: 'deselect', label: 'Deselect', icon: 'select-off', action: () => { store.selectedFileIds = [] } },
-    ],
-  },
-  {
-    id: 'view',
-    label: 'View',
-    children: [
-      { id: 'file-browser', label: 'File Browser', icon: 'folder-outline', shortcut: 'Ctrl+1', action: () => { wm.open('files') } },
-      { id: 'collections', label: 'Collections', icon: 'bookmark-multiple-outline', action: () => { wm.open('collections') } },
-      { id: 'people', label: 'People (Faces)', icon: 'face-man-outline', action: () => { wm.open('faces') } },
-      { id: 'map', label: 'Map View', icon: 'map-outline', action: () => { wm.open('map') } },
-      { id: 'code', label: 'Code Intelligence', icon: 'code-tags', action: () => { wm.open('code') } },
-      { id: 'div1', divider: true },
-      { id: 'search', label: 'Search', icon: 'magnify', shortcut: 'Ctrl+F', action: () => { store.searchQuery = ''; store.currentPanel = 'search' } },
-      { id: 'storage', label: 'Storage Dashboard', icon: 'harddisk', action: () => { wm.open('storage') } },
-      { id: 'sync-panel', label: 'Sync Panel', icon: 'sync', action: () => { wm.open('sync') } },
-      { id: 'transfer-panel', label: 'Transfer Manager', icon: 'transfer', action: () => { wm.open('transfer') } },
-      { id: 'import-panel', label: 'Import Manager', icon: 'file-import-outline', action: () => { wm.open('import') } },
-      { id: 'div2', divider: true },
-      { id: 'minimize-all', label: 'Minimize All', icon: 'window-minimize', action: () => wm.minimizeAll() },
-      { id: 'close-all', label: 'Close All Windows', icon: 'close-box-multiple-outline', action: () => wm.closeAll() },
-    ],
-  },
-  {
-    id: 'tools',
-    label: 'Tools',
-    children: [
-      { id: 'trash', label: 'Trash', icon: 'delete-outline', action: () => { wm.open('trash'); store.fetchTrashItems() } },
-      { id: 'activity', label: 'Activity Log', icon: 'history', action: () => { wm.open('activity'); store.fetchAuditLog() } },
-      { id: 'favorites', label: 'Favorites', icon: 'star-outline', action: () => { wm.open('favorites') } },
-      { id: 'recent', label: 'Recent Files', icon: 'clock-outline', action: () => { wm.open('recent') } },
-      { id: 'div1', divider: true },
-      { id: 'accounts', label: 'Account Manager', icon: 'account-outline', action: () => { wm.open('accounts') } },
-      { id: 'users', label: 'User Management', icon: 'account-group-outline', action: () => { wm.open('users'); store.fetchUsers() } },
-      { id: 'div2', divider: true },
-      { id: 'command-palette', label: 'Command Palette', icon: 'keyboard', shortcut: 'Ctrl+K', action: () => { store.commandPaletteOpen = true } },
-      { id: 'keyboard-shortcuts', label: 'Keyboard Shortcuts', icon: 'keyboard-settings-outline', action: () => { store.showShortcutsHelp = true } },
-    ],
-  },
-  {
-    id: 'help',
-    label: 'Help',
-    children: [
-      { id: 'about', label: 'About Cybermanju Drive', icon: 'information-outline', action: () => {} },
-      { id: 'docs', label: 'Documentation', icon: 'file-document-outline', action: () => { window.open('https://github.com/hautlythird211/Cybermanju-Drive', '_blank') } },
-      { id: 'div1', divider: true },
-      { id: 'matrix', label: 'Toggle Matrix Rain', icon: 'lightning-bolt-outline', checked: store.matrixRainEnabled, action: () => { store.matrixRainEnabled = !store.matrixRainEnabled } },
-    ],
-  },
-]; return m; })
+const menuStructure = computed(() => {
+  const menus = getMenusForPanel(wm.activeWindow.value?.panelType ?? null)
+  const help = menus.find(m => m.id === 'help')
+  const matrix = help?.children.find(c => c.id === 'matrix')
+  if (matrix) matrix.checked = store.matrixRainEnabled
+  return menus
+})
 
 async function toggleMenu(id: string) {
   const previouslyOpen = openMenu.value
@@ -467,12 +402,12 @@ onUnmounted(() => {
 .top-menu-bar {
   display: flex;
   align-items: center;
-  height: 32px;
-  padding: 0 8px;
-  background: var(--bg-glass);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border-bottom: 1px solid var(--border-glass);
+  height: 34px;
+  padding: 0 10px;
+  background: rgba(8, 8, 10, 0.65);
+  backdrop-filter: blur(30px) saturate(1.8);
+  -webkit-backdrop-filter: blur(30px) saturate(1.8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   z-index: 100;
   position: relative;
   gap: 8px;
@@ -482,22 +417,7 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-/* Velvet texture overlay */
-.top-menu-bar::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background:
-    repeating-radial-gradient(circle at 50% 50%, transparent 0, rgba(255,255,255,0.015) 1px, transparent 2px),
-    repeating-conic-gradient(rgba(255,255,255,0.008) 0% 25%, transparent 0% 50%) 0 0 / 4px 4px,
-    radial-gradient(ellipse at 30% 0%, rgba(0,255,65,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse at 70% 100%, rgba(90,240,255,0.03) 0%, transparent 50%);
-  pointer-events: none;
-  mix-blend-mode: screen;
-}
-
-/* Bottom psychedelic glow line */
+/* Subtle cyberpunk accent line */
 .top-menu-bar::after {
   content: '';
   position: absolute;
@@ -507,13 +427,13 @@ onUnmounted(() => {
   height: 1px;
   background: linear-gradient(90deg,
     transparent 0%,
-    rgba(0, 255, 65, 0.25) 20%,
-    rgba(90, 240, 255, 0.2) 40%,
-    rgba(179, 136, 255, 0.2) 60%,
-    rgba(255, 107, 157, 0.15) 80%,
+    rgba(0, 255, 65, 0.15) 20%,
+    rgba(90, 240, 255, 0.12) 40%,
+    rgba(179, 136, 255, 0.12) 60%,
+    rgba(255, 107, 157, 0.1) 80%,
     transparent 100%);
   background-size: 200% 100%;
-  animation: velvet-shimmer 6s ease-in-out infinite;
+  animation: accent-shimmer 6s ease-in-out infinite;
 }
 
 .tmb-left {
@@ -526,11 +446,11 @@ onUnmounted(() => {
 .app-logo {
   display: flex;
   align-items: baseline;
-  gap: 3px;
-  padding: 0 8px;
+  gap: 4px;
+  padding: 0 10px;
   cursor: pointer;
   border-right: 1px solid var(--border-subtle);
-  margin-right: 4px;
+  margin-right: 6px;
   outline: none;
 }
 
@@ -541,12 +461,12 @@ onUnmounted(() => {
 
 .app-logo:hover .logo-brand {
   color: var(--accent);
-  text-shadow: 0 0 12px rgba(0, 255, 65, 0.4);
+  text-shadow: 0 0 12px rgba(0, 255, 65, 0.3);
 }
 
 .logo-brand {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 1.5px;
   color: var(--text-primary);
@@ -568,7 +488,7 @@ onUnmounted(() => {
   flex-shrink: 0;
   border-right: 1px solid var(--border-subtle);
   padding-right: 8px;
-  margin-right: 4px;
+  margin-right: 6px;
 }
 
 .tmb-path {
@@ -600,7 +520,7 @@ onUnmounted(() => {
   cursor: pointer;
   border-radius: var(--radius-sm);
   outline: none;
-  transition: all var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all var(--duration-fast) var(--ease-spring);
 }
 
 .menu-item:focus-visible {
@@ -608,7 +528,7 @@ onUnmounted(() => {
 }
 
 .menu-item:hover {
-  background: rgba(0, 255, 65, 0.06);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .menu-item:active {
@@ -616,10 +536,10 @@ onUnmounted(() => {
 }
 
 .menu-label {
-  font-family: var(--font-mono);
-  font-size: var(--font-size-base);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  font-size: var(--font-size-md);
   color: var(--text-secondary);
-  letter-spacing: 0.2px;
+  letter-spacing: 0.1px;
   font-weight: 500;
 }
 
@@ -631,47 +551,35 @@ onUnmounted(() => {
   position: absolute;
   top: 100%;
   left: 0;
-  min-width: 220px;
-  background: var(--bg-glass-heavy);
-  backdrop-filter: blur(var(--glass-blur-xl));
-  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
-  border: 1px solid var(--border-glass);
+  min-width: 230px;
+  background: rgba(8, 8, 10, 0.78);
+  backdrop-filter: blur(40px) saturate(1.8);
+  -webkit-backdrop-filter: blur(40px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-lg);
   padding: 4px;
-  box-shadow: var(--shadow-elevated), var(--glow-accent);
+  box-shadow: var(--shadow-elevated);
   z-index: 200;
   will-change: transform, opacity;
-}
-
-/* Dropdown velvet texture */
-.menu-dropdown::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background:
-    repeating-radial-gradient(circle at 50% 50%, transparent 0, rgba(255,255,255,0.01) 1px, transparent 2px),
-    radial-gradient(ellipse at 50% 0%, rgba(0,255,65,0.03) 0%, transparent 60%);
-  pointer-events: none;
 }
 
 .menu-dropdown-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
-  font-family: var(--font-mono);
-  font-size: var(--font-size-base);
+  padding: 7px 10px;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  font-size: var(--font-size-md);
   color: var(--text-secondary);
   cursor: pointer;
   border-radius: var(--radius-sm);
-  transition: all var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all var(--duration-fast) var(--ease-spring);
   outline: none;
   position: relative;
 }
 
 .menu-dropdown-item:hover {
-  background: rgba(0, 255, 65, 0.08);
+  background: rgba(0, 255, 65, 0.06);
   color: var(--text-primary);
   padding-left: 12px;
 }
@@ -695,6 +603,7 @@ onUnmounted(() => {
 
 .mdi-shortcut {
   font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
   color: var(--text-muted);
   margin-left: auto;
 }
@@ -702,6 +611,7 @@ onUnmounted(() => {
 .mdi-check {
   color: var(--accent);
   font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
 }
 
 .menu-divider {
@@ -714,7 +624,7 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   justify-content: center;
-  max-width: 360px;
+  max-width: 400px;
   margin: 0 auto;
 }
 
@@ -723,24 +633,23 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   width: 100%;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-medium);
-  border-radius: var(--radius-md);
-  padding: 0 8px;
-  height: 22px;
+  background: rgba(14, 14, 18, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 0 10px;
+  height: 24px;
   transition: all var(--transition-normal);
 }
 
 .search-wrap:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 8px rgba(0, 255, 65, 0.1);
+  border-color: rgba(0, 255, 65, 0.2);
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.04);
 }
 
 .search-prompt {
   color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--font-size-sm);
-  margin-right: 4px;
+  margin-right: 6px;
+  flex-shrink: 0;
 }
 
 .search-input {
@@ -748,20 +657,24 @@ onUnmounted(() => {
   background: transparent;
   border: none;
   color: var(--text-primary);
-  font-family: var(--font-mono);
-  font-size: var(--font-size-sm);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  font-size: var(--font-size-md);
   height: 100%;
   outline: none;
 }
 
 .search-input::placeholder {
   color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.3px;
 }
 
 .search-cursor {
   color: var(--accent);
   animation: blink 0.8s step-end infinite;
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-md);
+  font-family: var(--font-mono);
 }
 
 @keyframes blink {
@@ -774,8 +687,10 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   margin-top: 4px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-medium);
+  background: var(--bg-glass-heavy);
+  backdrop-filter: blur(var(--glass-blur-xl));
+  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
+  border: 1px solid var(--border-glass);
   border-radius: var(--radius-md);
   max-height: 200px;
   overflow-y: auto;
@@ -786,7 +701,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
+  padding: 7px 10px;
   cursor: pointer;
   font-family: var(--font-mono);
   font-size: var(--font-size-sm);
@@ -795,7 +710,7 @@ onUnmounted(() => {
 }
 
 .suggestion-item:hover {
-  background: var(--bg-hover);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .suggestion-icon {
@@ -811,13 +726,13 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-/* ── Status indicators (merged from StatusBar) ── */
+/* ── Status indicators ── */
 .tmb-sync {
   cursor: pointer;
   color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
-  padding: 2px 4px;
+  padding: 2px 6px;
   border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
   outline: none;
@@ -826,7 +741,7 @@ onUnmounted(() => {
 
 .tmb-sync:hover {
   color: var(--text-primary);
-  background: rgba(0, 255, 65, 0.06);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .tmb-sync:focus-visible {
@@ -836,7 +751,7 @@ onUnmounted(() => {
 .tmb-active {
   color: var(--accent);
   font-weight: 700;
-  text-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.2);
 }
 
 .tmb-info {
@@ -851,8 +766,9 @@ onUnmounted(() => {
   font-weight: 700;
   font-size: var(--font-size-xs);
   color: var(--accent);
-  border: 1px solid var(--accent);
-  padding: 0 4px;
+  border: 1px solid rgba(0, 255, 65, 0.2);
+  padding: 1px 5px;
+  border-radius: 3px;
   white-space: nowrap;
 }
 
@@ -864,8 +780,7 @@ onUnmounted(() => {
 }
 
 .tmb-div {
-  color: var(--text-muted);
-  opacity: 0.5;
+  color: rgba(255, 255, 255, 0.15);
 }
 
 .tmb-mode {
@@ -882,8 +797,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 22px;
+  width: 28px;
+  height: 24px;
   color: var(--text-muted);
   cursor: pointer;
   border-radius: var(--radius-sm);
@@ -894,20 +809,20 @@ onUnmounted(() => {
 
 .tmb-clipboard:hover {
   color: var(--text-primary);
-  background: rgba(0, 255, 65, 0.06);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .clipboard-count {
   position: absolute;
   top: 0;
   right: 0;
-  font-size: 7px;
+  font-size: 8px;
   font-weight: 700;
   color: var(--accent);
-  background: var(--bg-surface);
+  background: rgba(0, 0, 0, 0.5);
   border-radius: 50%;
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -919,13 +834,13 @@ onUnmounted(() => {
   top: 100%;
   right: 0;
   margin-top: 4px;
-  min-width: 260px;
-  max-height: 240px;
+  min-width: 280px;
+  max-height: 260px;
   overflow-y: auto;
-  background: var(--bg-glass-heavy);
-  backdrop-filter: blur(var(--glass-blur-xl));
-  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
-  border: 1px solid var(--border-glass);
+  background: rgba(8, 8, 10, 0.78);
+  backdrop-filter: blur(40px) saturate(1.8);
+  -webkit-backdrop-filter: blur(40px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-lg);
   padding: 4px;
   box-shadow: var(--shadow-elevated);
@@ -946,17 +861,17 @@ onUnmounted(() => {
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
   color: var(--text-secondary);
-  padding: 4px 8px;
+  padding: 5px 8px;
   cursor: pointer;
   border-radius: var(--radius-sm);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: all var(--duration-fast) cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all var(--duration-fast) var(--ease-spring);
 }
 
 .clip-item:hover {
-  background: rgba(0, 255, 65, 0.08);
+  background: rgba(0, 255, 65, 0.05);
   color: var(--text-primary);
   padding-left: 12px;
 }
@@ -976,8 +891,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 22px;
+  width: 28px;
+  height: 24px;
   color: var(--text-muted);
   cursor: pointer;
   border-radius: var(--radius-sm);
@@ -988,22 +903,22 @@ onUnmounted(() => {
 
 .tray-icon:hover {
   color: var(--text-primary);
-  background: rgba(0, 255, 65, 0.06);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .tray-icon.active {
   color: var(--accent);
-  text-shadow: 0 0 8px rgba(0, 255, 65, 0.4);
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.25);
 }
 
 .tmb-separator {
   width: 1px;
   height: 16px;
-  background: var(--border-subtle);
+  background: rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
 }
 
-@keyframes velvet-shimmer {
+@keyframes accent-shimmer {
   0% { background-position: 200% 0; }
   50% { background-position: 0% 0; }
   100% { background-position: -200% 0; }

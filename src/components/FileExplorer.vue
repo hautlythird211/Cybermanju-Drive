@@ -795,33 +795,33 @@ onMounted(() => {
 <style scoped>
 /* CSS Variables for theming */
 .explorer {
-  --bg-primary: #fafafa;
-  --bg-secondary: #ffffff;
-  --bg-tertiary: #f5f5f7;
-  --bg-hover: rgba(0, 0, 0, 0.04);
-  --bg-active: rgba(0, 122, 255, 0.08);
-  --text-primary: #1d1d1f;
-  --text-secondary: #6e6e73;
-  --text-tertiary: #86868b;
-  --border-color: #d2d2d7;
-  --border-light: #e8e8ed;
-  --accent: #007aff;
-  --accent-hover: #0066d6;
-  --danger: #ff3b30;
-  --success: #34c759;
-  --warning: #ff9500;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --bg-primary: var(--bg-surface);
+  --bg-secondary: var(--bg-elevated);
+  --bg-tertiary: var(--bg-overlay);
+  --bg-hover: rgba(255, 255, 255, 0.04);
+  --bg-active: rgba(0, 255, 65, 0.06);
+  --text-primary: var(--text-primary);
+  --text-secondary: var(--text-secondary);
+  --text-tertiary: var(--text-muted);
+  --border-color: var(--border-medium);
+  --border-light: var(--border-subtle);
+  --accent: var(--accent);
+  --accent-hover: #00cc35;
+  --danger: var(--danger);
+  --success: var(--success);
+  --warning: var(--warning);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.3);
   --transition: 0.2s ease;
 
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--bg-primary);
+  background: transparent;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
   color: var(--text-primary);
   overflow: hidden;

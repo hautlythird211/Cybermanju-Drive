@@ -17,7 +17,7 @@
     </div>
 
     <div v-else-if="store.duplicateGroups.length === 0" class="empty-state">
-      <Icon icon="mdi:check-circle-outline" width="32" height="32" style="color:#00ff41" />
+      <Icon icon="mdi:check-circle-outline" width="32" height="32" style="color:var(--text-accent)" />
       <span>NO DUPLICATES FOUND</span>
       <span class="text-muted">All files are unique</span>
     </div>
@@ -113,17 +113,17 @@ function selectFile(file: FileNode) {
 
 <style scoped>
 .duplicates-panel {
-  padding: 16px;
+  padding: 20px;
   height: 100%;
   overflow-y: auto;
-  font-family: 'Courier New', monospace;
-  background: #0a0a0a;
-  color: #00ff41;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  background: transparent;
 }
 
 .duplicates-panel::-webkit-scrollbar { width: 4px; }
-.duplicates-panel::-webkit-scrollbar-track { background: #0a0a0a; }
-.duplicates-panel::-webkit-scrollbar-thumb { background: #00ff41; }
+.duplicates-panel::-webkit-scrollbar-track { background: transparent; }
+.duplicates-panel::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 2px; }
 
 .panel-header {
   display: flex;
@@ -131,7 +131,7 @@ function selectFile(file: FileNode) {
   justify-content: space-between;
   margin-bottom: 18px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #1a1a1a;
+  border-bottom: 1px solid var(--border-glass);
 }
 
 .header-left {
@@ -140,13 +140,13 @@ function selectFile(file: FileNode) {
   gap: 8px;
 }
 
-.icon-col { color: #00ff41; font-weight: 700; }
+.icon-col { color: var(--text-accent); font-weight: 700; }
 
 .panel-title {
   font-size: 13px;
-  font-weight: 800;
-  color: #e0e0e0;
-  letter-spacing: 2px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 1px;
   margin: 0;
 }
 
@@ -156,7 +156,7 @@ function selectFile(file: FileNode) {
   align-items: center;
   gap: 12px;
   padding: 40px;
-  color: #555;
+  color: var(--text-muted);
 }
 
 .empty-state {
@@ -165,25 +165,26 @@ function selectFile(file: FileNode) {
   align-items: center;
   gap: 8px;
   padding: 40px;
-  color: #00ff41;
+  color: var(--text-accent);
 }
 
-.text-muted { color: #555; font-size: 10px; }
+.text-muted { color: var(--text-muted); font-size: 10px; }
 
 .summary-bar {
   display: flex;
   gap: 16px;
-  padding: 10px 12px;
-  background: rgba(0, 255, 65, 0.05);
-  border: 1px solid #1a1a1a;
-  border-radius: 6px;
+  padding: 12px;
+  background: var(--bg-glass-light);
+  backdrop-filter: blur(var(--glass-blur-light));
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
   margin-bottom: 16px;
 }
 
 .summary-text {
   font-size: 10px;
   font-weight: 700;
-  color: #00ff41;
+  color: var(--text-accent);
   letter-spacing: 1px;
 }
 
@@ -194,9 +195,10 @@ function selectFile(file: FileNode) {
 }
 
 .dup-group {
-  background: #0d0d0d;
-  border: 1px solid #1a1a1a;
-  border-radius: 8px;
+  background: var(--bg-glass-light);
+  backdrop-filter: blur(var(--glass-blur-light));
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
@@ -206,7 +208,7 @@ function selectFile(file: FileNode) {
   gap: 8px;
   padding: 10px 14px;
   background: rgba(255, 95, 87, 0.08);
-  border-bottom: 1px solid #1a1a1a;
+  border-bottom: 1px solid var(--border-glass);
 }
 
 .group-icon { color: #ff5f57; }
@@ -220,7 +222,7 @@ function selectFile(file: FileNode) {
 
 .group-count {
   font-size: 9px;
-  color: #555;
+  color: var(--text-muted);
   margin-left: auto;
 }
 
@@ -234,15 +236,15 @@ function selectFile(file: FileNode) {
   align-items: center;
   gap: 10px;
   padding: 8px 14px;
-  border-bottom: 1px solid #1a1a1a;
+  border-bottom: 1px solid var(--border-glass);
   cursor: pointer;
   transition: background 0.1s;
 }
 
 .dup-file:last-child { border-bottom: none; }
-.dup-file:hover { background: rgba(0, 255, 65, 0.02); }
+.dup-file:hover { background: var(--accent-dim); }
 
-.file-icon { color: #888; flex-shrink: 0; }
+.file-icon { color: var(--text-muted); flex-shrink: 0; }
 
 .file-info {
   flex: 1;
@@ -253,7 +255,7 @@ function selectFile(file: FileNode) {
 
 .file-name {
   font-size: 11px;
-  color: #ccc;
+  color: var(--text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -268,9 +270,9 @@ function selectFile(file: FileNode) {
 
 .file-account {
   font-size: 8px;
-  color: #555;
+  color: var(--text-muted);
   padding: 2px 6px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-surface);
   border-radius: 3px;
 }
 </style>

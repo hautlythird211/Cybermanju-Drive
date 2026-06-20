@@ -296,12 +296,12 @@ onUnmounted(() => {
   border-bottom: 1px solid #1a1a1a;
 }
 
-.header-icon { color: #00ff41; flex-shrink: 0; }
+.header-icon { color: var(--text-primary); flex-shrink: 0; }
 
 .panel-title {
   font-size: 13px;
-  font-weight: 800;
-  color: #e0e0e0;
+  font-weight: 700;
+  color: var(--text-primary);
   letter-spacing: 2px;
   margin: 0;
 }
@@ -321,31 +321,32 @@ onUnmounted(() => {
 .transfer-select {
   width: 100%;
   padding: 7px 10px;
-  background: #080808;
-  border: 1px solid #1a1a1a;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
   border-radius: 6px;
-  color: #ccc;
-  font-family: 'Courier New', monospace;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
   font-size: 10px;
   outline: none;
   cursor: pointer;
 }
 
 .transfer-select:focus {
-  border-color: #333;
+  border-color: var(--border-accent);
+  outline: none;
 }
 
 .file-list {
   max-height: 180px;
   overflow-y: auto;
-  background: #080808;
-  border: 1px solid #141414;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-glass);
   border-radius: 6px;
 }
 
 .file-list::-webkit-scrollbar { width: 4px; }
 .file-list::-webkit-scrollbar-track { background: transparent; }
-.file-list::-webkit-scrollbar-thumb { background: #1a1a1a; border-radius: 2px; }
+.file-list::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 2px; }
 
 .empty-files {
   display: flex;
@@ -366,10 +367,10 @@ onUnmounted(() => {
   transition: background 0.1s;
 }
 
-.file-row:hover { background: rgba(0, 255, 65, 0.02); }
-.file-row.selected { background: rgba(0, 255, 65, 0.05); }
+.file-row:hover { background: var(--bg-surface); }
+.file-row.selected { background: var(--bg-surface); }
 
-.file-row input { accent-color: #00ff41; flex-shrink: 0; }
+.file-row input { accent-color: var(--accent); flex-shrink: 0; }
 
 .file-row-icon { color: #666; flex-shrink: 0; }
 
@@ -432,10 +433,11 @@ onUnmounted(() => {
 }
 
 .progress-card {
-  background: #0a0a0a;
-  border: 1px solid #1a1a1a;
-  border-radius: 8px;
+  background: var(--bg-glass-light);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
   padding: 14px;
+  backdrop-filter: blur(var(--glass-blur-light));
 }
 
 .p-row {
@@ -472,7 +474,7 @@ onUnmounted(() => {
 
 .progress-bar-fill {
   height: 100%;
-  background: #00ff41;
+  background: var(--accent);
   border-radius: 2px;
   transition: width 0.3s;
 }
@@ -483,10 +485,10 @@ onUnmounted(() => {
   gap: 8px;
   padding: 10px 14px;
   font-size: 9px;
-  color: #555;
-  background: #0a0a0a;
+  color: var(--text-muted);
+  background: var(--bg-glass-light);
   border-radius: 6px;
-  border: 1px solid #141414;
+  border: 1px solid var(--border-glass);
 }
 
 .transfer-actions {
@@ -502,10 +504,10 @@ onUnmounted(() => {
   gap: 6px;
   padding: 7px 16px;
   background: transparent;
-  border: 1px solid #2a2a2a;
-  border-radius: 6px;
-  color: #888;
-  font-family: 'Courier New', monospace;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   cursor: pointer;
@@ -513,17 +515,17 @@ onUnmounted(() => {
   transition: all 0.15s;
 }
 
-.bw-btn:hover { border-color: #444; color: #ccc; }
+.bw-btn:hover { background: var(--accent-dim); border-color: var(--border-accent); color: var(--text-accent); }
 .bw-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
 .bw-btn-inverse {
-  border-color: #00ff41;
-  color: #00ff41;
+  border-color: var(--accent);
+  color: var(--text-accent);
   text-shadow: 0 0 4px rgba(0, 255, 65, 0.15);
 }
 
 .bw-btn-inverse:hover {
-  background: rgba(0, 255, 65, 0.08);
+  background: var(--accent-dim);
   box-shadow: 0 0 12px rgba(0, 255, 65, 0.1);
 }
 
@@ -540,10 +542,10 @@ onUnmounted(() => {
   gap: 4px;
   padding: 4px 10px;
   background: transparent;
-  border: 1px solid #2a2a2a;
+  border: 1px solid var(--border-medium);
   border-radius: 4px;
-  color: #888;
-  font-family: 'Courier New', monospace;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
   font-size: 9px;
   font-weight: 700;
   cursor: pointer;
@@ -551,5 +553,5 @@ onUnmounted(() => {
   transition: all 0.12s;
 }
 
-.bw-btn-sm:hover { border-color: #444; color: #ccc; }
+.bw-btn-sm:hover { background: var(--accent-dim); border-color: var(--border-accent); color: var(--text-accent); }
 </style>

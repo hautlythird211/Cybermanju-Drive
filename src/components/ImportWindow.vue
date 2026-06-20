@@ -363,14 +363,14 @@ onUnmounted(() => {
 }
 
 .header-icon {
-  color: #00ff41;
+  color: var(--text-primary);
   flex-shrink: 0;
 }
 
 .panel-title {
   font-size: 13px;
-  font-weight: 800;
-  color: #e0e0e0;
+  font-weight: 700;
+  color: var(--text-primary);
   letter-spacing: 2px;
   margin: 0;
 }
@@ -394,11 +394,12 @@ onUnmounted(() => {
 }
 
 .source-card {
-  background: #0a0a0a;
-  border: 1px solid #1a1a1a;
-  border-radius: 8px;
+  background: var(--bg-glass-light);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
   overflow: hidden;
   transition: border-color 0.15s;
+  backdrop-filter: blur(var(--glass-blur-light));
 }
 
 .source-card.active {
@@ -416,7 +417,7 @@ onUnmounted(() => {
 }
 
 .sc-header:hover {
-  background: rgba(0, 255, 65, 0.02);
+  background: var(--bg-surface);
 }
 
 .sc-icon {
@@ -455,7 +456,7 @@ onUnmounted(() => {
 .sc-status.idle { color: #555; border-color: #2a2a2a; }
 .sc-status.scanning { color: #45B7D1; border-color: rgba(69, 183, 209, 0.2); }
 .sc-status.error { color: #ff5f57; border-color: rgba(255, 95, 87, 0.2); }
-.sc-status.done { color: #00ff41; border-color: rgba(0, 255, 65, 0.2); }
+.sc-status.done { color: var(--text-accent); border-color: var(--border-glass); }
 
 .sc-chevron {
   color: #444;
@@ -502,10 +503,10 @@ onUnmounted(() => {
 .filter-tags button {
   padding: 2px 10px;
   background: transparent;
-  border: 1px solid #1a1a1a;
+  border: 1px solid var(--border-medium);
   border-radius: 4px;
-  color: #555;
-  font-family: 'Courier New', monospace;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
   font-size: 8px;
   font-weight: 700;
   cursor: pointer;
@@ -514,9 +515,9 @@ onUnmounted(() => {
 }
 
 .filter-tags button.active {
-  border-color: #00ff41;
-  color: #00ff41;
-  background: rgba(0, 255, 65, 0.04);
+  border-color: var(--border-accent);
+  color: var(--text-accent);
+  background: var(--bg-surface);
 }
 
 .filter-tags button:hover {
@@ -540,7 +541,7 @@ onUnmounted(() => {
 }
 
 .toggle-item input {
-  accent-color: #00ff41;
+  accent-color: var(--accent);
 }
 
 .toggle-item:hover {
@@ -561,9 +562,9 @@ onUnmounted(() => {
   align-items: center;
   gap: 2px;
   padding: 6px 14px;
-  background: #080808;
+  background: var(--bg-surface);
   border-radius: 6px;
-  border: 1px solid #141414;
+  border: 1px solid var(--border-glass);
 }
 
 .sum-label {
@@ -575,8 +576,8 @@ onUnmounted(() => {
 
 .sum-val {
   font-size: 14px;
-  font-weight: 800;
-  color: #e0e0e0;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .sc-actions {
@@ -593,10 +594,10 @@ onUnmounted(() => {
   gap: 4px;
   padding: 5px 12px;
   background: transparent;
-  border: 1px solid #2a2a2a;
+  border: 1px solid var(--border-medium);
   border-radius: 4px;
-  color: #888;
-  font-family: 'Courier New', monospace;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
   font-size: 9px;
   font-weight: 700;
   cursor: pointer;
@@ -605,8 +606,9 @@ onUnmounted(() => {
 }
 
 .bw-btn-sm:hover {
-  border-color: #444;
-  color: #ccc;
+  border-color: var(--border-accent);
+  color: var(--text-accent);
+  background: var(--accent-dim);
 }
 
 .bw-btn-sm:disabled {
@@ -625,11 +627,11 @@ onUnmounted(() => {
 }
 
 .bw-input-sm {
-  background: #080808;
-  border: 1px solid #1a1a1a;
-  border-radius: 4px;
-  color: #ccc;
-  font-family: 'Courier New', monospace;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
   font-size: 10px;
   padding: 5px 8px;
   outline: none;
@@ -637,7 +639,8 @@ onUnmounted(() => {
 }
 
 .bw-input-sm:focus {
-  border-color: #333;
+  border-color: var(--border-accent);
+  outline: none;
 }
 
 .empty-state {
@@ -656,10 +659,11 @@ onUnmounted(() => {
 }
 
 .progress-card {
-  background: #0a0a0a;
-  border: 1px solid #1a1a1a;
-  border-radius: 8px;
+  background: var(--bg-glass-light);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
   padding: 14px;
+  backdrop-filter: blur(var(--glass-blur-light));
 }
 
 .p-row {
@@ -699,7 +703,7 @@ onUnmounted(() => {
 
 .progress-bar-fill {
   height: 100%;
-  background: #00ff41;
+  background: var(--accent);
   border-radius: 2px;
   transition: width 0.3s ease;
 }

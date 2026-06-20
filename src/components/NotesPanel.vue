@@ -216,11 +216,12 @@ onMounted(loadNotes)
 
 <style scoped>
 .notes-panel {
-  display: flex;
+  width: 100%;
   height: 100%;
-  background: #0a0a0a;
-  color: #e0e0e0;
-  font-family: 'Courier New', monospace;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  background: transparent;
 }
 .notes-sidebar {
   width: 200px;
@@ -269,7 +270,7 @@ onMounted(loadNotes)
   font-size: 9px;
   padding: 4px 8px;
   border-radius: 4px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   outline: none;
   box-sizing: border-box;
 }
@@ -299,7 +300,7 @@ onMounted(loadNotes)
   color: #5af0ff;
   font-size: 13px;
   font-weight: 700;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   outline: none;
   padding: 4px 0;
 }
@@ -311,7 +312,7 @@ onMounted(loadNotes)
   color: #aaa;
   padding: 2px 8px;
   font-size: 8px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   cursor: pointer;
   border-radius: 4px;
@@ -353,7 +354,7 @@ onMounted(loadNotes)
   font-size: 8px;
   padding: 2px 6px;
   outline: none;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   width: 60px;
 }
 .tag-input:focus { border-color: #333; }
@@ -363,7 +364,7 @@ onMounted(loadNotes)
   border: none;
   color: #ccc;
   font-size: 12px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   line-height: 1.8;
   resize: none;
   outline: none;
@@ -386,7 +387,7 @@ onMounted(loadNotes)
   color: #5af0ff;
   padding: 6px 12px;
   font-size: 9px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-weight: 700;
   cursor: pointer;
   border-radius: 4px;

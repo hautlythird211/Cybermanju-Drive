@@ -84,19 +84,19 @@ function openCollection(col: { id: string; name: string; itemIds: string[] }) {
 .collections-panel {
   width: 100%;
   height: 100%;
-  background: #0a0a0a;
   overflow-y: auto;
-  padding: 16px;
-  font-family: 'Courier New', monospace;
-  color: #00ff41;
+  padding: 20px;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  background: transparent;
 }
 
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #00ff41;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-glass);
   margin-bottom: 16px;
 }
 
@@ -106,13 +106,14 @@ function openCollection(col: { id: string; name: string; itemIds: string[] }) {
   gap: 8px;
 }
 
-.icon-col { font-size: 16px; }
+.icon-col { font-size: 14px; color: var(--text-accent); }
 
 .panel-title {
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 700;
   letter-spacing: 1px;
   margin: 0;
+  color: var(--text-primary);
 }
 
 .section { margin-bottom: 16px; }
@@ -120,19 +121,28 @@ function openCollection(col: { id: string; name: string; itemIds: string[] }) {
 .collections-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   margin-bottom: 16px;
 }
 
 .collection-card {
-  border: 2px solid #00ff41;
-  padding: 10px;
-  transition: border-color 0.15s;
+  border: 1px solid var(--border-glass);
+  padding: 12px;
+  transition: all var(--transition-fast);
+  background: var(--bg-glass-light);
+  backdrop-filter: blur(var(--glass-blur-light));
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.collection-card:hover {
+  border-color: var(--border-accent);
+  background: var(--accent-dim);
 }
 
 .collection-card.drop-target {
-  border-color: #00ff41;
-  background: rgba(0, 255, 65,0.1);
+  border-color: var(--border-accent);
+  background: var(--accent-dim);
 }
 
 .col-header {
@@ -142,45 +152,54 @@ function openCollection(col: { id: string; name: string; itemIds: string[] }) {
   margin-bottom: 4px;
 }
 
-.col-name { font-size: 13px; font-weight: 700; }
-.col-type { font-size: 9px; }
-.col-meta { font-size: 10px; }
+.col-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.col-type { font-size: 9px; color: var(--text-muted); }
+.col-meta { font-size: 10px; color: var(--text-muted); }
 
 .section-title {
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: rgba(0, 255, 65,0.6);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
   margin: 0 0 8px;
+  font-family: var(--font-mono);
 }
 
 .create-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .bw-input {
-  background: #0a0a0a;
-  border: 2px solid #00ff41;
-  padding: 6px 8px;
-  color: #00ff41;
-  font-family: 'Courier New', monospace;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  padding: 7px 10px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
   font-size: 11px;
+  border-radius: var(--radius-sm);
+}
+
+.bw-input:focus {
+  border-color: var(--border-accent);
+  outline: none;
 }
 
 .bw-btn {
-  padding: 6px 12px;
-  background: #00ff41;
-  color: #0a0a0a;
-  border: 2px solid #00ff41;
-  font-family: 'Courier New', monospace;
+  padding: 7px 14px;
+  background: var(--accent);
+  color: var(--text-inverse);
+  border: 1px solid var(--accent);
+  font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
 }
 
-.bw-btn:hover { background: #0a0a0a; color: #00ff41; }
+.bw-btn:hover { background: #00cc35; border-color: #00cc35; }
 
-.text-muted { color: rgba(0, 255, 65,0.5) !important; }
+.text-muted { color: var(--text-muted) !important; }
 </style>

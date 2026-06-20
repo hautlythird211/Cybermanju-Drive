@@ -10,9 +10,12 @@
     :z-index="win.zIndex"
     :focused="focused"
     :anim-state="win.animState"
+    :maximizable="true"
+    :maximized="win.maximized"
     no-padding
     @close="onClose"
     @minimize="onMinimize"
+    @maximize="$emit('maximize', win.id)"
     @focus="$emit('focus', win.id)"
     @move="(x, y) => $emit('move', win.id, x, y)"
   >
@@ -41,6 +44,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: [id: string]
   minimize: [id: string]
+  maximize: [id: string]
   focus: [id: string]
   move: [id: string, x: number, y: number]
 }>()

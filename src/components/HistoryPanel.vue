@@ -92,33 +92,34 @@ function onClear() {
 }
 
 .panel-card {
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
-  border-radius: 8px;
+  background: var(--bg-glass-light);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
   padding: 16px;
+  backdrop-filter: blur(var(--glass-blur-light));
 }
 
 .panel-title {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
-  color: #e0e0e0;
+  color: var(--text-primary);
   letter-spacing: 1px;
 }
 
 .panel-hint {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
-  color: #555;
+  color: var(--text-muted);
   margin-bottom: 12px;
 }
 
 .panel-btn {
   background: transparent;
-  border: 1px solid #333;
-  color: #999;
+  border: 1px solid var(--border-medium);
+  color: var(--text-muted);
   padding: 2px 8px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
   font-weight: 700;
   cursor: pointer;
@@ -127,9 +128,9 @@ function onClear() {
 }
 
 .panel-btn:hover:not(:disabled) {
-  border-color: #555;
-  color: #e0e0e0;
-  background: #222;
+  border-color: var(--border-accent);
+  color: var(--text-accent);
+  background: var(--accent-dim);
 }
 
 .panel-btn:disabled {
@@ -143,7 +144,7 @@ function onClear() {
 }
 
 .text-muted {
-  color: #555 !important;
+  color: var(--text-muted) !important;
 }
 
 .empty-state {
@@ -153,8 +154,8 @@ function onClear() {
   justify-content: center;
   gap: 10px;
   padding: 36px;
-  color: #555;
-  font-family: 'Courier New', monospace;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
   font-size: 10px;
 }
 
@@ -175,7 +176,7 @@ function onClear() {
 }
 
 .history-count {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
 }
 
@@ -208,12 +209,12 @@ function onClear() {
 }
 
 .history-item:hover {
-  background: #1a1a1a;
+  background: var(--bg-surface);
 }
 
 .history-item-latest {
-  border-left: 2px solid rgba(0, 255, 65, 0.3);
-  background: rgba(0, 255, 65, 0.03);
+  border-left: 1px solid var(--border-glass);
+  background: var(--bg-surface);
 }
 
 .history-icon-col {
@@ -263,7 +264,7 @@ function onClear() {
 }
 
 .history-type-tag {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 7px;
   color: #666;
   background: #151515;
@@ -271,6 +272,6 @@ function onClear() {
   border-radius: 3px;
   flex-shrink: 0;
   letter-spacing: 0.3px;
-  border: 1px solid #252525;
+  border: 1px solid var(--border-glass);
 }
 </style>

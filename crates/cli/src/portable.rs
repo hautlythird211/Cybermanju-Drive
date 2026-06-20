@@ -1,5 +1,4 @@
 use crate::tui::TaskMessage;
-use cybermanju_compression::TripleCompressor;
 use cybermanju_portable_db::PortableDatabase;
 use std::fs;
 use std::path::Path;

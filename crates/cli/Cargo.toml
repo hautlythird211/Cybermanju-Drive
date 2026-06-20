@@ -15,6 +15,7 @@ cybermanju-crypto = { path = "../crypto" }
 cybermanju-compression = { path = "../compression" }
 cybermanju-db = { path = "../db" }
 cybermanju-portable-db = { path = "../portable-db" }
+cybermanju-backends = { path = "../backends" }
 
 # CLI + TUI
 clap = { version = "4", features = ["derive"] }

@@ -4,10 +4,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue'
+import type { ArtMakerSettings } from '@/configs/artMaker'
 
 const props = withDefaults(defineProps<{
   enabled?: boolean
   mode?: number
+  settings?: ArtMakerSettings
 }>(), {
   enabled: true,
   mode: 0,
@@ -18,6 +20,8 @@ let animId = 0
 let ctx: CanvasRenderingContext2D | null = null
 let w = 0, h = 0, dpr = 1
 let t = 0
+let speedMul = 1
+let hueShift = 0
 
 // ── Offscreen buffer for noise field ──
 let noiseCanvas: HTMLCanvasElement | null = null
@@ -164,6 +168,8 @@ function resize() {
   initFlower()
   initNetwork()
   initSpirals()
+  initRain()
+  initStars()
   disCount = 0
   disX = new Float64Array(DIS_MAX)
   disY = new Float64Array(DIS_MAX)
@@ -986,6 +992,222 @@ function drawCheckerboard() {
   ctx.restore()
 }
 
+// ── 15. MATRIX RAIN (integrated) ──
+let rainColumns: Float64Array = new Float64Array(0)
+let rainColumnHue: Float64Array = new Float64Array(0)
+let rainColumnSpeed: Float64Array = new Float64Array(0)
+const RAIN_CHARS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEF@#$%&*{}[]|;:<>?/~'
+function initRain() {
+  const colWidth = 16
+  const colCount = Math.ceil(w / colWidth)
+  rainColumns = new Float64Array(colCount)
+  rainColumnHue = new Float64Array(colCount)
+  rainColumnSpeed = new Float64Array(colCount)
+  for (let i = 0; i < colCount; i++) {
+    rainColumns[i] = Math.random() * h / 18 * -1
+    rainColumnHue[i] = hash(i * 7) * 360
+    rainColumnSpeed[i] = 0.6 + hash(i * 11) * 1.2
+  }
+}
+function drawMatrixRain() {
+  if (!ctx) return
+  const hs = hueShift
+  const colWidth = 16
+  const fontSize = 14
+  ctx.font = `${fontSize}px "Courier New", monospace`
+  const timeHue = (t * 0.5 + hs) % 360
+  const colCount = rainColumns.length
+  for (let i = 0; i < colCount; i++) {
+    const x = i * colWidth
+    const y = rainColumns[i] * 18
+    const char = RAIN_CHARS[(Math.random() * RAIN_CHARS.length) | 0]
+    rainColumnHue[i] = (rainColumnHue[i] + 0.3 + hash(i + t) * 0.2) % 360
+    const hue = (rainColumnHue[i] + hs) % 360
+    let mouseBoost = 0
+    if (mouseActive) {
+      const dx = x - mouseX; const dy = y - mouseY
+      const d2 = dx * dx + dy * dy
+      if (d2 < 40000) mouseBoost = 1 - Math.sqrt(d2) / 200
+    }
+    ctx.fillStyle = `hsla(${((hue + timeHue) % 360)|0},80,${65 + mouseBoost * 15|0},${0.6 + Math.random() * 0.35})`
+    ctx.shadowBlur = 8 + mouseBoost * 8
+    ctx.shadowColor = `hsla(${hue|0},90,60,0.6)`
+    ctx.fillText(char, x, y)
+    ctx.shadowBlur = 0; ctx.shadowColor = 'transparent'
+    if (Math.random() > 0.5) {
+      ctx.fillStyle = `hsla(${((hue + 120) % 360)|0},60,50,0.06)`
+      ctx.fillText(char, x + 2, y - 1)
+    }
+    rainColumns[i] += rainColumnSpeed[i] * speedMul
+    if (y > h && Math.random() > 0.975) {
+      rainColumns[i] = 0
+      rainColumnHue[i] = hash(i * 13 + t) * 360
+      rainColumnSpeed[i] = 0.6 + hash(i * 17 + t) * 1.2
+    }
+  }
+}
+
+// ── 16. FRACTAL TREE ──
+let treePhase = 0
+function drawFractalTree() {
+  if (!ctx) return
+  const cx = mouseActive ? mouseX : w * 0.5
+  const cy = h - 30
+  const baseHue = (t * 0.3 + hueShift) % 360
+  const sway = fastSin(t * 0.015 * speedMul) * 0.15
+
+  ctx.save()
+  ctx.lineCap = 'round'
+
+  // Simple iterative approach: draw main trunk and branches directly
+  const trunkLen = 60
+  const trunkAngle = -Math.PI / 2
+  const hue = (baseHue) % 360
+  ctx.strokeStyle = `hsla(${hue|0},55,50,0.06)`
+  ctx.lineWidth = 1.2
+  ctx.beginPath()
+  ctx.moveTo(cx, cy)
+  const trunkEndX = cx + Math.cos(trunkAngle + sway * 0.2) * trunkLen
+  const trunkEndY = cy + Math.sin(trunkAngle + sway * 0.2) * trunkLen
+  ctx.lineTo(trunkEndX, trunkEndY)
+  ctx.stroke()
+
+  // Draw branches iteratively
+  const branches: Array<{ x: number; y: number; angle: number; len: number; depth: number }> = [
+    { x: trunkEndX, y: trunkEndY, angle: trunkAngle + sway * 0.2, len: 40, depth: 1 },
+  ]
+  for (let i = 0; i < branches.length && i < 200; i++) {
+    const b = branches[i]
+    if (b.depth > 7 || b.len < 3) continue
+    const spread = 0.4 + b.depth * 0.05
+    const swayB = fastSin(t * 0.018 * speedMul + b.depth * 0.7) * 0.12
+    for (let dir = -1; dir <= 1; dir += 2) {
+      const a = b.angle + dir * spread + swayB
+      const l = b.len * (0.65 + fastSin(t * 0.02 * speedMul + b.depth * 2 + dir) * 0.05)
+      const ex = b.x + Math.cos(a) * l
+      const ey = b.y + Math.sin(a) * l
+      const bh = ((baseHue + b.depth * 22 + (dir + 1) * 15) % 360 + 360) % 360
+      ctx.strokeStyle = `hsla(${bh|0},55,50,${0.04 - b.depth * 0.004})`
+      ctx.lineWidth = Math.max(0.3, 0.8 - b.depth * 0.08)
+      ctx.beginPath()
+      ctx.moveTo(b.x, b.y)
+      ctx.lineTo(ex, ey)
+      ctx.stroke()
+      branches.push({ x: ex, y: ey, angle: a, len: l, depth: b.depth + 1 })
+    }
+  }
+  ctx.restore()
+}
+
+// ── 17. PLASMA WAVE ──
+function drawPlasmaWave() {
+  if (!ctx) return
+  const hs = hueShift
+  const step = 8
+  const cols = Math.ceil(w / step)
+  const rows = Math.ceil(h / step)
+  const time = t * 0.015 * speedMul
+
+  ctx.save()
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const px = x * step
+      const py = y * step
+      let dist = 0
+      if (mouseActive) {
+        const dx = px - mouseX
+        const dy = py - mouseY
+        dist = Math.sqrt(dx * dx + dy * dy)
+      }
+      const v = fastSin(px * 0.008 + time) + fastSin(py * 0.01 + time * 0.7) + fastSin((px + py) * 0.006 + time * 0.5) + fastSin(Math.sqrt(px * px + py * py) * 0.005 - time * 0.8)
+      const norm = (v / 4 + 0.5)
+      const hue = ((norm * 360 + hs + dist * 0.2) % 360 + 360) % 360
+      const alpha = 0.04 + norm * 0.06
+      ctx.fillStyle = `hsla(${hue|0},60,50,${alpha})`
+      ctx.fillRect(px, py, step + 1, step + 1)
+    }
+  }
+  ctx.restore()
+}
+
+// ── 18. STARDUST / NEBULA ──
+interface Star { x: number; y: number; z: number; size: number; twinkleSpeed: number; twinkleOffset: number }
+let stars: Star[] = []
+let starsInit = false
+function initStars() {
+  stars = []
+  for (let i = 0; i < 200; i++) {
+    stars.push({
+      x: Math.random() * w, y: Math.random() * h,
+      z: 0.3 + Math.random() * 0.7,
+      size: 0.5 + Math.random() * 2,
+      twinkleSpeed: 0.5 + Math.random() * 2,
+      twinkleOffset: Math.random() * 6.283,
+    })
+  }
+  starsInit = true
+}
+function drawStardust() {
+  if (!ctx) return
+  if (!starsInit) initStars()
+
+  const hs = hueShift
+  const baseHue = (t * 0.1 + hs + 240) % 360
+  const time = t * 0.008 * speedMul
+
+  ctx.save()
+  ctx.globalCompositeOperation = 'lighter'
+
+  // Nebula clouds
+  const nebulaCount = 5
+  for (let n = 0; n < nebulaCount; n++) {
+    const nx = w * 0.5 + fastSin(t * 0.005 * speedMul + n * 1.2) * w * 0.3
+    const ny = h * 0.5 + fastCos(t * 0.004 * speedMul + n * 1.5) * h * 0.25
+    const nr = 60 + fastSin(t * 0.01 * speedMul + n * 0.8) * 30 + 40
+    const nh = ((baseHue + n * 50 + fastSin(t * 0.006 * speedMul + n) * 30) % 360 + 360) % 360
+    const grad = ctx.createRadialGradient(nx, ny, 0, nx, ny, nr)
+    grad.addColorStop(0, `hsla(${nh|0},50,50,0.025)`)
+    grad.addColorStop(0.5, `hsla(${((nh + 40) % 360)|0},40,40,0.015)`)
+    grad.addColorStop(1, `rgba(0,0,0,0)`)
+    ctx.fillStyle = grad
+    ctx.fillRect(nx - nr, ny - nr, nr * 2, nr * 2)
+  }
+
+  // Stars
+  const mouseInflR = 120
+  for (let i = 0; i < stars.length; i++) {
+    const s = stars[i]
+    const twinkle = fastSin(t * 0.03 * s.twinkleSpeed + s.twinkleOffset) * 0.5 + 0.5
+    const alpha = twinkle * 0.3 * s.z
+
+    let sx = s.x, sy = s.y
+    if (mouseActive) {
+      const dx = s.x - mouseX
+      const dy = s.y - mouseY
+      const d2 = dx * dx + dy * dy
+      if (d2 < mouseInflR * mouseInflR && d2 > 0.01) {
+        const force = (1 - Math.sqrt(d2) / mouseInflR) * 15
+        const ang = Math.atan2(dy, dx) + fastSin(t * 0.02 + i) * 0.5
+        sx += Math.cos(ang) * force
+        sy += Math.sin(ang) * force
+      }
+    }
+
+    const hue = ((baseHue + i * 3 + twinkle * 20) % 360 + 360) % 360
+    ctx.beginPath()
+    ctx.arc(sx, sy, s.size * twinkle, 0, 6.283)
+    ctx.fillStyle = `hsla(${hue|0},60,${50 + twinkle * 20|0},${alpha})`
+    ctx.fill()
+
+    // Glow
+    ctx.beginPath()
+    ctx.arc(sx, sy, s.size * twinkle * 2.5, 0, 6.283)
+    ctx.fillStyle = `hsla(${hue|0},50,50,${alpha * 0.15})`
+    ctx.fill()
+  }
+  ctx.restore()
+}
+
 // ══════════════════════════════════════════════════════════════
 //  MAIN LOOP
 // ══════════════════════════════════════════════════════════════
@@ -994,6 +1216,11 @@ function draw() {
   if (!ctx) return
   t++
 
+  // Snapshot current settings
+  const s = props.settings
+  speedMul = s?.globalSpeed ?? 1
+  hueShift = s?.globalHueShift ?? 0
+
   // Smooth mouse position
   mouseSmoothX += (mouseX - mouseSmoothX) * 0.12
   mouseSmoothY += (mouseY - mouseSmoothY) * 0.12
@@ -1001,46 +1228,58 @@ function draw() {
   ctx.clearRect(0, 0, w, h)
 
   // Layer 1: Alive noise field (deepest, dense, alive)
-  drawAliveNoiseField()
+  if (!s || s.layers.noiseField.enabled) { ctx.globalAlpha = s?.layers.noiseField.opacity ?? 1; drawAliveNoiseField(); ctx.globalAlpha = 1 }
 
   // Layer 2: Checkerboard warp
-  drawCheckerboard()
+  if (!s || s.layers.checkerboard.enabled) { ctx.globalAlpha = s?.layers.checkerboard.opacity ?? 1; drawCheckerboard(); ctx.globalAlpha = 1 }
 
   // Layer 3: Flower of Life
-  drawFlowerOfLife()
+  if (!s || s.layers.flowerOfLife.enabled) { ctx.globalAlpha = s?.layers.flowerOfLife.opacity ?? 1; drawFlowerOfLife(); ctx.globalAlpha = 1 }
 
   // Layer 4: Op-Art Rings + chromatic aberration
-  drawOpArtRings()
+  if (!s || s.layers.opArtRings.enabled) { ctx.globalAlpha = s?.layers.opArtRings.opacity ?? 1; drawOpArtRings(); ctx.globalAlpha = 1 }
 
   // Layer 5: Network Grid
-  drawNetworkGrid()
+  if (!s || s.layers.networkGrid.enabled) { ctx.globalAlpha = s?.layers.networkGrid.opacity ?? 1; drawNetworkGrid(); ctx.globalAlpha = 1 }
 
   // Layer 6: Vortex spiral
-  drawVortex()
+  if (!s || s.layers.vortex.enabled) { ctx.globalAlpha = s?.layers.vortex.opacity ?? 1; drawVortex(); ctx.globalAlpha = 1 }
 
   // Layer 7: Lissajous curves
-  drawLissajous()
+  if (!s || s.layers.lissajous.enabled) { ctx.globalAlpha = s?.layers.lissajous.opacity ?? 1; drawLissajous(); ctx.globalAlpha = 1 }
 
   // Layer 8: Sacred Mandala
-  drawMandala()
+  if (!s || s.layers.mandala.enabled) { ctx.globalAlpha = s?.layers.mandala.opacity ?? 1; drawMandala(); ctx.globalAlpha = 1 }
 
   // Layer 9: Spiral particles
-  drawSpiralParticles()
+  if (!s || s.layers.spiralParticles.enabled) { ctx.globalAlpha = s?.layers.spiralParticles.opacity ?? 1; drawSpiralParticles(); ctx.globalAlpha = 1 }
 
   // Layer 10: Pulsating core
-  drawCore()
+  if (!s || s.layers.core.enabled) { ctx.globalAlpha = s?.layers.core.opacity ?? 1; drawCore(); ctx.globalAlpha = 1 }
 
   // Layer 11: Warp field (mouse)
-  drawWarpField()
+  if (!s || s.layers.warpField.enabled) { ctx.globalAlpha = s?.layers.warpField.opacity ?? 1; drawWarpField(); ctx.globalAlpha = 1 }
 
   // Layer 12: Disintegration (mouse)
-  drawDisintegration()
+  if (!s || s.layers.disintegration.enabled) { ctx.globalAlpha = s?.layers.disintegration.opacity ?? 1; drawDisintegration(); ctx.globalAlpha = 1 }
 
   // Layer 13: Screen tear / glitch bugs
-  drawScreenTear()
+  if (!s || s.layers.screenTear.enabled) { ctx.globalAlpha = s?.layers.screenTear.opacity ?? 1; drawScreenTear(); ctx.globalAlpha = 1 }
 
   // Layer 14: Vintage CRT overlay (top)
-  drawVintageOverlay()
+  if (!s || s.layers.crtOverlay.enabled) { ctx.globalAlpha = s?.layers.crtOverlay.opacity ?? 1; drawVintageOverlay(); ctx.globalAlpha = 1 }
+
+  // Layer 15: Matrix Rain (integrated)
+  if (!s || s.layers.matrixRain.enabled) { ctx.globalAlpha = s?.layers.matrixRain.opacity ?? 1; drawMatrixRain(); ctx.globalAlpha = 1 }
+
+  // Layer 16: Fractal Tree
+  if (!s || s.layers.fractalTree.enabled) { ctx.globalAlpha = s?.layers.fractalTree.opacity ?? 1; drawFractalTree(); ctx.globalAlpha = 1 }
+
+  // Layer 17: Plasma Wave
+  if (!s || s.layers.plasmaWave.enabled) { ctx.globalAlpha = s?.layers.plasmaWave.opacity ?? 1; drawPlasmaWave(); ctx.globalAlpha = 1 }
+
+  // Layer 18: Stardust / Nebula
+  if (!s || s.layers.stardust.enabled) { ctx.globalAlpha = s?.layers.stardust.opacity ?? 1; drawStardust(); ctx.globalAlpha = 1 }
 
   animId = requestAnimationFrame(draw)
 }
@@ -1051,6 +1290,8 @@ function start() {
   initFlower()
   initNetwork()
   initSpirals()
+  initRain()
+  initStars()
   draw()
 }
 

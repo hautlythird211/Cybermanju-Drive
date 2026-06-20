@@ -26,6 +26,7 @@ import WebBrowserPanel from '@/components/WebBrowserPanel.vue'
 import BookWriter from '@/components/BookWriter.vue'
 import NotesPanel from '@/components/NotesPanel.vue'
 import PluginCreator from '@/components/PluginCreator.vue'
+import ArtMaker from '@/components/ArtMaker.vue'
 
 export interface WindowState {
   id: string
@@ -37,6 +38,8 @@ export interface WindowState {
   width: number
   height: number
   minimized: boolean
+  maximized: boolean
+  previousBounds: { x: number; y: number; width: number; height: number }
   zIndex: number
   component: Component | null
   props?: Record<string, unknown>
@@ -90,6 +93,7 @@ const defaultSizes: SizeMap = {
   book: { width: 680, height: 500 },
   notes: { width: 520, height: 420 },
   plugins: { width: 600, height: 480 },
+  'art-maker': { width: 520, height: 560 },
 }
 
 const inlinePanels: PanelType[] = [
@@ -123,6 +127,7 @@ const panelComponentMap: Record<string, Component> = {
   book: BookWriter,
   notes: NotesPanel,
   plugins: PluginCreator,
+  'art-maker': ArtMaker,
 }
 
 function getComponent(panelType: PanelType): Component | null {
@@ -250,6 +255,8 @@ export function useWindowManager() {
       width: Math.min(size.width, tile.width),
       height: Math.min(size.height, tile.height),
       minimized: false,
+      maximized: false,
+      previousBounds: { x: tile.x, y: tile.y, width: Math.min(size.width, tile.width), height: Math.min(size.height, tile.height) },
       zIndex: nextZIndex.value++,
       component: comp,
       props: Object.keys(resolvedProps).length > 0 ? resolvedProps : undefined,
@@ -352,9 +359,28 @@ export function useWindowManager() {
     })
   }
 
+  function maximize(id: string) {
+    const win = windows.value.find(w => w.id === id)
+    if (!win) return
+    if (win.maximized) {
+      win.x = win.previousBounds.x
+      win.y = win.previousBounds.y
+      win.width = win.previousBounds.width
+      win.height = win.previousBounds.height
+      win.maximized = false
+    } else {
+      win.previousBounds = { x: win.x, y: win.y, width: win.width, height: win.height }
+      win.x = 0
+      win.y = 0
+      win.width = window.innerWidth
+      win.height = window.innerHeight
+      win.maximized = true
+    }
+  }
+
   function updatePosition(id: string, x: number, y: number) {
     const win = windows.value.find(w => w.id === id)
-    if (win) {
+    if (win && !win.maximized) {
       win.x = x
       win.y = y
     }
@@ -362,7 +388,7 @@ export function useWindowManager() {
 
   function updateSize(id: string, width: number, height: number) {
     const win = windows.value.find(w => w.id === id)
-    if (win) {
+    if (win && !win.maximized) {
       win.width = Math.max(320, width)
       win.height = Math.max(240, height)
     }
@@ -370,7 +396,7 @@ export function useWindowManager() {
 
   function updateTilePosition(id: string, containerWidth: number, containerHeight: number) {
     const win = windows.value.find(w => w.id === id)
-    if (!win) return
+    if (!win || win.maximized) return
     const tile = getTileRect(win.screenX, win.screenY, win.tileSlot, containerWidth, containerHeight)
     win.x = tile.x
     win.y = tile.y
@@ -381,7 +407,7 @@ export function useWindowManager() {
   function retileAll(containerWidth: number, containerHeight: number) {
     lastContainerSize.value = { width: containerWidth, height: containerHeight }
     for (const win of windows.value) {
-      if (win.minimized || win.animState === 'exiting') continue
+      if (win.minimized || win.maximized || win.animState === 'exiting') continue
       const tile = getTileRect(win.screenX, win.screenY, win.tileSlot, containerWidth, containerHeight)
       win.x = tile.x
       win.y = tile.y
@@ -410,6 +436,7 @@ export function useWindowManager() {
     open,
     close,
     minimize,
+    maximize,
     restore,
     focus,
     toggle,

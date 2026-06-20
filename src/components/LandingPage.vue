@@ -542,8 +542,8 @@ onUnmounted(() => {
   inset: 0;
   display: flex;
   flex-direction: column;
-  background: #000;
-  font-family: 'Courier New', 'Fira Code', monospace;
+  background: #030308;
+  font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Courier New', monospace;
   outline: none;
   overflow: hidden;
   z-index: 999;
@@ -616,12 +616,13 @@ onUnmounted(() => {
   width: 92vw;
   max-width: 640px;
   max-height: 40vh;
-  background: rgba(0, 0, 0, 0.9);
-  border: 1px solid rgba(0, 255, 65, 0.15);
-  border-radius: 8px;
+  background: rgba(3, 3, 8, 0.82);
+  border: 1px solid rgba(0, 255, 65, 0.12);
+  border-radius: 12px;
   padding: 16px 20px;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.8), 0 0 1px rgba(0, 255, 65, 0.3);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 1px rgba(0, 255, 65, 0.2);
   cursor: text;
   transition: opacity 0.3s ease;
 }

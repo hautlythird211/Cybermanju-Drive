@@ -1,12 +1,13 @@
 <template>
   <div class="desktop-shell" @contextmenu.prevent="onDesktopContext">
-    <!-- Animated psychedelic ambient background -->
+    <!-- Animated ambient background with glass-orbs -->
     <div class="desktop-ambient" aria-hidden="true">
       <div class="ambient-orb ambient-orb--1"></div>
       <div class="ambient-orb ambient-orb--2"></div>
       <div class="ambient-orb ambient-orb--3"></div>
       <div class="ambient-orb ambient-orb--4"></div>
       <div class="ambient-orb ambient-orb--5"></div>
+      <div class="ambient-grid"></div>
     </div>
     <div class="desktop-wallpaper">
       <slot name="wallpaper" />
@@ -45,7 +46,7 @@
                 class="overview-tile"
                 :style="overviewTileBg(w)"
               >
-                <Icon :icon="w.icon" width="10" height="10" />
+                <Icon :icon="w.icon" width="12" height="12" />
                 <span class="overview-tile-label">{{ w.title }}</span>
               </div>
               <div
@@ -56,7 +57,7 @@
             </div>
           </div>
         </div>
-        <div class="overview-hint">click a screen to jump · 3-finger swipe to close</div>
+        <div class="overview-hint">click a screen to jump - 3-finger swipe to close</div>
       </div>
 
       <div ref="gridRef" class="desktop-grid" :class="{ 'screen-swiping': screenTransitioning }">
@@ -67,6 +68,7 @@
           :focused="win.id === wm.activeWindow.value?.id"
           @close="(id: string) => wm.close(id)"
           @minimize="(id: string) => wm.minimize(id)"
+          @maximize="(id: string) => wm.maximize(id)"
           @focus="(id: string) => wm.focus(id)"
           @move="(id: string, x: number, y: number) => wm.updatePosition(id, x, y)"
         />
@@ -109,9 +111,9 @@ const currentScreenIdx = computed(() => {
 const visibleWindows = computed(() => wm.getCurrentScreenWindows())
 
 function overviewTileBg(w: { title: string; icon: string }) {
-  const colours = ['#ff5f57', '#febc2e', '#28c840', '#5dade2', '#af7ac5', '#f5b041']
+  const colours = ['#ff453a', '#ffd60a', '#30d158', '#5af0ff', '#b388ff', '#ff6b9d']
   const bg = colours[w.title.length % colours.length]
-  return { background: `${bg}22`, borderColor: bg }
+  return { background: `${bg}18`, borderColor: bg }
 }
 
 function jumpToScreen(idx: number) {
@@ -244,7 +246,7 @@ function onDesktopContext(e: MouseEvent) {
   if (ctx) ctx.open('file_grid_bg', { x: e.clientX, y: e.clientY })
 }
 
-// ── Sync store booleans ↔ window manager ──
+// ── Sync store booleans - window manager ──
 watch(() => store.showEncryptionPanel, (val) => {
   if (val) wm.open('encryption')
   else { const w = wm.windows.value.find(win => win.panelType === 'encryption'); if (w) wm.close(w.id) }
@@ -304,6 +306,23 @@ onUnmounted(() => {
   position: relative;
   overflow: hidden;
   isolation: isolate;
+  background: var(--bg-deep);
+}
+
+.desktop-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 255, 65, 0.012) 2px,
+      rgba(0, 255, 65, 0.012) 4px
+    );
 }
 
 .desktop-wallpaper {
@@ -331,7 +350,7 @@ onUnmounted(() => {
   z-index: 1;
   width: 100%;
   height: 100%;
-  padding: 6px;
+  padding: 8px;
   transition: opacity 0.2s, filter 0.2s;
   will-change: transform, opacity;
 }
@@ -345,73 +364,74 @@ onUnmounted(() => {
   position: absolute;
   inset: 0;
   z-index: 50;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 20px;
+  gap: 24px;
 }
 
 .overview-header {
-  font-family: 'Courier New', monospace;
-  font-size: 13px;
-  font-weight: 700;
-  color: #00ff41;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-accent);
   letter-spacing: 4px;
-  text-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+  text-shadow: 0 0 20px rgba(0, 255, 65, 0.2);
 }
 
 .overview-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 20px;
   justify-content: center;
   align-items: center;
   max-width: 90vw;
 }
 
 .overview-screen {
-  width: 200px;
-  height: 140px;
-  border: 2px solid #333;
-  border-radius: 10px;
-  padding: 8px;
+  width: 220px;
+  height: 150px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 10px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  gap: 8px;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
   position: relative;
-  background: rgba(20, 20, 20, 0.8);
-  backdrop-filter: blur(8px);
+  background: rgba(14, 14, 18, 0.7);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
 }
 
 .overview-screen:hover {
-  border-color: #555;
+  border-color: rgba(0, 255, 65, 0.2);
   transform: translateY(-4px) scale(1.03);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 255, 65, 0.04);
 }
 
 .overview-screen.hovered {
-  border-color: #00ff41;
+  border-color: rgba(0, 255, 65, 0.3);
   box-shadow:
-    0 0 20px rgba(0, 255, 65, 0.15),
-    inset 0 0 30px rgba(0, 255, 65, 0.03);
+    0 0 20px rgba(0, 255, 65, 0.08),
+    inset 0 0 30px rgba(0, 255, 65, 0.02);
 }
 
 .overview-screen.active {
-  border-color: #00ff4188;
+  border-color: rgba(0, 255, 65, 0.2);
 }
 
 .overview-screen-label {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 8px;
   font-weight: 700;
-  color: #888;
-  letter-spacing: 1px;
+  color: var(--text-muted);
+  letter-spacing: 1.5px;
 }
 
 .overview-screen-grid {
@@ -419,29 +439,30 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
-  gap: 3px;
+  gap: 4px;
 }
 
 .overview-tile {
-  border: 1px solid #333;
-  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
   font-size: 7px;
-  color: #ccc;
+  color: rgba(255, 255, 255, 0.7);
   overflow: hidden;
   transition: all 0.15s;
+  font-family: var(--font-mono);
 }
 
 .overview-screen:hover .overview-tile {
-  border-color: #444;
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .overview-tile-empty {
-  opacity: 0.15;
+  opacity: 0.12;
   border-style: dashed;
 }
 
@@ -454,15 +475,15 @@ onUnmounted(() => {
 }
 
 .overview-hint {
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 9px;
-  color: #444;
+  color: rgba(255, 255, 255, 0.2);
   letter-spacing: 1px;
 }
 
 .desktop-dock {
   position: absolute;
-  bottom: 12px;
+  bottom: 14px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 200;
@@ -477,6 +498,17 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
+.ambient-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, transparent 70%);
+  -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, transparent 70%);
+}
+
 .ambient-orb {
   position: absolute;
   border-radius: 50%;
@@ -487,47 +519,47 @@ onUnmounted(() => {
 .ambient-orb--1 {
   width: clamp(300px, 50vw, 700px);
   height: clamp(300px, 50vw, 700px);
-  background: radial-gradient(circle, rgba(0, 255, 65, 0.18), rgba(0, 200, 255, 0.06) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(0, 255, 65, 0.12), rgba(0, 200, 255, 0.04) 50%, transparent 70%);
   top: -10%;
   left: -10%;
-  animation: psychedelic-drift-1 12s ease-in-out infinite, hue-crazy 8s linear infinite;
+  animation: ambient-drift-1 12s ease-in-out infinite;
 }
 
 .ambient-orb--2 {
   width: clamp(400px, 60vw, 800px);
   height: clamp(400px, 60vw, 800px);
-  background: radial-gradient(circle, rgba(255, 107, 157, 0.14), rgba(179, 136, 255, 0.08) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 107, 157, 0.08), rgba(179, 136, 255, 0.05) 50%, transparent 70%);
   bottom: -15%;
   right: -10%;
-  animation: psychedelic-drift-2 15s ease-in-out infinite reverse, hue-crazy 10s linear infinite reverse;
+  animation: ambient-drift-2 15s ease-in-out infinite reverse;
 }
 
 .ambient-orb--3 {
   width: clamp(200px, 35vw, 500px);
   height: clamp(200px, 35vw, 500px);
-  background: radial-gradient(circle, rgba(255, 215, 0, 0.12), rgba(255, 153, 51, 0.06) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.07), rgba(255, 153, 51, 0.04) 50%, transparent 70%);
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  animation: psychedelic-drift-3 18s ease-in-out infinite, hue-crazy 12s linear infinite;
+  animation: ambient-drift-3 18s ease-in-out infinite;
 }
 
 .ambient-orb--4 {
   width: clamp(250px, 40vw, 550px);
   height: clamp(250px, 40vw, 550px);
-  background: radial-gradient(circle, rgba(90, 240, 255, 0.12), rgba(0, 255, 65, 0.05) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(90, 240, 255, 0.07), rgba(0, 255, 65, 0.03) 50%, transparent 70%);
   top: 30%;
   right: 10%;
-  animation: psychedelic-drift-4 20s ease-in-out infinite reverse, hue-crazy 6s linear infinite;
+  animation: ambient-drift-4 20s ease-in-out infinite reverse;
 }
 
 .ambient-orb--5 {
   width: clamp(180px, 25vw, 350px);
   height: clamp(180px, 25vw, 350px);
-  background: radial-gradient(circle, rgba(179, 136, 255, 0.1), rgba(255, 107, 157, 0.06) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(179, 136, 255, 0.06), rgba(255, 107, 157, 0.04) 50%, transparent 70%);
   bottom: 20%;
   left: 15%;
-  animation: psychedelic-drift-5 22s ease-in-out infinite, hue-crazy 14s linear infinite reverse;
+  animation: ambient-drift-5 22s ease-in-out infinite;
 }
 
 .desktop-content {
@@ -540,41 +572,36 @@ onUnmounted(() => {
   isolation: isolate;
 }
 
-@keyframes psychedelic-drift-1 {
+@keyframes ambient-drift-1 {
   0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
-  25% { transform: translate(8%, 5%) scale(1.12) rotate(3deg); }
-  50% { transform: translate(-5%, 8%) scale(0.92) rotate(-2deg); }
-  75% { transform: translate(6%, -4%) scale(1.06) rotate(4deg); }
+  25% { transform: translate(6%, 4%) scale(1.08) rotate(2deg); }
+  50% { transform: translate(-4%, 6%) scale(0.95) rotate(-1deg); }
+  75% { transform: translate(5%, -3%) scale(1.04) rotate(3deg); }
 }
 
-@keyframes psychedelic-drift-2 {
+@keyframes ambient-drift-2 {
   0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
-  20% { transform: translate(-6%, -4%) scale(1.08) rotate(-3deg); }
-  50% { transform: translate(4%, -6%) scale(0.94) rotate(2deg); }
-  80% { transform: translate(-3%, 5%) scale(1.1) rotate(-4deg); }
+  20% { transform: translate(-5%, -3%) scale(1.05) rotate(-2deg); }
+  50% { transform: translate(3%, -5%) scale(0.96) rotate(1deg); }
+  80% { transform: translate(-2%, 4%) scale(1.06) rotate(-3deg); }
 }
 
-@keyframes psychedelic-drift-3 {
+@keyframes ambient-drift-3 {
   0%, 100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
-  33% { transform: translate(calc(-50% + 6%), calc(-50% - 4%)) scale(1.15) rotate(5deg); }
-  66% { transform: translate(calc(-50% - 5%), calc(-50% + 6%)) scale(0.88) rotate(-3deg); }
+  33% { transform: translate(calc(-50% + 5%), calc(-50% - 3%)) scale(1.1) rotate(4deg); }
+  66% { transform: translate(calc(-50% - 4%), calc(-50% + 5%)) scale(0.9) rotate(-2deg); }
 }
 
-@keyframes psychedelic-drift-4 {
+@keyframes ambient-drift-4 {
   0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
-  25% { transform: translate(-7%, 6%) scale(1.08) rotate(-5deg); }
-  50% { transform: translate(5%, -5%) scale(1.14) rotate(3deg); }
-  75% { transform: translate(-4%, -3%) scale(0.92) rotate(-2deg); }
+  25% { transform: translate(-5%, 5%) scale(1.05) rotate(-4deg); }
+  50% { transform: translate(4%, -4%) scale(1.08) rotate(2deg); }
+  75% { transform: translate(-3%, -2%) scale(0.95) rotate(-1deg); }
 }
 
-@keyframes psychedelic-drift-5 {
+@keyframes ambient-drift-5 {
   0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
-  30% { transform: translate(5%, -7%) scale(1.1) rotate(4deg); }
-  60% { transform: translate(-6%, 4%) scale(0.9) rotate(-5deg); }
-}
-
-@keyframes hue-crazy {
-  0% { filter: hue-rotate(0deg) blur(80px); }
-  100% { filter: hue-rotate(360deg) blur(80px); }
+  30% { transform: translate(4%, -5%) scale(1.06) rotate(3deg); }
+  60% { transform: translate(-5%, 3%) scale(0.93) rotate(-4deg); }
 }
 </style>

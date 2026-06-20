@@ -3,21 +3,18 @@ use crate::harvest;
 use crate::portable;
 use crate::transfer;
 use anyhow::Result;
-use chrono::Utc;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen};
-use crossterm::{execute, queue};
-use cybermanju_types::sync::{StorageBackend, SyncBackendType};
+use crossterm::execute;
+use cybermanju_types::sync::SyncBackendType;
 use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style, Stylize};
-use ratatui::symbols;
-use ratatui::text::{Line, Span, Text};
-use ratatui::widgets::{Block, BorderType, Borders, Cell, Clear, Gauge, List, ListItem, ListState, Paragraph, Row, Table, TableState, Tabs};
+use ratatui::text::{Line, Span};
+use ratatui::widgets::{Block, BorderType, Borders, Gauge, List, ListItem, ListState, Paragraph, Tabs};
 use ratatui::Frame;
 use std::io::stdout;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 
@@ -74,7 +71,7 @@ impl Default for BackendConfig {
 pub enum Screen {
     Menu,
     BackendList,
-    BackendAdd { backend_type: Option<SyncBackendType>, name: String, token: String, config_json: String, error: String },
+    BackendAdd,
     Harvest { backends: Vec<HarvestBackend>, overall_progress: f64, status_line: String, running: bool },
     Transfer { source_idx: usize, dest_idx: usize, status: String, progress: f64, running: bool },
     Portable { mode: PortableMode, status: String, path: String, progress: f64, running: bool },
@@ -99,7 +96,7 @@ pub enum PortableMode {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TaskMessage {
-    HarvestProgress(String, usize, u64, String), // backend_name, files_done, bytes, status
+    HarvestProgress(String, usize, usize, u64, String), // backend_name, files_done, total_files, bytes, status
     HarvestDone(String, usize, u64),
     HarvestError(String, String),
     HarvestOverall(f64, String),
@@ -200,11 +197,12 @@ impl App {
     fn check_tasks(&mut self) {
         while let Ok(msg) = self.task_rx.try_recv() {
             match msg {
-                TaskMessage::HarvestProgress(name, files, bytes, status) => {
+                TaskMessage::HarvestProgress(name, files, total, bytes, status) => {
                     if let Screen::Harvest { ref mut backends, .. } = self.screen {
                         for b in backends.iter_mut() {
                             if b.name == name {
                                 b.files_downloaded = files;
+                                b.files_found = total;
                                 b.downloaded_bytes = bytes;
                                 b.status = status.clone();
                             }
@@ -295,13 +293,23 @@ impl App {
         }
     }
 
+    const MENU_ITEMS: &[&str] = &[
+        "  Backends  ",
+        "  Harvest   ",
+        "  Transfer  ",
+        "  .cybermanju Create",
+        "  .cybermanju Extract",
+        "  Quit      ",
+    ];
+
     fn handle_menu_key(&mut self, key: KeyCode) {
+        let max = Self::MENU_ITEMS.len() - 1;
         match key {
             KeyCode::Up | KeyCode::Char('k') => {
                 self.menu_index = self.menu_index.saturating_sub(1);
             }
             KeyCode::Down | KeyCode::Char('j') => {
-                self.menu_index = self.menu_index.saturating_add(1).min(5);
+                self.menu_index = self.menu_index.saturating_add(1).min(max);
             }
             KeyCode::Enter => match self.menu_index {
                 0 => self.screen = Screen::BackendList,
@@ -337,7 +345,7 @@ impl App {
                     field_focus: 0,
                     error: String::new(),
                 };
-                self.screen = Screen::BackendAdd { backend_type: None, name: String::new(), token: String::new(), config_json: String::new(), error: String::new() };
+                self.screen = Screen::BackendAdd;
             }
             KeyCode::Char('d') => {
                 if let Some(i) = self.backend_list_state.selected() {
@@ -354,8 +362,10 @@ impl App {
         }
     }
 
+    const BACKEND_TYPES: &[&str] = &["local", "github", "gitlab", "googleDrive", "googlePhotos", "telegram", "mega"];
+
     fn handle_backend_add_key(&mut self, key: KeyCode) {
-        let types = ["local", "github", "gitlab", "googleDrive", "googlePhotos", "telegram", "mega"];
+        let types = Self::BACKEND_TYPES;
         let mut state = self.backend_add_state.clone();
         match key {
             KeyCode::Tab => {
@@ -368,7 +378,7 @@ impl App {
             }
             KeyCode::Down | KeyCode::Char('j') => {
                 if state.field_focus == 0 {
-                    state.backend_type = (state.backend_type + 1).min(6);
+                    state.backend_type = (state.backend_type + 1).min(Self::BACKEND_TYPES.len() - 1);
                 }
             }
             KeyCode::Enter => {
@@ -425,22 +435,7 @@ impl App {
             _ => {}
         }
         self.backend_add_state = state;
-        self.screen = Screen::BackendAdd {
-            backend_type: Some(match types[self.backend_add_state.backend_type] {
-                "local" => SyncBackendType::Local,
-                "github" => SyncBackendType::GitHub,
-                "gitlab" => SyncBackendType::GitLab,
-                "googleDrive" => SyncBackendType::GoogleDrive,
-                "googlePhotos" => SyncBackendType::GooglePhotos,
-                "telegram" => SyncBackendType::Telegram,
-                "mega" => SyncBackendType::Mega,
-                _ => SyncBackendType::Local,
-            }),
-            name: self.backend_add_state.name.clone(),
-            token: self.backend_add_state.token.clone(),
-            config_json: self.backend_add_state.config.clone(),
-            error: self.backend_add_state.error.clone(),
-        };
+        self.screen = Screen::BackendAdd;
     }
 
     fn handle_harvest_key(&mut self, key: KeyCode) {
@@ -592,15 +587,7 @@ impl App {
     }
 
     fn render_menu(&self, f: &mut Frame) {
-        let items = [
-            "  Backends  ",
-            "  Harvest   ",
-            "  Transfer  ",
-            "  .cybermanju Create",
-            "  .cybermanju Extract",
-            "  Quit      ",
-        ];
-        let list_items: Vec<ListItem> = items.iter().enumerate().map(|(i, s)| {
+        let list_items: Vec<ListItem> = Self::MENU_ITEMS.iter().enumerate().map(|(i, s)| {
             let style = if i == self.menu_index { Style::new().fg(Color::Rgb(0, 255, 65)).bg(Color::Rgb(0, 40, 0)) } else { Style::new().fg(Color::Rgb(0, 200, 50)) };
             ListItem::new(Line::from(Span::styled(s, style)))
         }).collect();
@@ -644,7 +631,7 @@ impl App {
             .direction(Direction::Vertical)
             .constraints([Constraint::Length(3), Constraint::Length(3), Constraint::Length(3), Constraint::Length(3), Constraint::Length(3), Constraint::Min(1)])
             .split(f.area());
-        let types = ["local", "github", "gitlab", "googleDrive", "googlePhotos", "telegram", "mega"];
+        let types = Self::BACKEND_TYPES;
         let sel = self.backend_add_state.backend_type;
         let type_str = types[sel];
         let focused = self.backend_add_state.field_focus;
@@ -710,7 +697,7 @@ impl App {
                     _ => Color::Rgb(0, 255, 65),
                 };
                 let pct = if b.files_found > 0 { (b.downloaded_bytes as f64 / b.total_bytes.max(1) as f64 * 100.0) as u16 } else { 0 };
-                ListItem::new(format!(" {:<20} {:>4} files {:>8} bytes  {}", b.name, b.files_downloaded, b.downloaded_bytes, b.status))
+                ListItem::new(format!(" {:<20} {:>4} files {:>8} bytes {:>3}%  {}", b.name, b.files_downloaded, b.downloaded_bytes, pct, b.status))
                     .style(Style::new().fg(color))
             }).collect();
             let list = List::new(items)

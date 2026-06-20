@@ -16,8 +16,8 @@ impl std::fmt::Display for SyncBackendType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Local => write!(f, "local"),
-            Self::GitHub => write!(f, "github"),
-            Self::GitLab => write!(f, "gitlab"),
+            Self::GitHub => write!(f, "gitHub"),
+            Self::GitLab => write!(f, "gitLab"),
             Self::GoogleDrive => write!(f, "googleDrive"),
             Self::GooglePhotos => write!(f, "googlePhotos"),
             Self::Telegram => write!(f, "telegram"),
@@ -120,6 +120,8 @@ pub struct SyncConfig {
     pub create_previews: bool,
     pub delete_raw_after_sync: bool,
     pub max_concurrent_uploads: u32,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

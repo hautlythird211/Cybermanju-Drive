@@ -11,6 +11,7 @@ members = [
     "crates/tests",
     "crates/drive-wasm",
     "crates/cli",
+    "crates/backends",
     "src-tauri",
 ]
 resolver = "2"

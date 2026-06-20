@@ -279,6 +279,7 @@ async function handleGoogleOAuth(oauth: typeof import('@/wasm/oauth')) {
   }
   store.authToken = token.accessToken
   await store.fetchAccounts()
+  store.showLoginPopup = false
   showImportDialog('google', token, 'Google (Drive + Photos)')
   notify('success', 'AUTHENTICATED WITH GOOGLE')
 }
@@ -287,21 +288,24 @@ async function doOAuth(provider: OAuthProvider, storageKey: OAuthProvider, oauth
   const existingToken = await oauth.loadTokenFromStorage(storageKey)
   if (existingToken) {
     const validToken = await oauth.getValidToken(existingToken)
-    if (validToken) oauth.saveTokenToStorage(validToken)
-    const data = await import('@/wasm/data')
-    const account = await data.upsertOAuthAccount(provider, validToken!)
-    store.currentUser = {
-      userId: account.id,
-      username: account.name,
-      role: 'user',
-      displayName: account.name,
-      token: validToken!.accessToken,
+    if (validToken) {
+      oauth.saveTokenToStorage(validToken)
+      const data = await import('@/wasm/data')
+      const account = await data.upsertOAuthAccount(provider, validToken)
+      store.currentUser = {
+        userId: account.id,
+        username: account.name,
+        role: 'user',
+        displayName: account.name,
+        token: validToken.accessToken,
+      }
+      store.authToken = validToken.accessToken
+      await store.fetchAccounts()
+      store.showLoginPopup = false
+      showImportDialog(provider, validToken, account.name)
+      notify('success', `AUTHENTICATED WITH ${provider.toUpperCase()}`)
+      return
     }
-    store.authToken = validToken!.accessToken
-    await store.fetchAccounts()
-    showImportDialog(provider, validToken!, account.name)
-    notify('success', `AUTHENTICATED WITH ${provider.toUpperCase()}`)
-    return
   }
 
   const token = await oauth.authenticateWithPopup(provider)
@@ -317,6 +321,7 @@ async function doOAuth(provider: OAuthProvider, storageKey: OAuthProvider, oauth
   }
   store.authToken = token.accessToken
   await store.fetchAccounts()
+  store.showLoginPopup = false
   showImportDialog(provider, token, account.name)
   notify('success', `AUTHENTICATED WITH ${provider.toUpperCase()}`)
 }

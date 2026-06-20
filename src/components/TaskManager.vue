@@ -208,14 +208,14 @@ onUnmounted(() => {
   background: transparent;
   border: none;
   outline: none;
-  color: #ccc;
-  font-family: 'Courier New', monospace;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
   font-size: 11px;
 }
 
 .tm-count {
   font-size: 10px;
-  color: #555;
+  color: var(--text-muted);
   letter-spacing: 1px;
 }
 
@@ -234,14 +234,14 @@ onUnmounted(() => {
 .tm-table th {
   text-align: left;
   padding: 8px 8px;
-  color: #555;
+  color: var(--text-muted);
   font-weight: 700;
   letter-spacing: 1px;
   border-bottom: 1px solid var(--border-subtle);
   font-size: 9px;
   position: sticky;
   top: 0;
-  background: #0a0a0a;
+  background: var(--bg-surface);
 }
 
 .th-sort {
@@ -250,7 +250,7 @@ onUnmounted(() => {
 }
 
 .th-sort:hover {
-  color: #888;
+  color: var(--text-secondary);
 }
 
 .tm-table td {
@@ -263,14 +263,14 @@ onUnmounted(() => {
 }
 
 .tm-pid {
-  color: #555;
-  font-family: 'Courier New', monospace;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
   font-size: 9px;
   width: 40px;
 }
 
 .tm-name {
-  color: #ddd;
+  color: var(--text-primary);
   font-weight: 600;
   font-size: 10px;
   max-width: 160px;
@@ -283,15 +283,15 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #888;
-  font-family: 'Courier New', monospace;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
   min-width: 80px;
 }
 
 .tm-bar-wrap {
   flex: 1;
   height: 4px;
-  background: #111;
+  background: var(--bg-surface);
   border-radius: 2px;
   overflow: hidden;
   min-width: 30px;
@@ -304,8 +304,8 @@ onUnmounted(() => {
 }
 
 .tm-cpu-bar {
-  background: linear-gradient(90deg, #00ff41, #00ff88);
-  box-shadow: 0 0 4px rgba(0, 255, 65, 0.3);
+  background: linear-gradient(90deg, var(--accent), var(--accent-dim));
+  box-shadow: 0 0 4px var(--accent-glow);
 }
 
 .tm-mem-bar {
@@ -317,7 +317,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #888;
+  color: var(--text-secondary);
 }
 
 .status-dot {
@@ -326,13 +326,13 @@ onUnmounted(() => {
   border-radius: 50%;
 }
 
-.status--running { background: #00ff41; box-shadow: 0 0 4px rgba(0, 255, 65, 0.5); }
+.status--running { background: var(--accent); box-shadow: 0 0 4px var(--accent-glow); }
 .status--sleeping { background: #febc2e; box-shadow: 0 0 4px rgba(254, 188, 46, 0.5); }
 .status--stopped { background: #ff5f57; box-shadow: 0 0 4px rgba(255, 95, 87, 0.5); }
 .status--zombie { background: #555; }
 
 .tm-user {
-  color: #555;
+  color: var(--text-muted);
   font-size: 9px;
 }
 

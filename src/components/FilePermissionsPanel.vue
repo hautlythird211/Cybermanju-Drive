@@ -145,25 +145,25 @@ async function handleRevoke(perm: FilePermission) {
 .perms-panel {
   width: 100%;
   height: 100%;
-  background: #0a0a0a;
   overflow-y: auto;
-  padding: 16px;
-  font-family: 'Courier New', monospace;
-  color: #00ff41;
+  padding: 20px;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  background: transparent;
 }
 
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #00ff41;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-glass);
   margin-bottom: 16px;
 }
 
 .header-left { display: flex; align-items: center; gap: 8px; }
-.icon-perms { font-size: 16px; }
-.panel-title { font-size: 14px; font-weight: 800; letter-spacing: 1px; margin: 0; }
+.icon-perms { font-size: 14px; color: var(--text-accent); }
+.panel-title { font-size: 13px; font-weight: 700; letter-spacing: 1px; margin: 0; color: var(--text-primary); }
 
 .empty-state {
   display: flex;
@@ -184,20 +184,21 @@ async function handleRevoke(perm: FilePermission) {
   gap: 4px;
   margin-bottom: 16px;
   padding-bottom: 10px;
-  border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+  border-bottom: 1px solid var(--border-glass);
 }
 
-.fi-name { font-size: 13px; font-weight: 700; }
-.fi-path { font-size: 9px; }
+.fi-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.fi-path { font-size: 9px; color: var(--text-muted); }
 
 .section { margin-bottom: 16px; }
 
 .section-title {
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: rgba(0, 255, 65, 0.6);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
   margin: 0 0 8px;
+  font-family: var(--font-mono);
 }
 
 .perms-list {
@@ -210,32 +211,39 @@ async function handleRevoke(perm: FilePermission) {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
-  border: 1px solid rgba(0, 255, 65, 0.2);
+  padding: 8px 10px;
+  border: 1px solid var(--border-glass);
   font-size: 10px;
+  background: var(--bg-glass-light);
+  backdrop-filter: blur(var(--glass-blur-light));
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
 }
 
-.perm-user { flex: 1; font-weight: 600; }
-.perm-access { font-size: 9px; border: 1px solid #00ff41; padding: 0 4px; }
+.perm-user { flex: 1; font-weight: 600; color: var(--text-primary); }
+.perm-access { font-size: 9px; border: 1px solid var(--border-medium); padding: 1px 6px; color: var(--text-muted); border-radius: var(--radius-sm); }
 
 .perm-revoke {
   background: transparent;
-  border: 1px solid #00ff41;
-  color: #00ff41;
-  padding: 1px 4px;
+  border: 1px solid var(--border-medium);
+  color: var(--text-muted);
+  padding: 2px 6px;
   cursor: pointer;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 8px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
 }
 
 .perm-revoke:hover {
-  background: #00ff41;
-  color: #0a0a0a;
+  background: var(--accent-dim);
+  border-color: var(--border-accent);
+  color: var(--text-accent);
 }
 
 .grant-section {
   padding-top: 12px;
-  border-top: 2px solid #00ff41;
+  border-top: 1px solid var(--border-glass);
 }
 
 .grant-row {
@@ -245,29 +253,37 @@ async function handleRevoke(perm: FilePermission) {
 }
 
 .bw-input {
-  background: #0a0a0a;
-  border: 2px solid #00ff41;
-  color: #00ff41;
-  font-family: 'Courier New', monospace;
-  font-size: 10px;
-  padding: 4px 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.bw-input:focus {
+  border-color: var(--border-accent);
+  outline: none;
 }
 
 .bw-btn {
-  background: transparent;
-  border: 2px solid #00ff41;
-  color: #00ff41;
-  padding: 4px 12px;
+  background: var(--accent);
+  color: var(--text-inverse);
+  border: 1px solid var(--accent);
+  padding: 6px 14px;
   cursor: pointer;
-  font-family: 'Courier New', monospace;
-  font-size: 10px;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
   white-space: nowrap;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
 }
 
 .bw-btn:hover {
-  background: #00ff41;
-  color: #0a0a0a;
+  background: #00cc35;
+  border-color: #00cc35;
 }
 
 .bw-btn:disabled {
@@ -284,7 +300,8 @@ async function handleRevoke(perm: FilePermission) {
 .share-copied {
   font-size: 9px;
   margin-bottom: 8px;
+  color: var(--text-accent);
 }
 
-.text-muted { color: rgba(0, 255, 65, 0.5) !important; }
+.text-muted { color: var(--text-muted) !important; }
 </style>

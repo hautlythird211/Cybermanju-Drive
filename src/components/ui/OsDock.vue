@@ -56,10 +56,10 @@ function onDockItemEnter(idx: number) {
       if (itemEl) {
         const dist = Math.abs(i - idx)
         let scale = 1
-        if (dist === 0) scale = 1.5
-        else if (dist === 1) scale = 1.15
+        if (dist === 0) scale = 1.3
+        else if (dist === 1) scale = 1.1
         dockTweens.value.get(i)?.kill()
-        const t = gsap.to(itemEl, { scale, duration: 0.2, ease: 'cubic-bezier(0.22, 1, 0.36, 1)', force3D: true, overwrite: 'auto' })
+        const t = gsap.to(itemEl, { scale, duration: 0.35, ease: 'back.out(2)', force3D: true, overwrite: 'auto' })
         dockTweens.value.set(i, t)
       }
     })
@@ -185,41 +185,61 @@ onUnmounted(() => {
   height: 40px;
   cursor: pointer;
   border-radius: var(--radius-lg);
-  transition: background var(--transition-fast);
+  transition: filter 0.25s cubic-bezier(0.22, 1, 0.36, 1);
   position: relative;
   will-change: transform;
 }
-.os-dock__item:hover {
-  background: var(--bg-overlay);
+.os-dock__item:hover .os-dock__icon-wrap {
+  filter: brightness(1.4) drop-shadow(0 0 6px var(--accent-glow));
 }
 
 .os-dock__item--active {
   background: var(--accent-dim);
-  box-shadow: 0 0 12px var(--accent-glow);
+  box-shadow: 0 0 16px var(--accent-glow);
+  transform: scale(1.06);
 }
 .os-dock__item--active::after {
   content: '';
   position: absolute;
-  bottom: -2px;
+  bottom: -4px;
   left: 50%;
   transform: translateX(-50%);
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
+  width: 20px;
+  height: 3px;
+  border-radius: 2px;
   background: var(--accent);
-  box-shadow: 0 0 6px var(--accent-glow);
-  background: linear-gradient(90deg, var(--accent), var(--info), var(--accent));
-  background-size: 200% 100%;
-  animation: shimmer 2s ease-in-out infinite;
+  box-shadow: 0 0 6px var(--accent-glow), 0 0 24px color-mix(in srgb, var(--accent) 25%, transparent);
+  animation: dock-active-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.os-dock--left .os-dock__item--active::after,
-.os-dock--right .os-dock__item--active::after {
+.os-dock--left .os-dock__item--active::after {
   bottom: auto;
-  right: -2px;
+  right: -4px;
   left: auto;
   top: 50%;
   transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  border-radius: 2px;
+  animation: dock-active-in-vert 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.os-dock--right .os-dock__item--active::after {
+  bottom: auto;
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  border-radius: 2px;
+  animation: dock-active-in-vert 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes dock-active-in {
+  from { opacity: 0; transform: translateX(-50%) scaleX(0); }
+}
+@keyframes dock-active-in-vert {
+  from { opacity: 0; transform: translateY(-50%) scaleY(0); }
 }
 
 .os-dock__icon-wrap {

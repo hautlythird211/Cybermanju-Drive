@@ -111,10 +111,11 @@ onUnmounted(() => {
   cursor: pointer;
   transition: background var(--transition-fast);
   position: relative;
+  border-radius: var(--radius-sm);
 }
 
 .tray-item:hover {
-  background: rgba(0, 255, 65, 0.06);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .tray-icon {
@@ -180,16 +181,16 @@ onUnmounted(() => {
 .popup-panel {
   position: absolute;
   right: 12px;
-  top: 36px;
+  top: 38px;
   width: 240px;
-  background: var(--bg-glass-heavy);
-  border: 1px solid var(--border-glass);
-  border-radius: 10px;
+  background: rgba(8, 8, 10, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
   padding: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), var(--glow-accent);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 255, 65, 0.02);
   z-index: 100000;
-  backdrop-filter: blur(var(--glass-blur-xl));
-  -webkit-backdrop-filter: blur(var(--glass-blur-xl));
+  backdrop-filter: blur(40px) saturate(1.8);
+  -webkit-backdrop-filter: blur(40px) saturate(1.8);
 }
 
 .popup-header {

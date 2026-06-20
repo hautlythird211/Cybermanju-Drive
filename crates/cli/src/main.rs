@@ -51,7 +51,7 @@ enum Commands {
     /// Database operations
     Db { #[command(subcommand)] action: DbAction },
 
-    // ── New: Data Liberation Kit ──
+    // ── Data Liberation Kit ──
     /// Harvest all data from all configured backends into .cybermanju
     Harvest {
         /// Output .cybermanju path (default: auto-generated)
@@ -71,6 +71,21 @@ enum Commands {
     Portable {
         #[command(subcommand)]
         action: PortableAction,
+    },
+
+    /// Test connection to a configured backend
+    TestConnection {
+        /// Backend name
+        name: String,
+    },
+
+    /// List files on a remote backend
+    ListRemote {
+        /// Backend name
+        name: String,
+        /// Remote path prefix filter
+        #[arg(short, long, default_value = "")]
+        prefix: String,
     },
 }
 
@@ -106,31 +121,76 @@ fn main() -> Result<()> {
         Commands::Compress { path, output } => cmd_compress(path, output),
         Commands::Decompress { path, output } => cmd_decompress(path, output),
         Commands::Db { action } => cmd_db(action),
-        Commands::Harvest { .. } => cmd_harvest_cli(),
+        Commands::Harvest { output } => cmd_harvest_cli(output),
         Commands::Transfer { source, dest } => cmd_transfer_cli(&source, &dest),
         Commands::Portable { action } => cmd_portable(action),
+        Commands::TestConnection { name } => cmd_test_connection(&name),
+        Commands::ListRemote { name, prefix } => cmd_list_remote(&name, &prefix),
     }
 }
 
 // ── New CLI commands ──────────────────────────────────────────
 
-fn cmd_harvest_cli() -> Result<()> {
+fn cmd_harvest_cli(output: Option<PathBuf>) -> Result<()> {
     let cfg = tui::BackendConfig::load();
     if cfg.backends.is_empty() {
         anyhow::bail!("No backends configured. Run `cybermanju tui` to add backends");
     }
-    println!(" Harvesting from {} backends...", cfg.backends.len());
-    for sb in &cfg.backends {
-        print!("  {} ({:?}) ... ", sb.name, sb.backend_type);
-        std::io::stdout().flush()?;
-        let be = backends::create_backend(sb.backend_type, &sb.token, &sb.config)
-            .ok_or_else(|| anyhow::anyhow!("failed to create backend"))?;
-        match be.test_connection() {
-            Ok(true) => println!("\x1b[32mconnected\x1b[0m"),
-            _ => println!("\x1b[31mfailed\x1b[0m"),
+    let (tx, rx) = std::sync::mpsc::channel();
+    let backends = cfg.backends.clone();
+    let out_str = output.as_ref().map(|p| p.to_string_lossy().to_string());
+    println!(" Harvesting from {} backends...", backends.len());
+    std::thread::spawn(move || harvest::run_harvest_with_output(backends, tx, out_str));
+    while let Ok(msg) = rx.recv() {
+        match msg {
+            tui::TaskMessage::HarvestProgress(_, _, _, s) => {
+                println!("  {}", s);
+            }
+            tui::TaskMessage::HarvestOverall(p, s) => {
+                println!("  {:.0}% — {}", p * 100.0, s);
+            }
+            tui::TaskMessage::HarvestDone(name, files, bytes) => {
+                println!("  \x1b[32m{}: {} files, {} bytes\x1b[0m", name, files, bytes);
+            }
+            tui::TaskMessage::HarvestError(name, err) => {
+                println!("  \x1b[31m{}: {}\x1b[0m", name, err);
+            }
+            tui::TaskMessage::HarvestComplete(files, bytes) => {
+                println!(" \x1b[32mDone — {} files, {} bytes harvested\x1b[0m", files, bytes);
+                break;
+            }
+            _ => {}
         }
     }
-    println!("\n Use `cybermanju tui` for interactive harvest with progress tracking.");
+    Ok(())
+}
+
+fn cmd_test_connection(name: &str) -> Result<()> {
+    let cfg = tui::BackendConfig::load();
+    let sb = cfg.backends.iter().find(|b| b.name == name)
+        .ok_or_else(|| anyhow::anyhow!("Backend '{}' not found", name))?;
+    let be = backends::create_backend(sb.backend_type, &sb.token, &sb.config)
+        .ok_or_else(|| anyhow::anyhow!("Failed to create backend"))?;
+    heading(&format!("Testing connection: {}", name));
+    match be.test_connection() {
+        Ok(true) => { ok("Connection successful"); Ok(()) }
+        Ok(false) => { err_msg("Connection failed (unexpected response)"); Ok(()) }
+        Err(e) => { err_msg(&format!("Connection error: {}", e)); Ok(()) }
+    }
+}
+
+fn cmd_list_remote(name: &str, prefix: &str) -> Result<()> {
+    let cfg = tui::BackendConfig::load();
+    let sb = cfg.backends.iter().find(|b| b.name == name)
+        .ok_or_else(|| anyhow::anyhow!("Backend '{}' not found", name))?;
+    let be = backends::create_backend(sb.backend_type, &sb.token, &sb.config)
+        .ok_or_else(|| anyhow::anyhow!("Failed to create backend"))?;
+    heading(&format!("Remote files: {} ({})", name, prefix));
+    let files = be.list_files(prefix).map_err(|e| anyhow::anyhow!("List failed: {}", e))?;
+    for f in &files {
+        println!("  {}  {:>12}  {}", f.path, f.size_bytes, f.name);
+    }
+    kv("Total files", &files.len().to_string());
     Ok(())
 }
 

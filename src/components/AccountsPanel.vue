@@ -83,12 +83,12 @@
       <div class="accounts-list">
         <div v-for="acc in localAccounts" :key="acc.id" class="account-card local-card">
           <div class="ac-header">
-            <Icon icon="mdi:harddisk" width="20" height="20" class="ac-icon" style="color:#00ff41" />
+            <Icon icon="mdi:harddisk" width="20" height="20" class="ac-icon" style="color:var(--text-accent)" />
             <div class="ac-info">
               <span class="ac-name">{{ acc.name }}</span>
               <span class="ac-email">{{ acc.path || '/' }}</span>
             </div>
-            <span class="ac-badge" style="background:#00ff4122;color:#00ff41;border-color:#00ff41">LOCAL</span>
+            <span class="ac-badge" style="background:var(--accent-dim);color:var(--text-accent);border-color:var(--border-accent)">LOCAL</span>
             <span class="ac-status online">ACTIVE</span>
           </div>
         </div>
@@ -265,14 +265,14 @@ async function disconnectAccount(acc: Account) {
   padding: 16px;
   height: 100%;
   overflow-y: auto;
-  font-family: 'Courier New', monospace;
-  background: #0a0a0a;
-  color: #00ff41;
+  font-family: var(--font-mono);
+  background: transparent;
+  color: var(--text-primary);
 }
 
 .accounts-panel::-webkit-scrollbar { width: 4px; }
-.accounts-panel::-webkit-scrollbar-track { background: #0a0a0a; }
-.accounts-panel::-webkit-scrollbar-thumb { background: #00ff41; }
+.accounts-panel::-webkit-scrollbar-track { background: transparent; }
+.accounts-panel::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 2px; }
 
 .panel-header {
   display: flex;
@@ -283,12 +283,12 @@ async function disconnectAccount(acc: Account) {
   border-bottom: 1px solid #1a1a1a;
 }
 
-.header-icon { color: #00ff41; flex-shrink: 0; }
+.header-icon { color: var(--text-primary); flex-shrink: 0; }
 
 .panel-title {
   font-size: 13px;
-  font-weight: 800;
-  color: #e0e0e0;
+  font-weight: 700;
+  color: var(--text-primary);
   letter-spacing: 2px;
   margin: 0;
 }
@@ -310,15 +310,16 @@ async function disconnectAccount(acc: Account) {
 }
 
 .account-card {
-  background: #0d0d0d;
-  border: 1px solid #1a1a1a;
-  border-radius: 8px;
+  background: var(--bg-glass-light);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
   overflow: hidden;
   transition: border-color 0.15s;
+  backdrop-filter: blur(var(--glass-blur-light));
 }
 
 .account-card.expanded {
-  border-color: #2a2a2a;
+  border-color: var(--border-accent);
 }
 
 .local-card { opacity: 0.7; }
@@ -333,7 +334,7 @@ async function disconnectAccount(acc: Account) {
   transition: background 0.1s;
 }
 
-.ac-header:hover { background: rgba(0, 255, 65, 0.02); }
+.ac-header:hover { background: var(--bg-surface); }
 
 .ac-icon { flex-shrink: 0; }
 
@@ -360,7 +361,7 @@ async function disconnectAccount(acc: Account) {
 
 .ac-badge {
   font-size: 7px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 1px;
   padding: 2px 6px;
   border-radius: 4px;
@@ -376,7 +377,7 @@ async function disconnectAccount(acc: Account) {
   border-radius: 4px;
 }
 
-.ac-status.online { color: #00ff41; background: rgba(0, 255, 65, 0.1); }
+.ac-status.online { color: var(--text-accent); background: var(--bg-surface); }
 .ac-status.offline { color: #555; background: rgba(255, 255, 255, 0.05); }
 
 .ac-chevron { color: #444; flex-shrink: 0; }
@@ -436,9 +437,9 @@ async function disconnectAccount(acc: Account) {
   font-size: 10px;
 }
 
-.album-item:hover { border-color: #00ff41; }
+.album-item:hover { border-color: var(--border-accent); }
 
-.album-icon { color: #00ff41; flex-shrink: 0; }
+.album-icon { color: var(--text-accent); flex-shrink: 0; }
 
 .album-name { flex: 1; color: #ccc; }
 
@@ -458,7 +459,7 @@ async function disconnectAccount(acc: Account) {
 
 .scan-results {
   padding: 8px;
-  background: rgba(0, 255, 65, 0.03);
+  background: var(--bg-surface);
   border: 1px solid #1a1a1a;
   border-radius: 4px;
 }
@@ -470,7 +471,7 @@ async function disconnectAccount(acc: Account) {
 }
 
 .sr-key { color: #555; }
-.sr-val { color: #00ff41; font-weight: 700; }
+.sr-val { color: var(--text-accent); font-weight: 700; }
 
 .collections-grid {
   display: flex;
@@ -490,7 +491,7 @@ async function disconnectAccount(acc: Account) {
   font-size: 10px;
 }
 
-.collection-chip:hover { border-color: #00ff41; }
+.collection-chip:hover { border-color: var(--border-accent); }
 
 .col-name { color: #ccc; }
 .col-count { color: #555; font-size: 8px; margin-left: auto; }

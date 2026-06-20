@@ -545,7 +545,7 @@ function handleLandingLaunch() {
     <template v-else-if="bootPhase === 'desktop'">
         <DesktopShell>
           <template #wallpaper>
-            <CanvasEngine :enabled="store.matrixRainEnabled" />
+            <CanvasEngine :enabled="store.matrixRainEnabled" :settings="store.artSettings" />
           </template>
         </DesktopShell>
 
