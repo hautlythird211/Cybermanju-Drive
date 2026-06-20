@@ -22,6 +22,10 @@ let w = 0, h = 0, dpr = 1
 let t = 0
 let speedMul = 1
 let hueShift = 0
+let globalSat = 50
+let globalBright = 50
+function gs(base: number): number { return Math.min(100, Math.max(0, Math.round(base + globalSat - 50))) }
+function gb(base: number): number { return Math.min(100, Math.max(0, Math.round(base + globalBright - 50))) }
 const BG_COLOR = 'rgb(6, 6, 10)'
 
 let mouseX = -9999, mouseY = -9999
@@ -198,10 +202,11 @@ function initNeuralPackets() {
   }
 }
 
-function spawnNeuralPacket(i: number) {
+function spawnNeuralPacket(i: number, depth = 0) {
+  if (depth > 10) return
   const source = (hash(i * 37 + t * 3) * networkX.length) | 0
   const target = (hash(i * 41 + t * 7) * networkX.length) | 0
-  if (source === target) return spawnNeuralPacket((i + 1) % NEURAL_PACKET_COUNT)
+  if (source === target) return spawnNeuralPacket((i + 1) % NEURAL_PACKET_COUNT, depth + 1)
   neuralPacketX[i] = networkX[source]
   neuralPacketY[i] = networkY[source]
   neuralPacketTarget[i] = target
@@ -257,7 +262,7 @@ function drawCloudChamber() {
       const hue = (baseHue + density * 80 + n2 * 40) % 360
       const light = 35 + density * 25 + mouseDist * 10
 
-      ctx.fillStyle = `hsla(${hue|0},50,${light|0},${Math.min(alpha, 0.85)})`
+      ctx.fillStyle = `hsla(${hue|0},${gs(50)},${light|0},${Math.min(alpha, 0.85)})`
       ctx.fillRect(x, y, step + 1, step + 1)
     }
   }
@@ -292,7 +297,7 @@ function drawMoireGrid() {
       ctx.lineTo(lx + perpX, ly + perpY)
     }
     const lHue = (baseHue + hueOff) % 360
-    ctx.strokeStyle = `hsla(${lHue|0},45,50,0.15)`
+    ctx.strokeStyle = `hsla(${lHue|0},${gs(45)},${gb(50)},0.15)`
     ctx.lineWidth = 0.6
     ctx.stroke()
   }
@@ -304,7 +309,7 @@ function drawMoireGrid() {
     const sr = 30 + fastSin(t * 0.01 + i * 0.9) * 15 + 15
     const sh = (baseHue + i * 18 + t * 0.3) % 360
     const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr)
-    grad.addColorStop(0, `hsla(${sh|0},60,55,0.12)`)
+    grad.addColorStop(0, `hsla(${sh|0},${gs(60)},${gb(55)},0.12)`)
     grad.addColorStop(1, 'rgba(0,0,0,0)')
     ctx.fillStyle = grad
     ctx.fillRect(sx - sr, sy - sr, sr * 2, sr * 2)
@@ -339,7 +344,7 @@ function drawFlowerOfLife() {
         const r = cr * (0.3 + pulse * 0.3) * (1 - intensity * 0.5)
         ctx.beginPath()
         ctx.arc(sx, sy, r, 0, 6.283)
-        ctx.strokeStyle = `hsla(${hue|0},55,45,${0.25 + intensity * 0.35})`
+        ctx.strokeStyle = `hsla(${hue|0},${gs(55)},${gb(45)},${0.25 + intensity * 0.35})`
         ctx.lineWidth = 0.4 + intensity * 0.6
         ctx.stroke()
         continue
@@ -348,7 +353,7 @@ function drawFlowerOfLife() {
     const r = cr * (0.3 + pulse * 0.3)
     ctx.beginPath()
     ctx.arc(cx, cy, r, 0, 6.283)
-    ctx.strokeStyle = `hsla(${hue|0},50,40,0.2)`
+    ctx.strokeStyle = `hsla(${hue|0},${gs(50)},${gb(40)},0.2)`
     ctx.lineWidth = 0.3
     ctx.stroke()
   }
@@ -374,7 +379,7 @@ function drawOpArtRings() {
     for (let r = offset; r < maxR; r += spacing) {
       const hue = ((baseHue + hueOff + r * 0.3) % 360 + 360) % 360
       const alpha = 0.1 + fastSin(r * 0.05 + phase) * 0.06
-      ctx.strokeStyle = `hsla(${hue|0},55,45,${alpha})`
+      ctx.strokeStyle = `hsla(${hue|0},${gs(55)},${gb(45)},${alpha})`
       ctx.lineWidth = 0.8 + fastSin(r * 0.1 + phase) * 0.4
       ctx.beginPath()
       ctx.arc(xOff, yOff, r, 0, 6.283)
@@ -403,7 +408,7 @@ function drawOpArtRings() {
             ctx.beginPath()
             ctx.arc(hx, hy, 1.5 + scatter * 0.08, 0, 6.283)
             const hue = ((baseHue + f * 22) % 360 + 360) % 360
-            ctx.fillStyle = `hsla(${hue|0},65,55,${0.25 + fi * 0.25})`
+            ctx.fillStyle = `hsla(${hue|0},${gs(65)},${gb(55)},${0.25 + fi * 0.25})`
             ctx.fill()
           }
         }
@@ -456,7 +461,7 @@ function drawNeuralNetwork() {
         ctx.beginPath()
         ctx.moveTo(networkX[i], networkY[i])
         ctx.lineTo(networkX[j], networkY[j])
-        ctx.strokeStyle = `hsla(${hue|0},50,45,${alpha})`
+        ctx.strokeStyle = `hsla(${hue|0},${gs(50)},${gb(45)},${alpha})`
         ctx.stroke()
       }
     }
@@ -473,11 +478,10 @@ function drawNeuralNetwork() {
       if (d2 < WARP_R2) highlight = 1 - Math.sqrt(d2) / WARP_R
     }
     const r = 1.2 + highlight * 2.5
-    const nh = (baseHue + i * 2 + highlight * 30) % 360
     ctx.moveTo(networkX[i] + r, networkY[i])
     ctx.arc(networkX[i], networkY[i], r, 0, 6.283)
   }
-  ctx.fillStyle = `hsla(${baseHue|0},55,50,0.35)`
+  ctx.fillStyle = `hsla(${baseHue|0},${gs(55)},${gb(50)},0.35)`
   ctx.fill()
 
   // Data packets traveling between nodes
@@ -504,13 +508,13 @@ function drawNeuralNetwork() {
 
     ctx.beginPath()
     ctx.arc(px, py, 2.5, 0, 6.283)
-    ctx.fillStyle = `hsla(${ph|0},70,60,0.7)`
+    ctx.fillStyle = `hsla(${ph|0},${gs(70)},${gb(60)},0.7)`
     ctx.fill()
 
     // Glow trail
     ctx.beginPath()
     ctx.arc(px, py, 5, 0, 6.283)
-    ctx.fillStyle = `hsla(${ph|0},60,55,0.15)`
+    ctx.fillStyle = `hsla(${ph|0},${gs(60)},${gb(55)},0.15)`
     ctx.fill()
   }
 }
@@ -558,7 +562,7 @@ function drawVortex() {
       if (i === 0) ctx.moveTo(x, y)
       else ctx.lineTo(x, y)
     }
-    ctx.strokeStyle = `hsla(${armHue|0},60,45,0.2)`
+    ctx.strokeStyle = `hsla(${armHue|0},${gs(60)},${gb(45)},0.2)`
     ctx.stroke()
   }
 }
@@ -601,7 +605,7 @@ function drawLissajous() {
       if (i === 0) ctx.moveTo(x, y)
       else ctx.lineTo(x, y)
     }
-    ctx.strokeStyle = `hsla(${ch|0},50,45,0.18)`
+    ctx.strokeStyle = `hsla(${ch|0},${gs(50)},${gb(45)},0.18)`
     ctx.lineWidth = 0.5
     ctx.stroke()
   }
@@ -644,7 +648,7 @@ function drawMandala() {
       else ctx.lineTo(x, y)
     }
     ctx.closePath()
-    ctx.strokeStyle = `hsla(${layerHue|0},60,50,${0.25 + layer * 0.04})`
+    ctx.strokeStyle = `hsla(${layerHue|0},${gs(60)},${gb(50)},${0.25 + layer * 0.04})`
     ctx.lineWidth = 0.7
     ctx.stroke()
 
@@ -717,20 +721,20 @@ function drawSpiralParticles() {
     if (trailAlpha > 0.02) {
       ctx.beginPath()
       ctx.arc(tx, ty, size * 0.8, 0, 6.283)
-      ctx.fillStyle = `hsla(${hue|0},50,45,${trailAlpha})`
+      ctx.fillStyle = `hsla(${hue|0},${gs(50)},${gb(45)},${trailAlpha})`
       ctx.fill()
     }
 
     // Glow
     ctx.beginPath()
     ctx.arc(x, y, size * 3, 0, 6.283)
-    ctx.fillStyle = `hsla(${hue|0},50,45,${alpha * 0.15})`
+    ctx.fillStyle = `hsla(${hue|0},${gs(50)},${gb(45)},${alpha * 0.15})`
     ctx.fill()
 
     // Core
     ctx.beginPath()
     ctx.arc(x, y, size, 0, 6.283)
-    ctx.fillStyle = `hsla(${hue|0},60,55,${alpha + 0.15})`
+    ctx.fillStyle = `hsla(${hue|0},${gs(60)},${gb(55)},${alpha + 0.15})`
     ctx.fill()
   }
 }
@@ -753,8 +757,8 @@ function drawCore() {
     const rayHue = (baseHue + ray * 15 + 30) % 360
 
     const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rayLen)
-    grad.addColorStop(0, `hsla(${rayHue|0},65,55,0.08)`)
-    grad.addColorStop(0.3, `hsla(${rayHue|0},60,50,0.04)`)
+    grad.addColorStop(0, `hsla(${rayHue|0},${gs(65)},${gb(55)},0.08)`)
+    grad.addColorStop(0.3, `hsla(${rayHue|0},${gs(60)},${gb(50)},0.04)`)
     grad.addColorStop(1, 'rgba(0,0,0,0)')
     ctx.fillStyle = grad
 
@@ -775,7 +779,7 @@ function drawCore() {
 
   // Outer glow
   const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 5)
-  grad.addColorStop(0, `hsla(${baseHue|0},65,55,${0.25 + pulse * 0.15})`)
+  grad.addColorStop(0, `hsla(${baseHue|0},${gs(65)},${gb(55)},${0.25 + pulse * 0.15})`)
   grad.addColorStop(0.3, `hsla(${((baseHue+30)%360)|0},55,45,0.1)`)
   grad.addColorStop(1, 'rgba(0,0,0,0)')
   ctx.fillStyle = grad
@@ -792,14 +796,14 @@ function drawCore() {
     else ctx.lineTo(x, y)
   }
   ctx.closePath()
-  ctx.strokeStyle = `hsla(${baseHue|0},55,50,0.3)`
+  ctx.strokeStyle = `hsla(${baseHue|0},${gs(55)},${gb(50)},0.3)`
   ctx.lineWidth = 1.2
   ctx.stroke()
 
   // Inner core
   ctx.beginPath()
   ctx.arc(cx, cy, coreR * 0.3, 0, 6.283)
-  ctx.fillStyle = `hsla(${baseHue|0},70,60,${0.35 + pulse * 0.2})`
+  ctx.fillStyle = `hsla(${baseHue|0},${gs(70)},${gb(60)},${0.35 + pulse * 0.2})`
   ctx.fill()
 }
 
@@ -826,7 +830,7 @@ function drawWarpField() {
     ctx.moveTo(mouseSmoothX + fastCos(angle) * innerR, mouseSmoothY + fastSin(angle) * innerR)
     ctx.lineTo(mouseSmoothX + fastCos(angle + 0.04) * outerR, mouseSmoothY + fastSin(angle + 0.04) * outerR)
   }
-  ctx.strokeStyle = `hsla(${baseHue|0},45,45,0.08)`
+  ctx.strokeStyle = `hsla(${baseHue|0},${gs(45)},${gb(45)},0.08)`
   ctx.lineWidth = 0.3
   ctx.stroke()
 }
@@ -865,7 +869,7 @@ function drawDisintegration() {
 
     ctx.beginPath()
     ctx.arc(disX[i], disY[i], sz, 0, 6.283)
-    ctx.fillStyle = `hsla(${hue|0},65,55,${alpha + 0.15})`
+    ctx.fillStyle = `hsla(${hue|0},${gs(65)},${gb(55)},${alpha + 0.15})`
     ctx.fill()
 
     ctx.beginPath()
@@ -909,18 +913,18 @@ function drawScreenTear() {
     const gy = Math.random() * h
     const gh = 30 + Math.random() * 80
     const hue = Math.random() * 360
-    ctx.fillStyle = `hsla(${hue|0},35,50,0.08)`
+    ctx.fillStyle = `hsla(${hue|0},${gs(35)},${gb(50)},0.08)`
     ctx.fillRect(0, gy, w, gh)
   }
 
   if (Math.random() < 0.015) {
     const splitX = Math.random() * w
     const splitW = 60 + Math.random() * 150
-    ctx.fillStyle = `hsla(0,60,55,0.06)`
+    ctx.fillStyle = `hsla(0,${gs(60)},${gb(55)},0.06)`
     ctx.fillRect(splitX, 0, splitW, h)
-    ctx.fillStyle = `hsla(120,60,55,0.06)`
+    ctx.fillStyle = `hsla(120,${gs(60)},${gb(55)},0.06)`
     ctx.fillRect(splitX + 4, 0, splitW, h)
-    ctx.fillStyle = `hsla(240,60,55,0.06)`
+    ctx.fillStyle = `hsla(240,${gs(60)},${gb(55)},0.06)`
     ctx.fillRect(splitX + 8, 0, splitW, h)
   }
 }
@@ -1002,7 +1006,7 @@ function drawMatrixRain() {
   const colWidth = 16
   const fontSize = 14
   ctx.font = `${fontSize}px "Courier New", monospace`
-  const colCount = rainColumns.length
+  const colCount = rainHeads.length
 
   for (let i = 0; i < colCount; i++) {
     const x = i * colWidth
@@ -1013,8 +1017,8 @@ function drawMatrixRain() {
 
     // Bright head character
     ctx.shadowBlur = 10
-    ctx.shadowColor = `hsla(${hue|0},90,60,0.5)`
-    ctx.fillStyle = `hsla(${hue|0},80,80,0.85)`
+    ctx.shadowColor = `hsla(${hue|0},${gs(90)},${gb(60)},0.5)`
+    ctx.fillStyle = `hsla(${hue|0},${gs(80)},${gb(80)},0.85)`
     ctx.fillText(ch, x, headY)
 
     // Fading trail characters
@@ -1025,7 +1029,7 @@ function drawMatrixRain() {
       if (trailY < -18) break
       const trailAlpha = 0.4 * (1 - t2 / trailLen) * (1 - t2 / trailLen)
       const trailChar = RAIN_CHARS[(Math.random() * RAIN_CHARS.length) | 0]
-      ctx.fillStyle = `hsla(${hue|0},70,${55 - t2 * 2|0},${Math.min(trailAlpha, 0.4)})`
+      ctx.fillStyle = `hsla(${hue|0},${gs(70)},${gb(55 - t2 * 2|0)},${Math.min(trailAlpha, 0.4)})`
       ctx.fillText(trailChar, x, trailY)
     }
 
@@ -1052,7 +1056,7 @@ function drawFractalTree() {
   const trunkLen = 70
   const trunkAngle = -Math.PI / 2
   const hue = (baseHue) % 360
-  ctx.strokeStyle = `hsla(${hue|0},55,45,0.5)`
+  ctx.strokeStyle = `hsla(${hue|0},${gs(55)},${gb(45)},0.5)`
   ctx.lineWidth = 2
   ctx.beginPath()
   ctx.moveTo(cx, cy)
@@ -1084,7 +1088,7 @@ function drawFractalTree() {
 
       // Higher alpha for branches
       const branchAlpha = 0.5 - b.depth * 0.04
-      ctx.strokeStyle = `hsla(${bh|0},50,45,${Math.max(branchAlpha, 0.2)})`
+      ctx.strokeStyle = `hsla(${bh|0},${gs(50)},${gb(45)},${Math.max(branchAlpha, 0.2)})`
       ctx.lineWidth = Math.max(0.3, 1.5 - b.depth * 0.15)
       ctx.beginPath()
       ctx.moveTo(b.x, b.y)
@@ -1096,7 +1100,7 @@ function drawFractalTree() {
         ctx.beginPath()
         ctx.arc(ex, ey, 1.5 + (8 - b.depth) * 0.3, 0, 6.283)
         const leafHue = (bh + 60) % 360
-        ctx.fillStyle = `hsla(${leafHue|0},60,55,${0.4 + (8 - b.depth) * 0.05})`
+        ctx.fillStyle = `hsla(${leafHue|0},${gs(60)},${gb(55)},${0.4 + (8 - b.depth) * 0.05})`
         ctx.fill()
       }
 
@@ -1128,7 +1132,7 @@ function drawPlasmaWave() {
       const norm = (v / 4 + 0.5)
       const hue = ((norm * 360 + hs + dist * 0.2) % 360 + 360) % 360
       const alpha = 0.12 + norm * 0.18
-      ctx.fillStyle = `hsla(${hue|0},55,45,${alpha})`
+      ctx.fillStyle = `hsla(${hue|0},${gs(55)},${gb(45)},${alpha})`
       ctx.fillRect(px, py, step + 1, step + 1)
     }
   }
@@ -1166,7 +1170,7 @@ function drawStardust() {
     const nr = 60 + fastSin(t * 0.01 * speedMul + n * 0.8) * 30 + 40
     const nh = ((baseHue + n * 50 + fastSin(t * 0.006 * speedMul + n) * 30) % 360 + 360) % 360
     const grad = ctx.createRadialGradient(nx, ny, 0, nx, ny, nr)
-    grad.addColorStop(0, `hsla(${nh|0},45,45,0.06)`)
+    grad.addColorStop(0, `hsla(${nh|0},${gs(45)},${gb(45)},0.06)`)
     grad.addColorStop(0.5, `hsla(${((nh + 40) % 360)|0},35,35,0.035)`)
     grad.addColorStop(1, 'rgba(0,0,0,0)')
     ctx.fillStyle = grad
@@ -1195,12 +1199,12 @@ function drawStardust() {
     const hue = ((baseHue + i * 3 + twinkle * 20) % 360 + 360) % 360
     ctx.beginPath()
     ctx.arc(sx, sy, s.size * twinkle, 0, 6.283)
-    ctx.fillStyle = `hsla(${hue|0},55,${45 + twinkle * 20|0},${alpha})`
+    ctx.fillStyle = `hsla(${hue|0},${gs(55)},${${gb(45)} + twinkle * 20|0},${alpha})`
     ctx.fill()
 
     ctx.beginPath()
     ctx.arc(sx, sy, s.size * twinkle * 2.5, 0, 6.283)
-    ctx.fillStyle = `hsla(${hue|0},45,40,${alpha * 0.2})`
+    ctx.fillStyle = `hsla(${hue|0},${gs(45)},${gb(40)},${alpha * 0.2})`
     ctx.fill()
   }
 }
@@ -1223,7 +1227,7 @@ function drawAurora() {
     ctx.beginPath()
     ctx.moveTo(x, h)
     ctx.lineTo(x, h - height)
-    ctx.strokeStyle = `hsla(${hue|0},55,50,${alpha})`
+    ctx.strokeStyle = `hsla(${hue|0},${gs(55)},${gb(50)},${alpha})`
     ctx.lineWidth = 3
     ctx.stroke()
   }
@@ -1242,7 +1246,7 @@ function drawAurora() {
       if (x === 0) ctx.moveTo(x, y)
       else ctx.lineTo(x, y)
     }
-    ctx.strokeStyle = `hsla(${bh|0},50,48,${bAlpha})`
+    ctx.strokeStyle = `hsla(${bh|0},${gs(50)},${gb(48)},${bAlpha})`
     ctx.lineWidth = bandH
     ctx.stroke()
   }
@@ -1277,7 +1281,7 @@ function drawHexGrid() {
         else ctx.lineTo(hx, hy)
       }
       ctx.closePath()
-      ctx.strokeStyle = `hsla(${hue|0},50,45,${alpha})`
+      ctx.strokeStyle = `hsla(${hue|0},${gs(50)},${gb(45)},${alpha})`
       ctx.lineWidth = 0.4 + pulse * 0.4
       ctx.stroke()
     }
@@ -1295,6 +1299,8 @@ function draw() {
   const s = props.settings
   speedMul = s?.globalSpeed ?? 1
   hueShift = s?.globalHueShift ?? 0
+  globalSat = s?.globalSaturation ?? 50
+  globalBright = s?.globalBrightness ?? 50
 
   mouseSmoothX += (mouseX - mouseSmoothX) * 0.12
   mouseSmoothY += (mouseY - mouseSmoothY) * 0.12

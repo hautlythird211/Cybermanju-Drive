@@ -1,214 +1,356 @@
-{"type": "project_overview", "name": "Cybermanju Drive", "version": "0.1.0", "description": "Quantum-resistant encrypted file manager with AI face grouping, triple-layer compression, code intelligence, GPS map view, web dashboard, multi-user access control, and cross-platform cloud sync. Runs as Tauri v2 desktop app, Docker container with web dashboard, or WASM/GitHub Pages.", "license": "MIT", "identifier": "com.cybermanju.drive"}
+{"type": "project_overview", "name": "Cybermanju Drive", "version": "0.1.0", "description": "Quantum-resistant encrypted file manager with AI face grouping, triple-layer compression, code intelligence, GPS map view, web dashboard, multi-user access control, cross-platform cloud sync via 7 backends, TUI CLI, and portable DB. Runs as Tauri v2 desktop, Docker container with web dashboard on :3456, or WASM/GitHub Pages SPA.", "license": "MIT", "identifier": "com.cybermanju.drive", "languages": ["Rust 2021", "TypeScript 5.8", "Vue 3.5"], "repository": "https://github.com/cybermanju/cybermanju-drive.git"}
 {"type": "deployment_modes", "modes": [
-  {"name": "Tauri Desktop", "entry": "src-tauri/src/main.rs", "transport": "Tauri IPC (invoke)", "use_case": "Native desktop with full filesystem access, 60+ IPC commands via Conduit plugin"},
-  {"name": "Web Dashboard", "entry": "Embedded HTTP on 0.0.0.0:3456", "transport": "REST API (fetch)", "use_case": "Browser access from any device; Docker/ZimaOS NAS deployment"},
-  {"name": "WASM/GitHub Pages", "entry": "dist-wasm/ static files", "transport": "SPA + WASM bridge via IndexedDB", "use_case": "Public showcase, read-only demo, no backend required"}
+  {"name": "Tauri Desktop (primary)", "entry": "src-tauri/src/main.rs → lib.rs", "transport": "Tauri IPC via Conduit plugin (2.4x faster)", "use_case": "Native desktop app with full filesystem access, tray icon, clipboard, serial port, snap layout (Windows)"},
+  {"name": "Web Dashboard (Docker/ZimaOS)", "entry": "embedded HTTP server in web_dashboard/mod.rs", "transport": "REST API on 0.0.0.0:3456, JWT auth", "use_case": "Browser access from any device on network; Docker containers; ZimaOS NAS App Store"},
+  {"name": "WASM/GitHub Pages", "entry": "dist-wasm/ static files via vite.config.wasm.ts", "transport": "SPA + WASM bridge (IndexedDB) via cybermanju-drive-wasm crate", "use_case": "Public showcase, no backend, read-only with local IndexedDB persistence"}
 ]}
-{"type": "workspace_layout", "root": "Cargo.toml [workspace]", "members": [
-  "crates/types", "crates/crypto", "crates/compression", "crates/search",
-  "crates/db", "crates/portable-db", "crates/web", "crates/faces",
-  "crates/tests", "crates/drive-wasm", "crates/cli", "crates/backends", "src-tauri"
-], "resolver": "2"}
-{"type": "crate", "name": "cybermanju-types", "path": "crates/types", "description": "Shared data types used by all crates and the Tauri app", "dependencies": ["serde", "serde_json"], "exports": ["FileNode", "Account", "Collection", "CollectionItem", "FaceGroup", "EncryptionKey", "LooseGroup", "User", "UserFilePermission", "Location", "TrashItem", "AuditEntry", "FileVersion", "ShareLink", "FileRelation", "DeletionRecord", "RecoveryEntry", "PortableHeader", "ContentStoreEntry", "PreviewStoreEntry", "SyncBackendType", "SyncStatus", "CloudAccount", "OAuthCredentials", "SyncFile", "SyncConfig", "SyncProgress", "SyncResult", "RemoteFile", "StorageBackend trait"], "used_by": ["db", "crypto", "faces", "backends", "portable-db", "tests", "cli", "src-tauri", "drive-wasm"]}
-{"type": "crate", "name": "cybermanju-crypto", "path": "crates/crypto", "description": "Post-quantum cryptography engine. Real ML-KEM (FIPS 203), ML-DSA (FIPS 204), Hybrid ML-KEM-768+X25519, ChaCha20Poly1305 AEAD, HMAC-SHA512.", "dependencies": ["anyhow", "base64", "blake3", "chacha20poly1305", "chrono", "hkdf", "hmac", "ml-dsa", "pqcrypto-mlkem", "pqcrypto-traits", "rand_core", "serde/serde_json", "sha2", "signature", "uuid", "x25519-dalek"], "exports": ["EncryptionAlgo enum (Kyber1024/Hybrid/MlDsa44-65-87/ClassicalSign/Aes256)", "KeyPair", "FileEncryptedData", "EncryptionStatus", "PqcEngine (generate_keypair/list_keys/encrypt/decrypt/sign/verify)", "encrypt_data", "decrypt_data", "sign_message", "verify_signature", "algorithm_from_str", "EncryptedFileMeta"], "used_by": ["portable-db", "drive-wasm", "src-tauri"]}
-{"type": "crate", "name": "cybermanju-compression", "path": "crates/compression", "description": "Triple-layer compression pipeline: LZ4 (ultra-fast) → Zstd (balanced) → Brotli (max ratio). Supports individual layers or full triple cascade. Skips remaining layers if LZ4 ratio > 0.98 (incompressible data).", "dependencies": ["anyhow", "blake3", "lz4_flex", "serde", "zstd", "brotli", "log"], "modules": ["layers/lz4.rs", "layers/zstd_layer.rs", "layers/brotli_layer.rs", "triple.rs", "types.rs"], "exports": ["TripleCompressor (compress_lz4/decompress_lz4/compress_zstd/decompress_zstd/compress_brotli/decompress_brotli/compress_data/compress_triple/decompress_triple)", "Lz4Layer", "ZstdLayer", "BrotliLayer", "CompressionType enum (None/Lz4/Zstd/TripleLayer)", "CompressionStats", "LayerDetail"], "used_by": ["portable-db", "drive-wasm", "tests", "cli", "src-tauri"]}
-{"type": "crate", "name": "cybermanju-search", "path": "crates/search", "description": "Tantivy full-text search index with BM25 ranking, faceted search, fuzzy matching, and real term dictionary completions. Indexes filename, content_text, tags, file_type, is_encrypted, has_geo, timestamp, blake3_hash.", "dependencies": ["anyhow", "chrono", "serde", "tantivy"], "exports": ["SearchIndex (new/add_document/add_document_batch/add_document_no_commit/commit/remove_document/delete_term/search/search_with_count/suggest/doc_count)", "SearchResult", "SearchRequest", "SearchSuggestion", "DocumentParams"], "used_by": ["web", "tests", "src-tauri"]}
-{"type": "crate", "name": "cybermanju-db", "path": "crates/db", "description": "redb (embedded key-value store) database layer with 20+ tables and parent index for hierarchical file organization. Stores files, accounts, collections, face groups, encryption keys, locations, users, permissions, sync configs, trash, audit log, file versions, share links, portable DB metadata.", "dependencies": ["anyhow", "base64", "chrono", "cybermanju-types", "rand_core", "redb", "serde/serde_json", "uuid"], "exports": ["Database (new/begin_read/begin_write/log_audit/trash_file/restore_from_trash/list_trash/empty_trash/create_file_version/list_file_versions/revert_file_version/create_share_link/get_share_link_by_token/get_file_node/add_to_parent_index/remove_from_parent_index/list_by_parent/insert_file_with_index/remove_file_with_index/move_file_with_index)", "Also: store_file_relation/get_file_relation/get_file_relations_for_local/delete_file_relation/list_all_file_relations/store_deletion_record/get_deletion_record/list_pending_deletions/list_all_deletion_records/update_deletion_record/delete_deletion_record/store_recovery_entry/get_recovery_entry/list_all_recovery_entries/delete_recovery_entry/set_portable_meta/get_portable_meta/get_all_portable_meta/mark_deletion_propagated/update_file_relation_status)", "FILE_CONTENTS_TABLE", "ContentLocation enum"], "used_by": ["portable-db", "tests", "cli", "src-tauri"]}
-{"type": "crate", "name": "cybermanju-portable-db", "path": "crates/portable-db", "description": ".cybermanju portable database — a self-contained, triple-compressed, optionally encrypted redb database for cross-platform file relations, deletion propagation, and recovery. One .cybermanju file per user, synced to every connected platform. Binary format: [32B magic][4B header_len][header JSON][compressed_db]. Blobs stored in sidecar .cyb3 directory.", "dependencies": ["anyhow", "blake3", "chrono", "cybermanju-compression", "cybermanju-crypto", "cybermanju-db", "cybermanju-types", "log", "serde/serde_json", "uuid"], "exports": ["PortableDatabase (create/open/open_or_create/pack/unpack/store_compressed_content/store_preview/get_recoverable_data/get_preview_data/list_recoverable_files/delete_recovery_entry/sync_to_backend/sync_from_backend/record_file_relation/record_deletion/propagate_deletion/repack/header/path)"], "used_by": ["cli", "src-tauri"]}
-{"type": "crate", "name": "cybermanju-web", "path": "crates/web", "description": "Web browser engine with tab management, DuckDuckGo search (via scraper reqwest), HTML renderer (text extraction, title, links), and Tantivy hybrid search. WASM-compatible (uses web-sys fetch when target_arch=wasm32).", "dependencies": ["serde", "serde_json", "url", "scraper", "log", "uuid", "chrono", "anyhow", "thiserror", "async-trait", "native: reqwest+tokio+cybermanju-search", "wasm32: wasm-bindgen+serde-wasm-bindgen+js-sys+web-sys+reqwest"], "modules": ["browser/manager.rs", "browser/mod.rs", "search/duckduckgo.rs", "search/tantivy.rs", "search/mod.rs", "render/html.rs", "render/layout.rs", "render/mod.rs", "wasm/mod.rs"], "exports": ["BrowserManager (open_tab/close_tab/activate_tab/navigate/add_history/add_bookmark/remove_bookmark/search_history)", "SearchEngine trait", "DuckDuckGoEngine", "HtmlRenderer (extract_text/extract_title/extract_links)", "WasmSearch (wasm_bindgen)", "WasmBrowser (wasm_bindgen)", "Tab/HistoryEntry/Bookmark/BrowserSettings", "SearchQuery/SearchResponse/SearchSourceType/SearchError", "WebResult"], "used_by": ["src-tauri"]}
-{"type": "crate", "name": "cybermanju-faces", "path": "crates/faces", "description": "Face detection and clustering module. 4 clustering algorithms: BruteForce O(n²), SimHash-accelerated LSH, Chinese Whispers (graph label propagation), HDBSCAN (MST-based hierarchical density). SimHash with 64-bit binary codes + 3 LSH tables for ~97% recall at cosine distance 0.3. ONNX integration for SCRFD detection + ArcFace embeddings (optional feature). Auto-selects algorithm based on dataset size.", "dependencies": ["anyhow", "blake3", "cybermanju-types", "log", "rayon", "serde/serde_json", "optional: ort/image/reqwest/ndarray/dirs"], "exports": ["EMBEDDING_DIM (512)", "HASH_BITS (64)", "DEFAULT_MATCH_THRESHOLD (0.55)", "SimHashIndex (new/query_candidates/knn/range_query)", "to_binary_hash", "hamming_distance", "embedding_distance", "embedding_distance_batch", "adaptive_threshold", "find_medoid", "update_medoid_incremental", "UnionFind", "cluster_bruteforce", "cluster_simhash", "cluster_chinese_whispers", "cluster_hdbscan", "cluster_auto (auto-selects algorithm)", "ClusteringStrategy enum", "Cluster type", "cached_projections"], "used_by": ["src-tauri"]}
-{"type": "crate", "name": "cybermanju-drive-wasm", "path": "crates/drive-wasm", "description": "WASM bridge exposing Rust crypto, compression, virtual drive, and sync engine to browser JavaScript via wasm-bindgen. Pure Rust dependencies (no C bindings) for browser compatibility.", "dependencies": ["wasm-bindgen", "js-sys", "serde-wasm-bindgen", "blake3", "chacha20poly1305", "sha2", "hkdf", "hmac", "ml-dsa", "ml-kem", "x25519-dalek", "signature", "rand_core", "getrandom_v0_2", "getrandom", "lz4_flex", "brotli", "zstd", "serde/serde_json", "uuid", "chrono", "wasm-logger", "log"], "modules": ["crypto.rs", "compression.rs", "drive.rs", "sync.rs", "types.rs"], "exports (wasm_bindgen)": ["init", "generate_uuid", "now_utc", "hash_file_meta", "crypto: blake3_hash/chacha20_generate_key/chacha20_generate_nonce/chacha20_encrypt/chacha20_decrypt/hkdf_derive/hmac_sha512/x25519_generate_keypair/x25519_shared_secret/ml_dsa65_generate_keypair/ml_dsa65_sign/ml_dsa65_verify/ml_kem1024_generate_keypair/ml_kem1024_encapsulate/ml_kem1024_decapsulate", "compression: compress_lz4/decompress_lz4/compress_brotli/decompress_brotli/compress_zstd/decompress_zstd/compress_lz4_probe_ratio", "drive: VirtualDrive (create_file/delete_file/get_file/list_files/search_files/rename_file/move_file/set_file_size/set_file_tags/toggle_star/get_starred_files/get_geo_files/get_quota/get_all_files/to_json/from_json)", "sync: SyncEngine (add_file/mark_synced/mark_error/mark_changed/remove_file/get_entries/get_state/get_pending_count/get_error_count/get_synced_count/has_changes/reset/to_json/from_json)"], "used_by": ["JavaScript frontend via import('cybermanju-drive-wasm')"]}
-{"type": "crate", "name": "cybermanju-backends", "path": "crates/backends", "description": "Shared storage backend implementations for cloud sync. Each backend implements the StorageBackend trait.", "dependencies": ["cybermanju-types", "serde/serde_json", "reqwest (blocking/json/multipart)", "base64", "chrono", "log", "urlencoding", "megalib", "tokio"], "modules": ["local.rs", "github.rs", "gitlab.rs", "google_drive.rs", "google_photos.rs", "telegram.rs", "mega.rs", "transfer.rs", "util.rs"], "exports": ["LocalBackend", "GitHubBackend", "GitLabBackend", "GoogleDriveBackend", "GooglePhotosBackend", "TelegramBackend", "MegaBackend", "transfer_files", "ProgressCallback", "TransferProgress"], "used_by": ["cli", "src-tauri"]}
-{"type": "crate", "name": "cybermanju-cli", "path": "crates/cli", "description": "CLI/TUI application with clap argument parsing and ratatui terminal UI. Supports harvest (scan files), transfer (cross-backend file copy), portable DB operations, and backend management.", "dependencies": ["cybermanju-types", "cybermanju-crypto", "cybermanju-compression", "cybermanju-db", "cybermanju-portable-db", "cybermanju-backends", "clap", "anstyle", "ratatui", "crossterm", "reqwest (blocking/json/multipart)", "urlencoding", "megalib", "anyhow", "serde/serde_json", "chrono", "uuid", "base64", "blake3", "log", "dirs"], "binary": "cybermanju (src/main.rs)", "modules": ["main.rs", "tui.rs", "harvest.rs", "transfer.rs", "backends.rs", "portable.rs"], "used_by": ["Direct CLI execution"]}
-{"type": "crate", "name": "cybermanju-tests", "path": "crates/tests", "description": "Comprehensive test suite exercising all workspace crates (types, compression, crypto, db, search, web)", "dependencies": ["cybermanju-types", "cybermanju-compression", "cybermanju-crypto", "cybermanju-db", "cybermanju-search", "cybermanju-web", "serde/serde_json", "anyhow", "blake3", "redb", "tempfile"], "used_by": ["cargo test --workspace"]}
-{"type": "crate", "name": "cybermanju-drive (src-tauri)", "path": "src-tauri", "description": "Tauri v2 desktop application — the primary deployment target. Orchestrates all workspace crates, registers 60+ IPC commands, manages AppState (db, search index, compressor), runs the embedded web dashboard, and initializes Tauri plugins.", "dependencies": ["All workspace crates (types/crypto/compression/search/db/portable-db/faces/backends)", "tauri v2 (tray-icon)", "tauri plugins: fs, dialog, shell, notification, store, log, os, process", "tauri-plugin-conduit (2.4x faster IPC)", "tauri-plugin-serialplugin", "serde/serde_json/anyhow/chrono/uuid/blake3/log/tracing/base64/rand_core", "redb, argon2, jsonwebtoken, hmac, sha2, hex", "kamadak-exif, image, infer, mime_guess", "reqwest (blocking/json/multipart/rustls-tls), url, scraper, megalib, tokio", "dirs, sysinfo, walkdir, rayon", "optional: tauri-plugin-snap-layout (windows), tauri-plugin-clipboard-next (non-android)"], "lib_type": "staticlib + cdylib + rlib", "features": ["default", "onnx-face (activates cybermanju-faces/onnx-face)"]}
-{"type": "app_state", "struct_name": "AppState", "path": "src-tauri/src/lib.rs", "fields": [
-  {"name": "db", "type": "RwLock<Database>", "description": "redb database instance"},
-  {"name": "db_path", "type": "String", "description": "Path to redb database file"},
-  {"name": "data_dir", "type": "String", "description": "Cross-platform app data directory"},
-  {"name": "tantivy_index", "type": "RwLock<SearchIndex>", "description": "Tantivy full-text search index"},
-  {"name": "compression", "type": "TripleCompressor", "description": "Triple-layer compressor instance"},
-  {"name": "hmac_secret", "type": "[u8; 32]", "description": "HMAC secret for secure session tokens"}
+{"type": "workspace_layout", "root": "Cargo.toml [workspace, resolver=2]", "members_count": 13, "members": [
+  "crates/types", "crates/crypto", "crates/compression", "crates/search", "crates/db",
+  "crates/portable-db", "crates/web", "crates/faces", "crates/tests", "crates/drive-wasm",
+  "crates/cli", "crates/backends", "src-tauri"
 ]}
-{"type": "tauri_commands", "module_path": "src-tauri/src/commands/", "modules": [
-  {"name": "files", "commands": ["list_files", "get_file", "create_folder", "delete_file", "rename_file", "duplicate_file_context", "move_file", "get_preview", "create_loose_group", "add_to_loose_group", "list_loose_groups", "rebuild_parent_index", "delete_files_from_backends", "delete_file_metadata_only"]},
-  {"name": "search", "commands": ["search_files", "search_files_paginated", "suggest"]},
-  {"name": "encryption", "commands": ["encrypt_file", "decrypt_file", "get_encryption_status", "generate_keypair", "list_keys"]},
-  {"name": "compression", "commands": ["compress_file", "decompress_file", "get_compression_stats"]},
-  {"name": "collections", "commands": ["list_collections", "create_collection", "add_to_collection", "remove_from_collection"]},
-  {"name": "faces", "commands": ["detect_faces", "detect_faces_batch_cmd", "recluster_faces", "rename_face_group", "merge_face_groups", "delete_face_group", "find_similar_faces", "list_face_groups", "get_group_files"]},
-  {"name": "map", "commands": ["get_geo_files", "extract_exif_gps"]},
-  {"name": "accounts", "commands": ["list_accounts", "create_account", "switch_account", "delete_account"]},
-  {"name": "users", "commands": ["register_user", "delete_user", "update_user_role", "authenticate_user", "list_users", "set_file_permission", "grant_file_permission", "revoke_file_permission", "verify_file_access", "get_file_permissions", "verify_token"]},
-  {"name": "sync", "commands": ["list_sync_configs", "create_sync_config", "delete_sync_config", "start_sync", "get_sync_progress", "test_sync_connection", "cancel_sync", "list_remote_files"]},
-  {"name": "import", "commands": ["import_file", "import_from_url", "scan_directory", "upload_file", "rebuild_search_index"]},
-  {"name": "share", "commands": ["generate_share_link", "get_shared_file", "list_share_links"]},
-  {"name": "trash", "commands": ["list_trash", "restore_from_trash", "empty_trash", "delete_from_trash"]},
-  {"name": "audit", "commands": ["get_audit_log"]},
-  {"name": "batch", "commands": ["batch_delete", "batch_encrypt", "batch_compress"]},
-  {"name": "versions", "commands": ["list_file_versions", "create_file_version", "revert_file_version", "snapshot_all_versions"]},
-  {"name": "transfer", "commands": ["transfer_files", "get_transfer_progress", "cancel_transfer"]},
-  {"name": "diagnostics", "commands": ["get_crash_log", "clear_crash_log", "get_app_log"]},
-  {"name": "duplicates", "commands": ["find_duplicates"]},
-  {"name": "portable_db", "commands": ["init_portable_db", "get_portable_db_header", "sync_portable_db", "record_file_relation", "get_file_relations", "list_all_relations", "record_deletion", "list_pending_deletions", "list_all_deletions", "store_compressed_for_recovery", "store_preview_for_recovery", "list_recoverable_files", "recover_file", "get_recovery_preview", "repack_portable_db", "mark_deletion_propagated", "get_portable_db_meta", "delete_recovery_entry"]},
-  {"name": "kv", "commands": ["kv_set", "kv_get"]},
-  {"name": "system_info", "commands": ["get_system_info"]},
-  {"name": "web", "commands": ["web_search", "fetch_page"]},
-  {"name": "dashboard", "commands": ["dashboard_status", "start_dashboard", "stop_dashboard"]}
+{"type": "crate_detail", "name": "cybermanju-types", "path": "crates/types", "src_files": ["src/lib.rs", "src/schema.rs", "src/sync.rs"], "description": "Foundation types crate — every other crate (including src-tauri) depends on this. Defines all data models, enums, and the StorageBackend trait.", "deps": ["serde (derive)", "serde_json"], "exports": [
+  {"schema types": ["FileNode", "Account", "Collection", "CollectionItem", "FaceGroup", "EncryptionKey", "LooseGroup", "User", "UserFilePermission", "Location", "TrashItem", "AuditEntry", "FileVersion", "ShareLink", "FileRelation", "DeletionRecord", "RecoveryEntry", "PortableHeader", "ContentStoreEntry", "PreviewStoreEntry"]},
+  {"sync types": ["SyncBackendType (Local/GitHub/GitLab/GoogleDrive/GooglePhotos/Telegram/Mega)", "SyncStatus (Idle/Scanning/Compressing/Uploading/Linking/Cleaning/Error/Done/Syncing/Completed/Cancelled)", "CloudAccount", "OAuthCredentials", "SyncFile", "SyncConfig", "SyncProgress", "SyncResult", "RemoteFile"]},
+  {"trait": "StorageBackend: Send + Sync { name(), backend_type(), upload_file(), download_file(), delete_file(), list_files(), get_file_url(), test_connection() }"}
+], "used_by": ["db", "crypto", "faces", "backends", "portable-db", "tests", "cli", "src-tauri", "drive-wasm"]}
+{"type": "crate_detail", "name": "cybermanju-crypto", "path": "crates/crypto", "src_files": ["src/lib.rs", "src/pqc.rs"], "description": "Post-quantum cryptography engine implementing NIST FIPS 203 (ML-KEM) and FIPS 204 (ML-DSA). Uses real pqcrypto-mlkem and ml-dsa crates — no stubs or placeholders.", "deps": ["anyhow", "base64", "blake3", "chacha20poly1305", "chrono", "hkdf", "hmac", "ml-dsa 0.1.1", "pqcrypto-mlkem 0.1", "pqcrypto-traits 0.3", "rand_core", "serde/serde_json", "sha2", "signature 3", "uuid", "x25519-dalek 2"], "exports": [
+  "EncryptionAlgo enum { Kyber1024, Hybrid (ML-KEM-768+X25519), MlDsa44/65/87, ClassicalSign (HMAC-SHA512), Aes256 (ChaCha20Poly1305) }",
+  "KeyPair { id, algorithm, public_key, private_key, created_at }",
+  "FileEncryptedData { ciphertext, nonce, algorithm, key_id, kem_ciphertext, x25519_ephemeral_pk, blake3_original, encrypted_at }",
+  "EncryptionStatus { is_encrypted, algorithm, nist_level, key_id, encrypted_at }",
+  "PqcEngine { new(), generate_keypair(algo), list_keys(), get_active_keypair(), get_status() }",
+  "encrypt_data(plaintext, keypair) -> FileEncryptedData",
+  "decrypt_data(encrypted, keypair) -> Vec<u8> (with BLAKE3 integrity check)",
+  "sign_message(message, keypair) -> Vec<u8> (ML-DSA or HMAC)",
+  "verify_signature(message, signature_bytes, keypair) -> bool",
+  "algorithm_from_str(s) -> Option<EncryptionAlgo>",
+  "EncryptedFileMeta JSON-safe format for .enc.meta.json files"
+], "key_algorithms": [
+  {"algo": "ML-KEM-1024 (FIPS 203)", "nist": 5, "type": "KEM", "crate": "pqcrypto-mlkem::mlkem1024", "encrypt_flow": "encapsulate(pk) → (shared_secret, kem_ciphertext) → HKDF → ChaCha20Key"},
+  {"algo": "Hybrid ML-KEM-768 + X25519", "nist": 5, "type": "KEM", "crate": "pqcrypto-mlkem::mlkem768 + x25519-dalek", "encrypt_flow": "ML-KEM encapsulate + X25519 DH(ephemeral_sk, derived_static_pk) → HKDF(both shared_secrets) → ChaCha20Key"},
+  {"algo": "ML-DSA-44 (FIPS 204)", "nist": 2, "type": "Signature", "crate": "ml_dsa::MlDsa44"},
+  {"algo": "ML-DSA-65 (FIPS 204)", "nist": 3, "type": "Signature", "crate": "ml_dsa::MlDsa65"},
+  {"algo": "ML-DSA-87 (FIPS 204)", "nist": 5, "type": "Signature", "crate": "ml_dsa::MlDsa87"},
+  {"algo": "HMAC-SHA512", "nist": 0, "type": "Signature", "note": "Classical fallback, not post-quantum"},
+  {"algo": "ChaCha20Poly1305", "nist": 0, "type": "AEAD", "note": "Classical symmetric encryption, 96-bit CSPRNG nonces"}
+], "used_by": ["portable-db", "drive-wasm", "src-tauri", "cli"]}
+{"type": "crate_detail", "name": "cybermanju-compression", "path": "crates/compression", "src_files": ["src/lib.rs", "src/triple.rs", "src/types.rs", "src/layers/lz4.rs", "src/layers/zstd_layer.rs", "src/layers/brotli_layer.rs"], "description": "Triple-layer compression pipeline. Supports individual layers or full LZ4→Zstd→Brotli cascade. Auto-skips remaining layers if LZ4 ratio > 0.98 (incompressible data).", "deps": ["anyhow", "blake3", "lz4_flex 0.11", "serde", "zstd 0.13", "brotli 7", "log"], "exports": [
+  "TripleCompressor { new(), compress_lz4(), decompress_lz4(), compress_zstd(level), decompress_zstd(), compress_brotli(level), decompress_brotli(), compress_data(data, layer), compress_triple(data) -> (Vec<u8>, CompressionStats), decompress_triple(data) -> (Vec<u8>, duration_ms), blake3_hash(data) }",
+  "Lz4Layer { compress(), decompress(), compress_with_detail(), probe_ratio() }",
+  "ZstdLayer { compress(data, level), decompress(), compress_with_detail(data, level) }",
+  "BrotliLayer { compress(data, level), decompress(), compress_with_detail(data, level) }",
+  "CompressionType enum { None, Lz4, Zstd, TripleLayer } with display_name() and color()",
+  "CompressionStats { original_size, compressed_size, ratio, layer, layer_details: Vec<LayerDetail>, blake3_hash, duration_ms }",
+  "LayerDetail { name, algorithm, input_size, output_size, ratio, color }"
+], "used_by": ["portable-db", "drive-wasm", "tests", "cli", "src-tauri"]}
+{"type": "crate_detail", "name": "cybermanju-search", "path": "crates/search", "src_files": ["src/lib.rs"], "description": "Tantivy 0.22 full-text search index with BM25 ranking, faceted search, fuzzy matching, phrase queries, and real term dictionary completions across filename/content_text/tags fields.", "deps": ["anyhow", "chrono", "serde", "tantivy 0.22"], "schema_fields": ["file_id (STRING|STORED)", "file_name (TEXT|STORED)", "content_text (TEXT|STORED)", "tags (STRING|STORED)", "file_type (STRING|STORED)", "is_encrypted (BOOL|STORED)", "has_geo (BOOL|STORED)", "timestamp (DATE|STORED)", "blake3_hash (STRING|STORED)"], "query_support": ["Simple terms: photo", "Phrase: \"vacation photo\"", "Boolean: photo AND encrypted", "Field-scoped: file_name:report", "Wildcards: *.pdf", "Fuzzy: phot~1"], "exports": [
+  "SearchIndex { new(path), add_document(), add_document_batch(), add_document_no_commit(), commit(), remove_document(), delete_term(), search(request), search_with_count(request), suggest(prefix, limit), doc_count() }",
+  "SearchResult { file_id, file_name, snippet, match_type, score }",
+  "SearchRequest { query, limit, offset }",
+  "SearchSuggestion { text, type }",
+  "DocumentParams<'_> { file_id, file_name, content_text, tags, file_type, is_encrypted, has_geo, created_at, blake3_hash }"
+], "used_by": ["web (native only)", "tests", "src-tauri"]}
+{"type": "crate_detail", "name": "cybermanju-db", "path": "crates/db", "src_files": ["src/lib.rs", "src/database.rs"], "description": "redb embedded key-value database layer. 21 named tables storing JSON-serialized data. Includes parent_index for hierarchical folder navigation and portable DB tables for cross-platform sync.", "deps": ["anyhow", "base64", "chrono", "cybermanju-types", "rand_core", "redb 2", "serde/serde_json", "uuid"], "tables": [
+  {"name": "files", "key": "file_id (str)", "value": "FileNode JSON", "purpose": "File/folder metadata"},
+  {"name": "accounts", "key": "account_id", "value": "Account JSON", "purpose": "Storage origin accounts"},
+  {"name": "collections", "key": "collection_id", "value": "Collection JSON", "purpose": "Curated file groups"},
+  {"name": "collection_items", "key": "item_id", "value": "CollectionItem JSON", "purpose": "File-collection junction"},
+  {"name": "face_groups", "key": "group_id", "value": "FaceGroup JSON", "purpose": "AI face person clusters"},
+  {"name": "loose_groups", "key": "group_id", "value": "LooseGroup JSON", "purpose": "Ad-hoc file groupings"},
+  {"name": "encryption_keys", "key": "key_id", "value": "EncryptionKey JSON", "purpose": "PQC keypair storage"},
+  {"name": "locations", "key": "location_id", "value": "Location JSON", "purpose": "GPS coordinate records"},
+  {"name": "users", "key": "user_id", "value": "User JSON", "purpose": "User accounts with password hashes"},
+  {"name": "user_file_perms", "key": "perm_id", "value": "UserFilePermission JSON", "purpose": "Per-file access control"},
+  {"name": "sync_configs", "key": "config_id", "value": "SyncConfig JSON", "purpose": "Sync backend configs"},
+  {"name": "parent_index", "key": "parent_id", "value": "Vec<String> JSON", "purpose": "Folder → children file_id list"},
+  {"name": "trash", "key": "file_id", "value": "TrashItem JSON", "purpose": "Soft-deleted files"},
+  {"name": "audit_log", "key": "entry_id", "value": "AuditEntry JSON", "purpose": "Operation audit trail"},
+  {"name": "file_versions", "key": "version_id", "value": "FileVersion JSON", "purpose": "File version history"},
+  {"name": "share_links", "key": "link_id", "value": "ShareLink JSON", "purpose": "Share link tokens"},
+  {"name": "file_relations", "key": "relation_id", "value": "FileRelation JSON", "purpose": "Cross-platform file locations"},
+  {"name": "deletion_log", "key": "record_id", "value": "DeletionRecord JSON", "purpose": "Cross-platform deletion propagation"},
+  {"name": "recovery_store", "key": "entry_id", "value": "RecoveryEntry JSON", "purpose": "Compressed/preview recovery references"},
+  {"name": "portable_meta", "key": "string", "value": "string", "purpose": "Portable DB metadata"},
+  {"name": "kv_store", "key": "string", "value": "string", "purpose": "General-purpose key-value store"}
+], "exports": [
+  "Database { new(path), begin_read(), begin_write(), log_audit(), trash_file(), restore_from_trash(), list_trash(), empty_trash(), create_file_version(), list_file_versions(), revert_file_version(), create_share_link(), get_share_link_by_token(), get_file_node(), add_to_parent_index(), remove_from_parent_index(), list_by_parent(), insert_file_with_index(), remove_file_with_index(), move_file_with_index() }",
+  "Portable DB methods: store_file_relation(), get_file_relation(), get_file_relations_for_local(), delete_file_relation(), list_all_file_relations(), store_deletion_record(), get_deletion_record(), list_pending_deletions(), list_all_deletion_records(), update_deletion_record(), delete_deletion_record(), store_recovery_entry(), get_recovery_entry(), list_all_recovery_entries(), delete_recovery_entry(), set_portable_meta(), get_portable_meta(), get_all_portable_meta(), mark_deletion_propagated(), update_file_relation_status()",
+  "FILE_CONTENTS_TABLE table definition", "ContentLocation enum { Disk(String), Database, Remote(String) }"
+], "used_by": ["portable-db", "tests", "cli", "src-tauri"]}
+{"type": "crate_detail", "name": "cybermanju-portable-db", "path": "crates/portable-db", "src_files": ["src/lib.rs"], "description": ".cybermanju portable database format — self-contained, triple-compressed, optionally encrypted redb database. Binary layout: [32B MAGIC][4B header_len][PortableHeader JSON][compressed/encrypted redb blob]. Blobs stored sidecar in .cyb3/ and .prev/ directories. Syncs to every connected platform.", "deps": ["anyhow", "blake3", "chrono", "cybermanju-compression", "cybermanju-crypto", "cybermanju-db", "cybermanju-types", "log", "serde/serde_json", "uuid"], "binary_format": {"magic": "CYBERMANJU_PORTABLE_v1\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0 (32 bytes)", "header": "PortableHeader JSON (version, stats, hash, encryption info)", "body": "Triple-compressed redb database, optionally encrypted with FileEncryptedMeta wrapper"}, "exports": [
+  "PortableDatabase { create(path, platform), open(path), open_or_create(path, platform), pack(redb_path, key), unpack(output_path, key) -> Database, store_compressed_content(db, file_id, data, name, mime) -> RecoveryEntry, store_preview(db, file_id, preview_data, w, h) -> RecoveryEntry, get_recoverable_data(db, file_id) -> Option<(Vec<u8>, mime)>, get_preview_data(db, file_id) -> Option<Vec<u8>>, list_recoverable_files(db), delete_recovery_entry(db, file_id), sync_to_backend(backend), sync_from_backend(backend, download_path), record_file_relation(db, ...), record_deletion(db, ...), propagate_deletion(db, record_id, backend, path), repack(redb_path, key), header(), path() }"
+], "used_by": ["cli", "src-tauri"]}
+{"type": "crate_detail", "name": "cybermanju-web", "path": "crates/web", "src_files": ["src/lib.rs", "src/browser/mod.rs", "src/browser/manager.rs", "src/search/mod.rs", "src/search/duckduckgo.rs", "src/search/tantivy.rs (native only)", "src/render/html.rs", "src/render/layout.rs", "src/wasm/mod.rs (wasm32 only)"], "description": "Embedded web browser engine with tab management, DuckDuckGo privacy search (via scraper), HTML text/title/link extraction, and hybrid local+web search. Conditionally compiles Tantivy on native and uses web-sys fetch on wasm32.", "deps_native": ["reqwest (rustls-tls)", "tokio", "cybermanju-search"], "deps_wasm": ["wasm-bindgen", "serde-wasm-bindgen", "js-sys", "web-sys (Window, Document, etc.)"], "shared_deps": ["serde/serde_json", "url", "scraper 0.21", "log", "uuid", "chrono", "anyhow", "thiserror", "async-trait"], "exports": [
+  "BrowserManager { new(), open_tab(url), close_tab(id), activate_tab(id), navigate(url, title), add_history(), add_bookmark(), remove_bookmark(), get_bookmarks(folder), search_history(), recent_history() }",
+  "Tab { id, title, url, loading, history_index }", "HistoryEntry { id, url, title, timestamp, visit_count }", "Bookmark { id, url, title, folder, created_at }", "BrowserSettings (default: DuckDuckGo home, privacy mode on, dark mode)",
+  "SearchEngine trait { async search(query) -> SearchResponse, name() }",
+  "DuckDuckGoEngine implements SearchEngine (web scraping)",
+  "SearchQuery, SearchResponse { results, total_estimate, source, query, suggestion }",
+  "HtmlRenderer { extract_text(html), extract_title(html), extract_links(html, base_url) }",
+  "WasmSearch, WasmBrowser (wasm_bindgen exports for browser use)",
+  "WebResult { title, url, snippet }", "SearchSource { Local, Web, Hybrid }"
+], "used_by": ["src-tauri"]}
+{"type": "crate_detail", "name": "cybermanju-faces", "path": "crates/faces", "src_files": ["src/lib.rs"], "description": "Face detection and clustering with 4 algorithms and auto-selection based on dataset size. 512-dim embeddings, SimHash with 64-bit binary codes + 3 LSH tables for ~97% recall. Optional ONNX integration (SCRFD + ArcFace).", "deps": ["anyhow", "blake3", "cybermanju-types", "log", "rayon 1.10", "serde/serde_json", "optional: ort 2.0.0-rc.12 + image + reqwest + ndarray + dirs"], "constants": ["EMBEDDING_DIM=512", "HASH_BITS=64", "NUM_HASH_TABLES=3", "BRUTE_FORCE_THRESHOLD=200", "DEFAULT_MATCH_THRESHOLD=0.55", "HDBSCAN_MIN_CLUSTER_SIZE=2", "CW_MAX_ITERATIONS=30"], "exports": [
+  "SimHashIndex { new(entries), query_candidates(query, hamming_dist, exclude), knn(query, k), range_query(query, threshold), get_embedding(idx), get_binary_hash(idx), get_id(idx), len(), is_empty() }",
+  "to_binary_hash(embedding) -> u64", "hamming_distance(a, b) -> u32",
+  "embedding_distance(a, b) -> f32 (cosine distance)", "embedding_distance_arr(arr, fixed_arr) -> f32", "embedding_distance_batch(query, embeddings) -> Vec<f32>",
+  "adaptive_threshold(distances, base) -> f32 (elbow method)",
+  "find_medoid(embeddings) -> Option<Vec<f32>>", "update_medoid_incremental(current, cluster, new) -> Vec<f32>",
+  "UnionFind { new(n), find(x), union(a, b), size(x) }",
+  "cluster_bruteforce(embeddings, threshold) -> Vec<Cluster> — O(n²·d), exact",
+  "cluster_simhash(embeddings, threshold) -> Vec<Cluster> — O(n·d·B + n·c·d), approximate",
+  "cluster_chinese_whispers(embeddings, threshold, k) -> Vec<Cluster> — O(n·k·I)",
+  "cluster_hdbscan(embeddings, min_cluster_size) -> Vec<Cluster> — O(n·k·d + n·log n)",
+  "cluster_auto(embeddings, threshold, strategy?) -> Vec<Cluster> — auto-selects algorithm",
+  "ClusteringStrategy enum { BruteForce, SimHash, ChineseWhispers, HDBSCAN }",
+  "Cluster { id, name, file_ids, centroid_embedding, binary_hash, cohesion, embedding_count, algorithm }",
+  "cached_projections() -> static SimHash projection matrix"
+], "used_by": ["src-tauri"], "features": ["default = [onnx-face]", "onnx-face = [ort, dirs, image, reqwest, ndarray]"]}
+{"type": "crate_detail", "name": "cybermanju-drive-wasm", "path": "crates/drive-wasm", "src_files": ["src/lib.rs", "src/crypto.rs", "src/compression.rs", "src/drive.rs", "src/sync.rs", "src/types.rs"], "description": "WASM bridge crate — exposes Rust crypto, compression, virtual drive, and sync engine to browser JavaScript via wasm-bindgen. Pure Rust deps only (no C bindings) for browser compatibility. Compiled to wasm32-unknown-unknown via wasm-pack.", "deps": ["wasm-bindgen", "js-sys", "serde-wasm-bindgen", "blake3", "chacha20poly1305", "sha2", "hkdf", "hmac", "ml-dsa", "ml-kem 0.3", "x25519-dalek 2", "signature 3", "rand_core", "getrandom (js feature)", "lz4_flex", "brotli (pure Rust)", "zstd (no default features, pure Rust)", "serde/serde_json", "uuid (js)", "chrono (wasmbind)", "wasm-logger", "log"], "wasm_exports": {
+  "init": "init() — initialize WASM logger",
+  "utils": "generate_uuid() -> String, now_utc() -> String, hash_file_meta(name, size, modified) -> String",
+  "crypto": [
+    "blake3_hash(data) -> String (hex)",
+    "chacha20_generate_key() -> Vec<u8> (32 bytes)",
+    "chacha20_generate_nonce() -> Vec<u8> (12 bytes)",
+    "chacha20_encrypt(key, nonce, plaintext) -> Vec<u8> (ciphertext+tag)",
+    "chacha20_decrypt(key, nonce, ciphertext) -> Vec<u8> (plaintext)",
+    "hkdf_derive(secret, salt, info, length) -> Vec<u8>",
+    "hmac_sha512(key, data) -> Vec<u8>",
+    "x25519_generate_keypair() -> {privateKey, publicKey}",
+    "x25519_shared_secret(private_key, peer_public) -> Vec<u8>",
+    "ml_dsa65_generate_keypair() -> {privateKey, publicKey}",
+    "ml_dsa65_sign(message, private_key) -> Vec<u8> (signature)",
+    "ml_dsa65_verify(message, signature, public_key) -> bool",
+    "ml_kem1024_generate_keypair() -> {publicKey, secretKey}",
+    "ml_kem1024_encapsulate(public_key) -> {ciphertext, sharedSecret}",
+    "ml_kem1024_decapsulate(secret_key, ciphertext) -> Vec<u8> (shared_secret)"
+  ],
+  "compression": [
+    "compress_lz4(data) -> Vec<u8>", "decompress_lz4(data) -> Vec<u8>",
+    "compress_brotli(data, quality) -> Vec<u8>", "decompress_brotli(data) -> Vec<u8>",
+    "compress_zstd(data, level) -> Vec<u8>", "decompress_zstd(data) -> Vec<u8>",
+    "compress_lz4_probe_ratio(data) -> f64"
+  ],
+  "drive (VirtualDrive)": [
+    "new() -> VirtualDrive", "create_file(name, type, parent_id) -> {id}",
+    "delete_file(file_id)", "get_file(file_id) -> WasmFileNode",
+    "list_files(parent_id) -> [WasmFileNode]", "search_files(query) -> [WasmFileNode]",
+    "rename_file(file_id, new_name)", "move_file(file_id, new_parent_id)",
+    "set_file_size(file_id, size)", "set_file_tags(file_id, tags)",
+    "toggle_star(file_id) -> bool", "get_starred_files() -> [WasmFileNode]",
+    "get_geo_files() -> [WasmFileNode]", "get_quota() -> {used, total, files, folders}",
+    "get_all_files() -> [WasmFileNode]", "file_count(), folder_count(), total_bytes()",
+    "to_json() -> String", "from_json(json) -> VirtualDrive"
+  ],
+  "sync (SyncEngine)": [
+    "new() -> SyncEngine", "add_file(path, size, backend) -> SyncFileEntry",
+    "mark_synced(file_id)", "mark_error(file_id, error)", "mark_changed(file_id)",
+    "remove_file(file_id)", "get_entries() -> [SyncFileEntry]", "get_state() -> SyncState",
+    "get_pending_count() -> u32", "get_error_count() -> u32", "get_synced_count() -> u32",
+    "has_changes() -> bool", "reset()", "to_json() -> String", "from_json(json) -> SyncEngine"
+  ]
+}, "used_by": ["Frontend: src/wasm/ modules load via import('cybermanju-drive-wasm')"]}
+{"type": "crate_detail", "name": "cybermanju-backends", "path": "crates/backends", "src_files": ["src/lib.rs", "src/local.rs", "src/github.rs", "src/gitlab.rs", "src/google_drive.rs", "src/google_photos.rs", "src/telegram.rs", "src/mega.rs", "src/transfer.rs", "src/util.rs"], "description": "Storage backend implementations for cloud sync. Each backend implements the StorageBackend trait. Also provides cross-backend file transfer with progress callbacks.", "deps": ["cybermanju-types", "serde/serde_json", "reqwest (blocking, json, multipart)", "base64", "chrono", "log", "urlencoding 2", "megalib 0.11", "tokio"], "backends": [
+  {"name": "LocalBackend", "protocol": "std::fs copy to local directory", "auth": "None"},
+  {"name": "GitHubBackend", "protocol": "GitHub Contents API for files <25MB, GitHub Releases for larger (up to 2GB)", "auth": "Personal Access Token"},
+  {"name": "GitLabBackend", "protocol": "GitLab Repository Files API", "auth": "Personal Access Token"},
+  {"name": "GoogleDriveBackend", "protocol": "Google Drive API v3 (REST)", "auth": "OAuth 2.0"},
+  {"name": "GooglePhotosBackend", "protocol": "Google Photos Library API (curl-based)", "auth": "OAuth 2.0"},
+  {"name": "TelegramBackend", "protocol": "Telegram Bot API", "auth": "Bot Token"},
+  {"name": "MegaBackend", "protocol": "MEGA API via megalib crate", "auth": "Email + Password (+ 2FA)"}
+], "exports": [
+  "LocalBackend", "GitHubBackend", "GitLabBackend", "GoogleDriveBackend", "GooglePhotosBackend", "TelegramBackend", "MegaBackend",
+  "transfer_files(source_backend, dest_backend, file_mappings, progress_cb) -> Result<TransferSummary>",
+  "ProgressCallback: Fn(TransferProgress)",
+  "TransferProgress { current, total, current_file, bytes_copied, errors }"
+], "used_by": ["cli", "src-tauri"]}
+{"type": "crate_detail", "name": "cybermanju-cli", "path": "crates/cli", "src_files": ["src/main.rs", "src/tui.rs", "src/harvest.rs", "src/transfer.rs", "src/backends.rs", "src/portable.rs"], "description": "Standalone CLI/TUI binary 'cybermanju' using clap for argument parsing and ratatui for terminal UI. Supports harvest (scan directory and import files), transfer (cross-backend copy), portable DB operations, and backend management.", "deps": ["cybermanju-types", "cybermanju-crypto", "cybermanju-compression", "cybermanju-db", "cybermanju-portable-db", "cybermanju-backends", "clap 4", "ratatui 0.29 (crossterm)", "reqwest (blocking, json, multipart)", "urlencoding", "megalib", "anyhow", "serde/serde_json", "chrono", "uuid", "base64", "blake3", "log", "dirs 6"], "binary_name": "cybermanju", "subcommands": [
+  {"subcommand": "harvest", "description": "Scan directory and import files into database"},
+  {"subcommand": "transfer", "description": "Copy files between backends (local↔cloud)"},
+  {"subcommand": "portable", "description": "Portable DB operations: init, pack, unpack, repack, sync"},
+  {"subcommand": "backends", "description": "List, test, configure storage backends"},
+  {"subcommand": "tui", "description": "Launch interactive terminal UI (ratatui)"}
 ]}
-{"type": "tauri_plugins", "plugins": [
-  "tauri_plugin_fs", "tauri_plugin_dialog", "tauri_plugin_shell", "tauri_plugin_notification",
-  "tauri_plugin_store", "tauri_plugin_log", "tauri_plugin_os", "tauri_plugin_process",
-  "tauri_plugin_conduit (2.4x faster IPC)", "tauri_plugin_serialplugin",
-  "tauri_plugin_clipboard_next (non-android)", "tauri_plugin_snap_layout (windows only)"
+{"type": "crate_detail", "name": "cybermanju-tests", "path": "crates/tests", "src_files": ["src/lib.rs (or test files)"], "description": "Integration test suite exercising all workspace crates. Run via cargo test --workspace or npm run rust:test.", "deps": ["cybermanju-types", "cybermanju-compression", "cybermanju-crypto", "cybermanju-db", "cybermanju-search", "cybermanju-web", "serde/serde_json", "anyhow", "blake3", "redb", "tempfile"]}
+{"type": "crate_detail", "name": "src-tauri (cybermanju-drive)", "path": "src-tauri", "src_files": ["src/main.rs", "src/lib.rs", "src/commands/*.rs (23 files)", "src/db/schema.rs", "src/crypto/mod.rs", "src/compression/mod.rs", "src/search/mod.rs", "src/sync/pipeline.rs", "src/sync/backends.rs", "src/sync/oauth.rs", "src/sync/models.rs", "src/transfer/mod.rs", "src/preview/mod.rs", "src/faces/mod.rs", "src/tree_sitter/mod.rs", "src/web_dashboard/mod.rs"], "description": "Tauri v2 desktop application — primary deployment target. Orchestrates all 12 workspace crates. Registers 60+ IPC commands via tauri::generate_handler!. Manages AppState (redb DB, Tantivy index, compressor, HMAC secret). Starts embedded web dashboard on port 3456 with JWT auth.", "lib_type": "staticlib + cdylib + rlib", "features": ["default", "onnx-face (activates cybermanju-faces/onnx-face)"], "tauri_plugins": [
+  {"plugin": "fs", "crate": "tauri-plugin-fs 2", "purpose": "Filesystem access"},
+  {"plugin": "dialog", "crate": "tauri-plugin-dialog 2", "purpose": "File open/save dialogs"},
+  {"plugin": "shell", "crate": "tauri-plugin-shell 2", "purpose": "Shell commands"},
+  {"plugin": "notification", "crate": "tauri-plugin-notification 2", "purpose": "OS notifications"},
+  {"plugin": "store", "crate": "tauri-plugin-store 2", "purpose": "Persistent key-value store"},
+  {"plugin": "log", "crate": "tauri-plugin-log 2", "purpose": "Logging"},
+  {"plugin": "os", "crate": "tauri-plugin-os 2", "purpose": "OS information"},
+  {"plugin": "process", "crate": "tauri-plugin-process 2", "purpose": "Process management"},
+  {"plugin": "conduit", "crate": "tauri-plugin-conduit 1", "purpose": "2.4x faster IPC (drop-in invoke replacement)"},
+  {"plugin": "serialplugin", "crate": "tauri-plugin-serialplugin 2", "purpose": "Serial port communication"},
+  {"plugin": "clipboard", "crate": "tauri-plugin-clipboard-next 0.2", "condition": "not target_os=android", "purpose": "Clipboard access"},
+  {"plugin": "snap-layout", "crate": "tauri-plugin-snap-layout 1", "condition": "target_os=windows", "purpose": "Windows 11 snap layout"}
+], "app_state_struct": {"name": "AppState", "path": "src-tauri/src/lib.rs:27-34", "fields": [
+  "db: RwLock<Database>", "db_path: String", "data_dir: String",
+  "tantivy_index: RwLock<SearchIndex>", "compression: TripleCompressor", "hmac_secret: [u8; 32]"
+]}, "additional_state": [
+  "Arc<DashboardState> (connection tracking, lifecycle)",
+  "Arc<SyncState> (sync progress, cancellation)",
+  "Arc<TransferState> (transfer progress, cancellation)"
 ]}
-{"type": "frontend_overview", "framework": "Vue 3 (Composition API) + TypeScript", "build": "Vite 6", "state": "Pinia 3", "types": "src/types/index.ts", "entry": "src/main.ts → src/App.vue", "components_count": 80, "composables_count": 15}
-{"type": "frontend_composables", "path": "src/composables/", "list": [
-  {"name": "useTauri", "purpose": "Dual-mode IPC/REST/WASM bridge — auto-detects environment (Tauri vs web) and routes commands accordingly", "exports": "invoke, pickFolder, pickFiles, readDirectory, readTextFile, writeTextFile, createDir, deletePath, renamePath, copyPath, pathExists, isTauri, isWebMode, setServerUrl, setAuthToken", "key_detail": "Three-tier fallback: Tauri IPC (Conduit) → WASM bridge (IndexedDB) → REST API"},
-  {"name": "useWindowManager", "purpose": "Window position, size, maximized state, focus tracking"},
-  {"name": "useLogin", "purpose": "User authentication state and login flow"},
-  {"name": "useShortcuts/useKeyboardShortcuts/shortcutsKey", "purpose": "Keyboard shortcut registration and handling"},
-  {"name": "useGsapAnimation", "purpose": "GSAP animation controller for UI transitions"},
-  {"name": "useDrag", "purpose": "Drag-and-drop file operations"},
-  {"name": "useSwipe", "purpose": "Touch swipe gesture detection"},
-  {"name": "useContextMenu", "purpose": "Right-click context menu state"},
-  {"name": "useNotifications", "purpose": "Toast/notification management"},
-  {"name": "useFocusTrap", "purpose": "Focus trapping for modals"},
-  {"name": "useTouchConfig", "purpose": "Touch-friendly configuration"},
-  {"name": "useFpsMonitor", "purpose": "Performance FPS counter"},
-  {"name": "useMoireTexture", "purpose": "Animated moire pattern background texture"}
+{"type": "tauri_command_modules", "path": "src-tauri/src/commands/", "modules_count": 23, "total_commands": 68, "modules": [
+  {"name": "files", "file": "files.rs", "commands_count": 14, "commands": ["list_files", "get_file", "create_folder", "delete_file", "rename_file", "duplicate_file_context", "move_file", "get_preview", "create_loose_group", "add_to_loose_group", "list_loose_groups", "rebuild_parent_index", "delete_files_from_backends", "delete_file_metadata_only"]},
+  {"name": "search", "file": "search.rs", "count": 3, "commands": ["search_files", "search_files_paginated", "suggest"]},
+  {"name": "encryption", "file": "encryption.rs", "count": 5, "commands": ["encrypt_file", "decrypt_file", "get_encryption_status", "generate_keypair", "list_keys"]},
+  {"name": "compression", "file": "compression.rs", "count": 3, "commands": ["compress_file", "decompress_file", "get_compression_stats"]},
+  {"name": "collections", "file": "collections.rs", "count": 4, "commands": ["list_collections", "create_collection", "add_to_collection", "remove_from_collection"]},
+  {"name": "faces", "file": "faces.rs", "count": 9, "commands": ["detect_faces", "detect_faces_batch_cmd", "recluster_faces", "rename_face_group", "merge_face_groups", "delete_face_group", "find_similar_faces", "list_face_groups", "get_group_files"]},
+  {"name": "map", "file": "map.rs", "count": 2, "commands": ["get_geo_files", "extract_exif_gps"]},
+  {"name": "accounts", "file": "accounts.rs", "count": 4, "commands": ["list_accounts", "create_account", "switch_account", "delete_account"]},
+  {"name": "users", "file": "users.rs", "count": 11, "commands": ["register_user", "delete_user", "update_user_role", "authenticate_user", "list_users", "set_file_permission", "grant_file_permission", "revoke_file_permission", "verify_file_access", "get_file_permissions", "verify_token"]},
+  {"name": "sync", "file": "sync.rs", "count": 8, "commands": ["list_sync_configs", "create_sync_config", "delete_sync_config", "start_sync", "get_sync_progress", "test_sync_connection", "cancel_sync", "list_remote_files"]},
+  {"name": "import", "file": "import.rs", "count": 5, "commands": ["import_file", "import_from_url", "scan_directory", "upload_file", "rebuild_search_index"]},
+  {"name": "share", "file": "share.rs", "count": 3, "commands": ["generate_share_link", "get_shared_file", "list_share_links"]},
+  {"name": "trash", "file": "trash.rs", "count": 4, "commands": ["list_trash", "restore_from_trash", "empty_trash", "delete_from_trash"]},
+  {"name": "audit", "file": "audit.rs", "count": 1, "commands": ["get_audit_log"]},
+  {"name": "batch", "file": "batch.rs", "count": 3, "commands": ["batch_delete", "batch_encrypt", "batch_compress"]},
+  {"name": "versions", "file": "versions.rs", "count": 4, "commands": ["list_file_versions", "create_file_version", "revert_file_version", "snapshot_all_versions"]},
+  {"name": "transfer", "file": "transfer", "count": 3, "commands": ["transfer_files", "get_transfer_progress", "cancel_transfer"]},
+  {"name": "diagnostics", "file": "diagnostics.rs", "count": 3, "commands": ["get_crash_log", "clear_crash_log", "get_app_log"]},
+  {"name": "duplicates", "file": "duplicates.rs", "count": 1, "commands": ["find_duplicates"]},
+  {"name": "portable_db", "file": "portable_db.rs", "count": 18, "commands": ["init_portable_db", "get_portable_db_header", "sync_portable_db", "record_file_relation", "get_file_relations", "list_all_relations", "record_deletion", "list_pending_deletions", "list_all_deletions", "store_compressed_for_recovery", "store_preview_for_recovery", "list_recoverable_files", "recover_file", "get_recovery_preview", "repack_portable_db", "mark_deletion_propagated", "get_portable_db_meta", "delete_recovery_entry"]},
+  {"name": "kv", "file": "kv.rs", "count": 2, "commands": ["kv_set", "kv_get"]},
+  {"name": "system_info", "file": "system_info.rs", "count": 1, "commands": ["get_system_info"]},
+  {"name": "web", "file": "web.rs", "count": 2, "commands": ["web_search", "fetch_page"]},
+  {"name": "dashboard", "file": "dashboard.rs", "count": 3, "commands": ["dashboard_status", "start_dashboard", "stop_dashboard"]}
 ]}
-{"type": "frontend_stores", "path": "src/stores/", "stores": [
-  {"name": "app", "file": "app.ts", "type": "Pinia defineStore", "manages": "Files, accounts, collections, face groups, encryption state, sync state, search, UI state (windows, sidebar, theme)"},
-  {"name": "history", "file": "history.ts", "type": "Pinia defineStore", "manages": "File operation history / undo tracking"}
+{"type": "frontend_overview", "framework": "Vue 3 Composition API + TypeScript 5.8 strict", "build_tool": "Vite 6 + vite-plugin-wasm + vite-plugin-top-level-await", "state": "Pinia 3", "entry": "src/main.ts → src/App.vue", "routing": "Window-manager-based (no vue-router), DesktopShell manages window lifecycle", "components_total": 80, "ui_primitives": 25, "app_panels": 55, "composables": 15, "wasm_modules": 11, "stores": 2}
+{"type": "frontend_composables", "path": "src/composables/", "entries": [
+  {"name": "useTauri", "purpose": "Triple-mode IPC bridge: Tauri Conduit → WASM IndexedDB → REST API. Auto-detects environment.", "exports": "invoke(cmd, args), setServerUrl, setAuthToken, isTauri, isWebMode, pickFolder, pickFiles, readDirectory, readTextFile, writeTextFile, createDir, deletePath, renamePath, copyPath, pathExists, kvSet, kvGet", "rest_routes": "35+ REST endpoints mapped in REST_ROUTES dict (line 144-339)", "wasm_fallback": "40+ commands handled via WASM bridge when Tauri IPC unavailable", "key_design": "Three-tier fallback: 1) Tauri Conduit invoke → 2) WASM bridge tryWasmInvoke → 3) REST fetch"},
+  {"name": "useWindowManager", "purpose": "Window position, size, z-index, maximized state, focus tracking"},
+  {"name": "useLogin", "purpose": "Authentication state, login/logout, token management"},
+  {"name": "useShortcuts / useKeyboardShortcuts / shortcutsKey", "purpose": "Configurable keyboard shortcut registration and handler dispatch"},
+  {"name": "useGsapAnimation", "purpose": "GSAP-based animation controller for window transitions, boot screen, UI effects"},
+  {"name": "useDrag", "purpose": "File drag-and-drop operations with visual feedback"},
+  {"name": "useSwipe", "purpose": "Touch swipe gesture detection for mobile"},
+  {"name": "useContextMenu", "purpose": "Right-click context menu positioning and state"},
+  {"name": "useNotifications", "purpose": "Toast notification queue and display management"},
+  {"name": "useFocusTrap", "purpose": "Keyboard focus trapping within modals and panels"},
+  {"name": "useTouchConfig", "purpose": "Touch-friendly configuration flags"},
+  {"name": "useFpsMonitor", "purpose": "Performance FPS counter for diagnostics"},
+  {"name": "useMoireTexture", "purpose": "Animated moire pattern background texture effect"}
 ]}
-{"type": "frontend_wasm_bridge", "path": "src/wasm/", "modules": [
-  {"name": "bridge.ts", "exports": "initWasm, getWasm, withWasm, isWasmSupported, isWasmReady", "purpose": "WASM module loader and lifecycle management"},
-  {"name": "index.ts", "exports": "re-exports all modules", "purpose": "Unified entry point"},
-  {"name": "crypto.ts", "exports": "WASM crypto wrappers", "purpose": "Browser-side PQC operations (ChaCha20, ML-DSA65, ML-KEM1024, X25519)"},
-  {"name": "compression.ts", "exports": "WASM compression wrappers", "purpose": "Browser-side LZ4/Brotli/Zstd compression"},
-  {"name": "drive.ts", "exports": "Virtual drive operations plus IndexedDB persistence", "purpose": "In-browser file system via WASM VirtualDrive + IndexedDB storage"},
-  {"name": "storage.ts", "exports": "IndexedDB-based KV store", "purpose": "Persistent key-value storage in browser"},
-  {"name": "sync.ts", "exports": "Sync engine with IndexedDB persistence", "purpose": "In-browser sync state management"},
-  {"name": "oauth.ts", "exports": "OAuth flow handlers", "purpose": "Browser OAuth for cloud backends"},
-  {"name": "transfer.ts", "exports": "File transfer operations", "purpose": "Cross-backend file transfers in browser"},
-  {"name": "native-fs.ts", "exports": "File System Access API wrappers", "purpose": "Read/write local files via browser Native File System API"},
-  {"name": "data.ts", "exports": "IndexedDB data access layer", "purpose": "Accounts, collections, face groups, encryption keys, users, locations persistence in IndexedDB"}
+{"type": "frontend_wasm_bridge_modules", "path": "src/wasm/", "entries": [
+  {"name": "bridge.ts", "exports": "initWasm(), getWasm(), withWasm(fn), isWasmSupported(), isWasmReady()", "purpose": "WASM module async loader with singleton lifecycle. Calls import('cybermanju-drive-wasm')."},
+  {"name": "index.ts", "re_exports": "All modules (crypto, compression, oauth, storage, sync, drive, nativeFs, data) + type re-exports", "purpose": "Unified entry point — re-exports everything"},
+  {"name": "crypto.ts", "wraps": "WASM crypto functions for browser usage", "purpose": "Browser-side PQC: ChaCha20 encrypt/decrypt, ML-DSA65 sign/verify, ML-KEM1024 encapsulate/decapsulate, X25519 DH"},
+  {"name": "compression.ts", "wraps": "WASM compression functions", "purpose": "Browser-side LZ4, Brotli, Zstd compression/decompression"},
+  {"name": "drive.ts", "wraps": "WASM VirtualDrive + IndexedDB persistence layer", "purpose": "In-browser virtual file system with create/read/update/delete, search, geo, starred files, quota tracking. Persists to IndexedDB."},
+  {"name": "storage.ts", "purpose": "IndexedDB-backed KV store (setItem/getItem/removeItem/clear)"},
+  {"name": "sync.ts", "wraps": "SyncEngine + IndexedDB persistence", "purpose": "Browser sync state: configs, file entries, progress tracking, remote file listing"},
+  {"name": "oauth.ts", "purpose": "Browser OAuth flow handler for Google, GitHub, GitLab, Telegram"},
+  {"name": "transfer.ts", "purpose": "Browser-side cross-backend file transfer operations"},
+  {"name": "native-fs.ts", "purpose": "File System Access API wrappers: openDirectory, openFiles, readFile, writeFile, listDirectory, resolveHandle, persistHandle"},
+  {"name": "data.ts", "purpose": "IndexedDB data access layer: accounts CRUD, collections CRUD, face groups, encryption keys, users, locations"}
 ]}
-{"type": "frontend_ui_components", "path": "src/components/", "ui_library": "Custom (Os-prefixed), ~25 UI primitives", "ui_components": [
-  "OsWindow (draggable/resizable window with title bar)", "OsButton", "OsInput", "OsSelect", "OsToggle", "OsModal",
-  "OsPanel", "OsSidebar", "OsDock", "OsMenuBar", "OsIcon", "OsBadge", "OsCard", "OsDivider", "OsTabs",
-  "OsTable", "OsProgress", "OsSlider", "OsLoading", "OsScrollArea", "OsPopover", "OsTooltip", "OsNotification", "OsQuadrant", "OsSection"
+{"type": "frontend_stores", "path": "src/stores/", "entries": [
+  {"name": "app (app.ts)", "type": "Pinia defineStore", "manages": "Files list, accounts, collections, face groups, loose groups, encryption state, sync configs/progress, search state, UI state (active windows, sidebar open, theme, view mode, dock items), notifications, keyboard shortcuts"},
+  {"name": "history (history.ts)", "type": "Pinia defineStore", "manages": "File operation history for undo/redo, operation timestamps"}
 ]}
-{"type": "frontend_app_components", "path": "src/components/", "app_components": [
-  "DesktopShell (root desktop with window manager)", "AppWindow (application window container)", "WindowContent (window content router)",
-  "LandingPage", "BootScreen", "LoginPopup", "FileExplorer", "FileGrid", "FilePreview", "FileTooltip",
-  "Sidebar", "Dock", "TopMenuBar", "SystemTray", "TaskManager", "MobileNav",
-  "ContextMenu", "CommandPalette", "KeyboardShortcutsHelp", "NotificationStack",
-  "SettingsPage", "SystemMonitor", "StorageDashboard", "ActivityPanel",
-  "SyncPanel", "CompressionPanel", "EncryptionPanel", "FaceGroupingPanel",
-  "CollectionsPanel", "NotesPanel", "HistoryPanel", "TrashPanel",
-  "MapView", "CanvasEngine", "ArtMaker", "BookWriter", "MatrixRain", "PrayerFlags",
-  "WebBrowserPanel", "WebDashboardPanel", "CodeIntelligencePanel", "PluginCreator",
-  "AccountsPanel", "UserManagementPanel", "FilePermissionsPanel",
-  "ImportDialog", "ImportWindow", "UploadDialog", "TransferWindow",
-  "MoveDialog", "DeleteDialog", "UnboxDialog", "ConfirmDialog",
-  "CrashReporter", "PostScreen", "DuplicatesPanel", "Terminal"
+{"type": "frontend_ui_components", "path": "src/components/ui/", "count": 25, "prefix": "Os", "components": [
+  {"name": "OsWindow", "purpose": "Draggable, resizable window container with title bar, minimize/maximize/close buttons"},
+  {"name": "OsButton", "purpose": "Themed button with icon support"},
+  {"name": "OsInput", "purpose": "Text input with label, validation state"},
+  {"name": "OsSelect", "purpose": "Dropdown select with options"},
+  {"name": "OsToggle", "purpose": "Boolean toggle switch"},
+  {"name": "OsModal", "purpose": "Modal dialog overlay"},
+  {"name": "OsPanel", "purpose": "Content panel container"},
+  {"name": "OsSidebar", "purpose": "Collapsible sidebar"},
+  {"name": "OsDock", "purpose": "macOS-style application dock"},
+  {"name": "OsMenuBar", "purpose": "Top menu bar with dropdown menus"},
+  {"name": "OsIcon", "purpose": "Icon component using Iconify"},
+  {"name": "OsBadge", "purpose": "Notification badge"},
+  {"name": "OsCard", "purpose": "Card container"},
+  {"name": "OsDivider", "purpose": "Horizontal/vertical divider"},
+  {"name": "OsTabs", "purpose": "Tabbed panel container"},
+  {"name": "OsTable", "purpose": "Data table"},
+  {"name": "OsProgress", "purpose": "Progress bar"},
+  {"name": "OsSlider", "purpose": "Range slider input"},
+  {"name": "OsLoading", "purpose": "Loading spinner"},
+  {"name": "OsScrollArea", "purpose": "Custom scrollable area"},
+  {"name": "OsPopover", "purpose": "Popover overlay"},
+  {"name": "OsTooltip", "purpose": "Tooltip on hover"},
+  {"name": "OsNotification", "purpose": "Toast notification display"},
+  {"name": "OsQuadrant", "purpose": "Quadrant-based layout region"},
+  {"name": "OsSection", "purpose": "Section container with title"}
 ]}
-{"type": "cross_crate_dependency_graph", "edges": [
-  "cybermanju-types → (none — root types crate used by all others)",
-  "cybermanju-crypto → cybermanju-types",
-  "cybermanju-compression → (none — standalone)",
-  "cybermanju-search → (none — standalone, Tantivy wrapper)",
-  "cybermanju-db → cybermanju-types",
-  "cybermanju-portable-db → cybermanju-types, cybermanju-crypto, cybermanju-compression, cybermanju-db",
-  "cybermanju-web → cybermanju-search (native only)",
-  "cybermanju-faces → cybermanju-types",
-  "cybermanju-backends → cybermanju-types",
-  "cybermanju-drive-wasm → (standalone, reimplements crypto/compression with pure-Rust deps)",
-  "cybermanju-cli → cybermanju-types, cybermanju-crypto, cybermanju-compression, cybermanju-db, cybermanju-portable-db, cybermanju-backends",
-  "cybermanju-tests → cybermanju-types, cybermanju-compression, cybermanju-crypto, cybermanju-db, cybermanju-search, cybermanju-web",
-  "src-tauri (cybermanju-drive) → ALL workspace crates"
-]}
+{"type": "frontend_app_components", "path": "src/components/", "count": 55, "categories": {
+  "shell": ["DesktopShell", "AppWindow", "WindowContent", "LandingPage", "BootScreen", "LoginPopup"],
+  "file_management": ["FileExplorer", "FileGrid", "FilePreview", "FileTooltip", "Sidebar", "Dock", "TopMenuBar", "SystemTray", "TaskManager", "MobileNav"],
+  "navigation": ["ContextMenu", "CommandPalette", "KeyboardShortcutsHelp", "NotificationStack"],
+  "settings": ["SettingsPage", "SystemMonitor", "StorageDashboard", "ActivityPanel"],
+  "panels": ["SyncPanel", "CompressionPanel", "EncryptionPanel", "FaceGroupingPanel", "CollectionsPanel", "NotesPanel", "HistoryPanel", "TrashPanel", "MapView", "CanvasEngine", "ArtMaker", "BookWriter", "MatrixRain", "PrayerFlags", "WebBrowserPanel", "WebDashboardPanel", "CodeIntelligencePanel", "PluginCreator"],
+  "accounts": ["AccountsPanel", "UserManagementPanel", "FilePermissionsPanel"],
+  "dialogs": ["ImportDialog", "ImportWindow", "FileUploadDialog", "TransferWindow", "MoveDialog", "DeleteDialog", "UnboxDialog", "ConfirmDialog"],
+  "other": ["CrashReporter", "PostScreen", "DuplicatesPanel", "Terminal", "LoadingSpinner"]
+}}
 {"type": "data_flow_file_lifecycle", "steps": [
-  "1. Import: import_file/scan_directory/upload_file commands → file saved to disk + FileNode stored in redb + added to Tantivy index",
-  "2. Encryption: encrypt_file command → PqcEngine encrypts with ML-KEM/ML-DSA → FileEncryptedData stored alongside file as .enc.meta.json → FileNode.encrypted=true",
-  "3. Compression: compress_file command → TripleCompressor chains LZ4→Zstd→Brotli → CompressionStats reported → original optionally deleted",
-  "4. Indexing: add_document to Tantivy → BM25 index built on filename/content/tags → searchable via search_files/suggest",
-  "5. Face Detection: detect_faces command → extract face embeddings → cluster via auto-select algorithm → FaceGroup stored in redb → FileNode.face_group_ids updated",
-  "6. Sync: start_sync → pipeline (scan→compress→preview→upload→link→clean raw) → FileRelation stored → SyncProgress reported",
-  "7. Transfer: transfer_files → copies files between backends (local↔cloud) with progress",
-  "8. Portable DB: store_compressed_for_recovery → triple-compressed → stored as .cyb3 blob → RecoveryEntry in redb",
-  "9. Trash: delete_file → TrashItem stored → file removed from active listing → restorable",
-  "10. Share: generate_share_link → random token → stored in redb → accessible via /api/shared/{token}"
+  "1. Import: import_file/scan_directory/upload_file/import_from_url → infer MIME → save file to disk → FileNode in redb (files table) + parent_index → add_document to Tantivy",
+  "2. Encrypt (optional): encrypt_file → PqcEngine: ML-KEM encapsulate(pk) → HKDF-SHA256 derive ChaCha20 key → ChaCha20Poly1305 encrypt → FileEncryptedData to .enc.meta.json → FileNode.encrypted=true",
+  "3. Compress (optional): compress_file → TripleCompressor: LZ4 probe (ratio>0.98? skip) → Zstd → Brotli → CompressionStats returned → original optionally deleted",
+  "4. Index: All file changes trigger add_document/remove_document on Tantivy → BM25 index updated → searchable via search_files/suggest with fuzzy/phrase/boolean queries",
+  "5. Face Detect: detect_faces → BLAKE3-seeded 512-dim embedding → SimHash index query_candidates → cluster_auto (BruteForce/SimHash/ChineseWhispers/HDBSCAN) → FaceGroup in redb → FileNode.face_group_ids",
+  "6. GPS/EXIF: extract_exif_gps → kamadak-exif parse → Location in redb + FileNode.gps_lat/lon → get_geo_files shows on MapView (MapLibre GL)",
+  "7. Sync: start_sync → SyncPipeline: scan→compress(preview→upload→link→optionally delete raw) → FileRelation recorded → SyncProgress with ETA → .cybermanju portable DB also uploaded",
+  "8. Transfer: transfer_files → reads source backend file → streams to destination backend → progress callbacks → TransferState updated",
+  "9. Portable DB Recovery: store_compressed_for_recovery → triple-compress → BLAKE3 dedup → .cyb3 blob file → RecoveryEntry in redb → get_recoverable_data decompresses on demand",
+  "10. Trash: delete_file → TrashItem in trash table → FileNode removed from files table + parent_index → list_trash shows → restore_from_trash moves back → empty_trash purges",
+  "11. Share: generate_share_link → random 32-byte base64url token → ShareLink in share_links → /api/shared/{token} GET → get_shared_file returns file",
+  "12. Version: create_file_version → FileVersion with snapshot_data (optional) → list_file_versions → revert_file_version restores FileNode metadata"
 ]}
-{"type": "database_tables", "engine": "redb (embedded key-value store)", "tables": [
-  "files (FileNode JSON)", "accounts (Account JSON)", "collections (Collection JSON)", "collection_items (CollectionItem JSON)",
-  "face_groups (FaceGroup JSON)", "loose_groups (LooseGroup JSON)", "encryption_keys (EncryptionKey JSON)",
-  "locations (Location JSON)", "users (User JSON)", "user_file_perms (UserFilePermission JSON)",
-  "sync_configs (SyncConfig JSON)", "parent_index (Vec<String> JSON — file_id list per parent_id)",
-  "trash (TrashItem JSON)", "audit_log (AuditEntry JSON)", "file_versions (FileVersion JSON)",
-  "share_links (ShareLink JSON)", "file_relations (FileRelation JSON)", "deletion_log (DeletionRecord JSON)",
-  "recovery_store (RecoveryEntry JSON)", "kv_store (generic string→string)", "portable_meta (string→string)"
+{"type": "frontend_rest_routes", "module": "src/composables/useTauri.ts", "routes_count": 35, "route_mappings": {
+  "GET": ["/api/files", "/api/files/{fileId}", "/api/search?q={query}", "/api/geo-files", "/api/accounts", "/api/collections", "/api/collection-items", "/api/face-groups", "/api/loose-groups", "/api/encryption/status", "/api/encryption/keys", "/api/users", "/api/permissions/{fileId}", "/api/locations", "/api/health", "/api/share-links", "/api/trash", "/api/shared/{token}"],
+  "POST": ["/api/users/login", "/api/users/register", "/api/permissions", "/api/permissions/verify", "/api/share-links", "/api/trash/restore", "/api/trash/empty"],
+  "DELETE": ["/api/files/{fileId}"]
+}}
+{"type": "web_dashboard", "port": 3456, "bind_desktop": "127.0.0.1", "bind_docker": "0.0.0.0 (when DOCKER_MODE env set)", "auth": "JWT tokens via jsonwebtoken crate + HMAC-SHA256", "server_impl": "Embedded Rust HTTP/1.1 (no external HTTP framework dependency)", "response_format": "snake_case JSON (transformed to camelCase by frontend useTauri.ts transformResponseKeys)", "lifecycle": "Starts in lib.rs run() before Tauri builder, stops after .run() returns via dashboard.stop()"}
+{"type": "portable_db_format", "file_extension": ".cybermanju", "magic": "CYBERMANJU_PORTABLE_v1 (32 bytes, null-padded)", "layout": "[0..32) magic | [32..36) header_json_len (u32 LE) | [36..+h) header_json (PortableHeader) | [+h..) body (triple-compressed redb, optionally encrypted with EncryptedFileMeta)]", "blobs": "Sidecar directory {filename}.cyb3/ for compressed file contents, {filename}.prev/ for preview thumbnails", "encryption": "Optional: pack() wraps compressed body with EncryptFileMeta (KEM ciphertext + nonce) before writing. unpack() decrypts on read."}
+{"type": "crypto_key_derivation", "algorithms": {
+  "ML-KEM-1024": {"encrypt": "mlkem1024::encapsulate(pk) → (shared_secret, kem_ct) → HKDF-SHA256(None, shared_secret) → 32B ChaCha20 key", "decrypt": "mlkem1024::decapsulate(ct, sk) → shared_secret → same HKDF → same key → ChaCha20 decrypt → BLAKE3 verify"},
+  "Hybrid ML-KEM-768+X25519": {"encrypt": "mlkem768::encapsulate(pk) → (pq_ss, kem_ct) + X25519 DH(ephemeral_sk, static_pk) → HKDF(pq_ss ∥ x_ss) → 32B ChaCha20 key", "decrypt": "mlkem768::decapsulate(ct, sk) → pq_ss + X25519 DH(sk, ephemeral_pk) → same HKDF → ChaCha20 decrypt → BLAKE3 verify", "note": "X25519 static SK derived deterministically from ML-KEM SK via HKDF(b'cybermanju-x25519-static-derivation', mlkem_sk)"},
+  "ML-DSA 44/65/87": {"sign": "SigningKey::<MlDsaN>::from_seed → .sign(message) → signature bytes", "verify": "SigningKey::<MlDsaN>::new_from_slice → .verifying_key() → .verify(message, signature) → bool"}
+}}
+{"type": "compression_pipeline_detail", "triple_compress": "data → LZ4 compress → if ratio > 0.98: return original (incompressible, skip remaining) → Zstd compress(level=15) → Brotli compress(level=11) → output", "triple_decompress": "data → Brotli decompress → Zstd decompress → LZ4 decompress → original", "individual": "Each layer (LZ4, Zstd, Brotli) usable independently via compress_data(data, layer_name)"}
+{"type": "face_clustering_pipeline_detail", "pipeline": "detect → embed → SimHash index → cluster → FaceGroup store", "auto_select": "n ≤ 200 → BruteForce (O(n²·d), exact) | 200 < n ≤ 1000 → ChineseWhispers (O(n·k·I), graph label propagation) | n > 1000 → SimHash (O(n·d·B + n·c·d), LSH-accelerated) | HDBSCAN available via explicit strategy", "simhash_math": "P[collision] = 1 - arccos(similarity)/π per table; with 3 tables + hamming_dist=1: ~97% recall at cos_dist=0.3", "medoid": "argmin_x Σ_y d(x,y) — actual data point (not mean), Kaufman & Rousseeuw 1987"}
+{"type": "deployment_docker", "dockerfile": "Dockerfile — multi-stage: node:20-alpine build → rust:1.85-slim-bookworm build → alpine:3.19 runtime (non-root user)", "compose": "docker-compose.yml with ZimaOS x-casaos metadata, /DATA/AppData/ volume, port 3456", "arch": ["amd64", "arm64"], "env_vars": {"RUST_LOG": "info", "PORT": "3456", "DB_PATH": "/data/cybermanju.db", "STATIC_DIR": "/app/static", "TZ": "UTC", "DOCKER_MODE": "set automatically (binds to 0.0.0.0)"}}
+{"type": "ci_cd_pipeline", "file": ".github/workflows/ci.yml", "triggers": ["push to main", "pull request"], "jobs": [
+  "rust-check: cargo check + clippy + fmt + test (all crates)",
+  "docker-build: docker buildx for multi-arch amd64+arm64",
+  "wasm-build: wasm-pack build + vite build --config vite.config.wasm.ts",
+  "deploy-pages: GitHub Pages deployment from dist-wasm/ on main push"
 ]}
-{"type": "search_index_schema", "engine": "Tantivy 0.22", "fields": [
-  "file_id (STRING|STORED)", "file_name (TEXT|STORED)", "content_text (TEXT|STORED)",
-  "tags (STRING|STORED)", "file_type (STRING|STORED)", "is_encrypted (BOOL|STORED)",
-  "has_geo (BOOL|STORED)", "timestamp (DATE|STORED)", "blake3_hash (STRING|STORED)"
-], "query_support": ["Simple terms", "Phrase: \"vacation photo\"", "Boolean: photo AND encrypted", "Field-scoped: file_name:report", "Wildcards: *.pdf", "Fuzzy: phot~1"]}
-{"type": "sync_backends", "trait": "StorageBackend (Send + Sync)", "methods": ["upload_file", "download_file", "delete_file", "list_files", "get_file_url", "test_connection"], "implementations": [
-  {"name": "LocalBackend", "type": "Local", "protocol": "Filesystem copy"},
-  {"name": "GitHubBackend", "type": "GitHub", "protocol": "GitHub Contents API + Releases (large files up to 2GB)"},
-  {"name": "GitLabBackend", "type": "GitLab", "protocol": "GitLab API"},
-  {"name": "GoogleDriveBackend", "type": "GoogleDrive", "protocol": "Google Drive API v3 with OAuth + full CRUD"},
-  {"name": "GooglePhotosBackend", "type": "GooglePhotos", "protocol": "Google Photos API (curl-based)"},
-  {"name": "TelegramBackend", "type": "Telegram", "protocol": "Telegram Bot API"},
-  {"name": "MegaBackend", "type": "Mega", "protocol": "MEGA API via megalib crate"}
-]}
-{"type": "crypto_architecture", "algorithms": [
-  {"name": "ML-KEM-1024 (FIPS 203)", "nist_level": 5, "type": "Key Encapsulation", "crate": "pqcrypto-mlkem", "status": "Production"},
-  {"name": "ML-KEM-768 + X25519 Hybrid", "nist_level": 5, "type": "Hybrid KEM", "crate": "pqcrypto-mlkem + x25519-dalek", "status": "Production", "detail": "X25519 static SK derived deterministically from ML-KEM SK via HKDF-SHA256"},
-  {"name": "ML-DSA-44 (FIPS 204)", "nist_level": 2, "type": "Digital Signature", "crate": "ml-dsa 0.1.1", "status": "Production"},
-  {"name": "ML-DSA-65 (FIPS 204)", "nist_level": 3, "type": "Digital Signature", "crate": "ml-dsa 0.1.1", "status": "Production"},
-  {"name": "ML-DSA-87 (FIPS 204)", "nist_level": 5, "type": "Digital Signature", "crate": "ml-dsa 0.1.1", "status": "Production"},
-  {"name": "HMAC-SHA512", "nist_level": 0, "type": "Classical Signature", "status": "Backward Compatibility"},
-  {"name": "ChaCha20Poly1305", "nist_level": 0, "type": "AEAD Symmetric Encryption", "status": "Production"}
-], "flow": "encrypt: ML-KEM encapsulate → HKDF-SHA256 derive key → ChaCha20Poly1305 encrypt → BLAKE3 integrity hash. decrypt: ML-KEM decapsulate → derive same key → ChaCha20Poly1305 decrypt → verify BLAKE3 hash."}
-{"type": "compression_pipeline", "layers": ["LZ4 (lz4_flex) — ultra-fast ~400 MB/s, level N/A", "Zstandard (zstd) — balanced, level 15", "Brotli (brotli) — maximum ratio, level 11"], "cascade": "compress_triple: data → LZ4 (probe ratio > 0.98? skip rest) → Zstd → Brotli → output. decompress_triple: Brotli → Zstd → LZ4 → original."}
-{"type": "portable_db_format", "file_extension": ".cybermanju", "binary_layout": "[0..32) magic: CYBERMANJU_PORTABLE_v1\\0\\0\\0\\0\\0\\0\\0\\0\\0\\0 | [32..36) header_json_len (u32 LE) | [36..+h) header_json (PortableHeader) | [+h..) compressed_db (triple-compressed redb, optionally encrypted)]", "blob_storage": "Sidecar directory {filename}.cyb3/ for compressed file contents and .prev/ for previews", "encryption": "Optional — when enabled, compressed DB is wrapped in EncryptedFileMeta (KEM ciphertext + nonce) before storage"}
-{"type": "face_clustering_pipeline", "pipeline": "detect → embed → index → cluster → store", "algorithms": [
-  {"name": "BruteForce", "complexity": "O(n²·d)", "threshold": "n ≤ 200", "method": "Full pairwise cosine distance + Union-Find connected components"},
-  {"name": "SimHash", "complexity": "O(n·d·B + n·c·d)", "threshold": "n > 1000", "method": "LSH pre-filtering with 64-bit binary codes, 3 hash tables, exact cosine distance on candidates"},
-  {"name": "Chinese Whispers", "complexity": "O(n·k·I)", "threshold": "200 < n ≤ 1000", "method": "Iterative label propagation on k-NN graph, converges in 10-30 iterations"},
-  {"name": "HDBSCAN", "complexity": "O(n·k·d + n·log n)", "method": "MST-based hierarchical density clustering, no eps parameter needed"}
-], "auto_select": "n ≤ 200 → BruteForce, 200 < n ≤ 1000 → ChineseWhispers, n > 1000 → SimHash"}
-{"type": "web_dashboard", "port": 3456, "bind": "127.0.0.1 (desktop) / 0.0.0.0 (DOCKER_MODE)", "auth": "JWT tokens via jsonwebtoken crate", "endpoints_count": 25, "key_endpoints": [
-  "GET /api/health", "GET /api/files", "GET /api/files/{id}", "DELETE /api/files/{id}",
-  "GET /api/accounts", "GET /api/collections", "GET /api/collection-items",
-  "GET /api/face-groups", "GET /api/loose-groups", "GET /api/encryption/status",
-  "GET /api/encryption/keys", "GET /api/geo-files", "GET /api/search?q={term}",
-  "GET /api/locations", "GET /api/users", "POST /api/users/register",
-  "POST /api/users/login", "GET /api/permissions/{fileId}", "POST /api/permissions",
-  "POST /api/permissions/verify", "GET /api/share-links", "POST /api/share-links",
-  "GET /api/shared/{token}", "GET /api/trash", "POST /api/trash/restore",
-  "POST /api/trash/empty"
-]}
-{"type": "deployment_docker", "file": "Dockerfile", "type": "Multi-stage: node build → rust build → alpine runtime", "compose": "docker-compose.yml with ZimaOS x-casaos metadata", "volumes": "/data/AppData/cybermanju-drive/config for persistent storage", "architectures": ["amd64", "arm64"], "env_vars": ["RUST_LOG=info", "PORT=3456", "DB_PATH=/data/cybermanju.db", "STATIC_DIR=/app/static", "TZ=UTC"]}
-{"type": "ci_cd", "file": ".github/workflows/ci.yml", "jobs": ["rust-check (cargo check + clippy + fmt + test)", "docker-build (multi-arch Docker image)", "wasm-build (wasm-pack + vite build)", "deploy-pages (GitHub Pages on main push)"]}
-{"type": "key_files", "files": [
-  {"path": "Cargo.toml", "purpose": "Workspace root with 13 member crates"},
-  {"path": "package.json", "purpose": "Frontend dependencies and scripts"},
-  {"path": "src-tauri/src/lib.rs", "purpose": "Core orchestrator — AppState, plugin registration, 60+ IPC command handler registration, web dashboard lifecycle"},
-  {"path": "src-tauri/src/main.rs", "purpose": "Tauri process entry point"},
-  {"path": "src-tauri/Cargo.toml", "purpose": "Tauri app dependencies"},
-  {"path": "src-tauri/tauri.conf.json", "purpose": "Tauri v2 configuration (window, permissions, bundle)"},
-  {"path": "src/composables/useTauri.ts", "purpose": "Triple-mode IPC bridge (Tauri Conduit → WASM IndexedDB → REST API)"},
-  {"path": "src/wasm/bridge.ts", "purpose": "WASM module loader and lifecycle"},
-  {"path": "src/stores/app.ts", "purpose": "Central Pinia store managing all application state"},
-  {"path": "vite.config.ts", "purpose": "Vite config for Tauri desktop mode"},
-  {"path": "vite.config.wasm.ts", "purpose": "Vite config for WASM/GitHub Pages build"},
-  {"path": "Dockerfile", "purpose": "Multi-stage Docker build"},
-  {"path": "docker-compose.yml", "purpose": "Docker Compose with ZimaOS metadata"},
-  {"path": "ARCHITECTURE.md", "purpose": "Full architecture documentation (799 lines)"},
-  {"path": "README.md", "purpose": "Project README with build/install/deploy instructions"}
+{"type": "key_files_reference", "files": [
+  {"path": "Cargo.toml", "purpose": "Workspace root manifest — 13 member crates, resolver=2"},
+  {"path": "package.json", "purpose": "Frontend deps (Vue, Pinia, MapLibre, GSAP, Tauri plugins) and 20+ npm scripts"},
+  {"path": "src-tauri/src/lib.rs", "purpose": "Core orchestrator: AppState init, 12 Tauri plugin registrations, 68 command handlers, web dashboard lifecycle"},
+  {"path": "src-tauri/src/main.rs", "purpose": "Tauri process entry point — calls lib::run()"},
+  {"path": "src-tauri/Cargo.toml", "purpose": "Tauri app deps — all workspace crates + tauri 2 plugins"},
+  {"path": "src-tauri/tauri.conf.json", "purpose": "Tauri v2 config: window size/title, bundle identifiers, security capabilities"},
+  {"path": "src/composables/useTauri.ts", "purpose": "Triple-mode IPC bridge (1067 lines): Tauri Conduit → WASM IndexedDB → REST API with 35+ mapped endpoints"},
+  {"path": "src/wasm/bridge.ts", "purpose": "WASM module async loader (import('cybermanju-drive-wasm') with singleton lifecycle"},
+  {"path": "src/stores/app.ts", "purpose": "Central Pinia store — all application state management"},
+  {"path": "crates/types/src/schema.rs", "purpose": "All shared data types (296 lines) — FileNode, Account, FaceGroup, EncryptionKey, PortableHeader, FileRelation, etc."},
+  {"path": "crates/crypto/src/pqc.rs", "purpose": "PQC engine (845 lines) — real ML-KEM, ML-DSA, hybrid X25519, ChaCha20Poly1305"},
+  {"path": "crates/db/src/database.rs", "purpose": "redb database layer (844 lines) — 21 tables, CRUD, parent index, portable DB methods"},
+  {"path": "crates/portable-db/src/lib.rs", "purpose": "PortableDatabase implementation (581 lines) — .cybermanju format pack/unpack/sync"},
+  {"path": "crates/faces/src/lib.rs", "purpose": "Face clustering engine (1238+ lines) — SimHash LSH, Chinese Whispers, HDBSCAN, Union-Find"},
+  {"path": "crates/drive-wasm/src/*.rs", "purpose": "WASM bridge (crypto, compression, VirtualDrive, SyncEngine) — wasm_bindgen exports"},
+  {"path": "vite.config.ts", "purpose": "Vite config for Tauri desktop dev (port 1420, HMR on port 1421)"},
+  {"path": "vite.config.wasm.ts", "purpose": "Vite config for WASM/GitHub Pages build (dist-wasm/ output)"},
+  {"path": "Dockerfile", "purpose": "Multi-stage Docker build (node build → rust build → alpine runtime)"},
+  {"path": "docker-compose.yml", "purpose": "ZimaOS-compatible Docker Compose with x-casaos metadata"},
+  {"path": "system.md", "purpose": ".cybermanju portable database design document (324 lines)"},
+  {"path": "ARCHITECTURE.md", "purpose": "Full architecture documentation (799 lines) with diagrams, schema, API docs"},
+  {"path": "architecture.jsonl", "purpose": "Machine-readable architecture context for AI — this file"},
+  {"path": "AGENTS.md", "purpose": "AI agent guide — project overview, patterns, build commands"},
+  {"path": "README.md", "purpose": "Project README with features, build, deploy, API docs"},
+  {"path": "llms.txt", "purpose": "LLM context file for AI coding assistants"},
+  {"path": "public/docs/index.html", "purpose": "Static documentation site entry point"}
 ]}

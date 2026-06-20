@@ -2,8 +2,8 @@
 
 > Quantum-resistant encrypted file manager with AI face grouping, triple-layer compression, code intelligence, GPS map view, web dashboard, and multi-user access control.
 
-**Version:** 0.1.0  
-**Identifier:** `com.cybermanju.drive`  
+**Version:** 0.1.0
+**Identifier:** `com.cybermanju.drive`
 **License:** MIT
 
 ---
@@ -20,11 +20,10 @@
 - **Loose groups** — ad-hoc user-defined file groupings
 
 ### Post-Quantum Cryptography
-- **NIST FIPS 203** — ML-KEM-1024 (Kyber) lattice-based key encapsulation, Level 5
-- **NIST FIPS 204** — ML-DSA-65 (Dilithium-5) lattice-based digital signatures, Level 5
-- **NIST FIPS 205** — SLH-DSA-128f (SPHINCS+) hash-based signatures, Level 1
-- **Hybrid mode** — ML-KEM + X25519 for defense-in-depth transitional security
-- **ChaCha20Poly1305** AEAD symmetric encryption with 96-bit CSPRNG nonces
+- **ML-KEM-1024** (FIPS 203) — lattice-based key encapsulation, NIST Level 5
+- **Hybrid ML-KEM-768 + X25519** — defense-in-depth transitional security
+- **ML-DSA-44/65/87** (FIPS 204) — lattice-based digital signatures (Levels 2/3/5)
+- **ChaCha20Poly1305** AEAD symmetric encryption with HKDF-SHA256 derived keys
 - **BLAKE3 integrity verification** on every encrypt/decrypt cycle
 - **Argon2id** password hashing for user authentication
 
@@ -33,40 +32,54 @@
 - **Zstandard** (level 15) — balanced ratio/speed
 - **Brotli** (level 11) — maximum compression ratio for archival
 - Cascading pipeline: LZ4 → ZSTD → Brotli (or any single layer)
+- Auto-skip when LZ4 ratio > 0.98 (incompressible data)
 - Per-layer stats reporting with compression ratios and timing
 
 ### Full-Text Search
 - **Tantivy** search engine with BM25 ranking
-- Indexed fields: filename, content text, tags
-- Query support: terms, phrases, boolean operators, wildcards, fuzzy matching
-- Faceted filtering by file type, encryption status, GPS data
+- Indexed fields: filename, content text, tags, file type, encryption status, GPS, timestamp, BLAKE3 hash
+- Query support: terms, phrases, booleans (`AND`/`OR`), wildcards, fuzzy (`~1`)
 - Real autocomplete from Tantivy term dictionary
+- Faceted filtering by file type, encryption status, GPS presence
 
 ### AI Face Detection & Clustering
-- Face embedding extraction (128-dim vectors, BLAKE3-seeded deterministic pipeline)
-- Cosine distance computation for similarity measurement
-- DBSCAN-like clustering via connected components (Union-Find)
-- Automatic person grouping with centroid embeddings
+- 512-dim deterministic embedding extraction (BLAKE3-seeded)
+- 4 clustering algorithms, auto-selected by dataset size:
+  - **BruteForce** O(n²) — exact, for n ≤ 200
+  - **SimHash LSH** — approximate, for n > 1000 (64-bit binary codes, 3 hash tables, ~97% recall)
+  - **Chinese Whispers** — graph label propagation, for 200 < n ≤ 1000
+  - **HDBSCAN** — MST-based hierarchical density, no eps parameter
+- Optional ONNX integration: SCRFD-2.5G detection + ArcFace 512-d embeddings
+- SimHash index: O(1) Hamming distance pre-filtering (POPCNT instruction)
 
 ### Code Intelligence
 - **tree-sitter** integration with language detection for 50+ file extensions
 - Heuristic symbol extraction: functions, classes, structs, traits, interfaces
-- Language-aware keyword sets for Rust, Python, Go, TypeScript, Java, C/C++, Ruby, Swift, and more
-- Structured AST output with symbol names, kinds, and line ranges
+- Language-aware keyword sets for Rust, Python, Go, TypeScript, Java, C/C++, Ruby, Swift
 
 ### Multi-User Access Control
 - Role-based access control: `admin`, `user`, `viewer`
 - Per-file permissions: `read`, `write`, `admin`
 - Argon2id password hashing with cryptographically secure salts
-- JWT-like session tokens (UUID v4)
+- JWT-like session tokens (jsonwebtoken + HMAC-SHA256)
 
-### Cloud Sync
+### Cloud Sync (7 Backends)
 - **Local** — filesystem copy to any local directory
 - **GitHub** — Contents API + Releases for large files (up to 2GB)
-- **Google Drive** — Drive API v3 with full CRUD
+- **GitLab** — GitLab API
+- **Google Drive** — Drive API v3 with full CRUD + OAuth
 - **Google Photos** — optimized media upload
+- **Telegram** — Telegram Bot API
+- **Mega** — MEGA API via megalib crate
 - Configurable pipeline: compress → preview → upload → link → delete raw
 - Real-time progress with ETA estimation and cancellation support
+
+### .cybermanju Portable Database
+- Self-contained, triple-compressed, optionally encrypted redb database
+- Cross-platform file relation tracking, deletion propagation, and recovery
+- One `.cybermanju` file per user, synced to every connected platform
+- BLAKE3-deduplicated content + preview blob storage
+- Binary format: `[32B magic][4B header_len][PortableHeader JSON][compressed DB]`
 
 ### GPS Map View
 - EXIF GPS coordinate extraction from photos
@@ -76,8 +89,28 @@
 ### Web Dashboard
 - Embedded HTTP/1.1 server on port 3456 (no external HTTP dependency)
 - REST API mirroring all Tauri IPC commands
+- JWT authentication
 - Works in Docker containers and ZimaOS NAS devices
 - Browser access from any device on the network
+
+### Triple-Mode IPC Bridge
+- **Tauri IPC** (via Conduit plugin — 2.4x faster) for desktop
+- **WASM bridge** (IndexedDB-backed) for browser with WASM support
+- **REST API** (HTTP fetch) for Docker/ZimaOS web mode
+- Auto-detects environment and routes commands transparently
+
+### Additional Features
+- **Trash/Recycle Bin** with restore and empty
+- **File versioning** with snapshot and revert
+- **Share links** with token-based access and expiration
+- **Audit log** for all file operations
+- **Batch operations** (delete, encrypt, compress)
+- **Duplicate detection** via BLAKE3 hash matching
+- **Keyboard shortcuts** with configurable keymaps
+- **Drag-and-drop**, **context menus**, **touch/swipe support**
+- **Animated desktop** with Matrix rain, prayer flags, moire textures
+- **ArtMaker canvas engine** and BookWriter tool
+- **Built-in terminal** and web browser panels
 
 ---
 
@@ -90,21 +123,277 @@
 | Frontend Framework | Vue 3 (Composition API) | ^3.5.13 |
 | State Management | Pinia | ^3.0.2 |
 | Type System | TypeScript | ^5.8.3 |
-| Build Tool | Vite | ^6.3.5 |
-| Icons | Lucide Vue | ^0.525.0 |
+| Build Tool | Vite + Vite WASM plugin | ^6.3.5 |
+| Icons | Iconify Vue | ^4.3.0 |
 | Maps | MapLibre GL | ^5.4.0 |
+| Animation | GSAP | ^3.15.0 |
 | Database | redb | 2.x |
 | Full-Text Search | Tantivy | 0.22 |
 | Compression | lz4_flex + zstd + brotli | 0.11 / 0.13 / 7 |
-| Encryption | ChaCha20Poly1305 + rustpq | 0.10 / 0.2 |
+| Post-Quantum Crypto | pqcrypto-mlkem + ml-dsa | 0.1 / 0.1.1 |
+| Symmetric Crypto | ChaCha20Poly1305 | 0.10 |
+| X25519 KEX | x25519-dalek | 2.x |
 | Password Hashing | argon2 | 0.5 |
 | Hashing | BLAKE3 | 1 |
 | Content ID | UUID v4 | 1 |
+| JWT | jsonwebtoken | 9 |
 | ML Inference | ort (ONNX Runtime) | 2.0.0-rc.12 |
 | Code Parsing | tree-sitter | 0.24 |
 | EXIF | kamadak-exif | 0.5 |
 | Image Processing | image | 0.25 |
 | MIME Detection | infer + mime_guess | 0.16 / 2 |
+| CLI/TUI | clap + ratatui | 4 / 0.29 |
+| WASM | wasm-bindgen + wasm-pack | 0.2 |
+| Async Runtime | tokio | 1.x |
+| HTTP Client | reqwest (rustls-tls) | 0.12 |
+| HTML Parsing | scraper | 0.21 |
+| Mega SDK | megalib | 0.11 |
+| System Info | sysinfo | 0.31 |
+| Directory Walk | walkdir | 2.5 |
+| Parallelism | rayon | 1.10 |
+
+---
+
+## Project Structure
+
+```
+cybermanju-drive/
+├── crates/                                  # 13 Rust workspace crates
+│   ├── types/                               # src/schema.rs + sync.rs — shared data types
+│   ├── crypto/                              # src/pqc.rs — ML-KEM, ML-DSA, ChaCha20Poly1305
+│   ├── compression/                         # LZ4→Zstd→Brotli triple-layer pipeline
+│   ├── search/                              # Tantivy full-text search index
+│   ├── db/                                  # redb embedded database (21 tables)
+│   ├── portable-db/                         # .cybermanju portable database format
+│   ├── web/                                 # Browser engine, DuckDuckGo search, HTML renderer
+│   ├── faces/                               # Face detection & 4 clustering algorithms
+│   ├── backends/                            # 7 storage backends (Local, GitHub, GitLab, GDrive, GPhotos, Telegram, Mega)
+│   ├── cli/                                 # CLI/TUI (clap + ratatui)
+│   ├── drive-wasm/                          # WASM bridge (crypto, compression, drive, sync)
+│   └── tests/                               # Integration tests
+├── src/                                     # Vue 3 + TypeScript frontend
+│   ├── components/                          #
+│   │   ├── ui/                              # 25 Os-prefixed UI primitives
+│   │   ├── FileExplorer.vue                 # File browser (grid/list/masonry)
+│   │   ├── FilePreview.vue                  # File preview panel
+│   │   ├── DesktopShell.vue                 # Root desktop window manager
+│   │   ├── SyncPanel.vue                    # Cloud sync configuration
+│   │   ├── CompressionPanel.vue             # Compression controls
+│   │   ├── EncryptionPanel.vue              # PQC key management
+│   │   ├── FaceGroupingPanel.vue            # Face clustering UI
+│   │   ├── MapView.vue                      # GPS map with geo-markers
+│   │   ├── WebBrowserPanel.vue              # Built-in web browser
+│   │   ├── CodeIntelligencePanel.vue        # Symbol extraction viewer
+│   │   ├── Terminal.vue                     # Built-in terminal
+│   │   ├── TransferWindow.vue               # Cross-backend file transfer
+│   │   └── ... (80+ total components)
+│   ├── composables/                         #
+│   │   ├── useTauri.ts                      # Triple-mode IPC bridge (Tauri/WASM/REST)
+│   │   ├── useWindowManager.ts              # Window position/size/focus
+│   │   ├── useLogin.ts                      # Authentication state
+│   │   ├── useShortcuts.ts                  # Keyboard shortcuts
+│   │   ├── useGsapAnimation.ts              # GSAP animation control
+│   │   ├── useDrag.ts                       # Drag-and-drop
+│   │   ├── useSwipe.ts                      # Touch swipe gestures
+│   │   └── ... (15 total)
+│   ├── stores/                              #
+│   │   ├── app.ts                           # Pinia store — all application state
+│   │   └── history.ts                       # File operation undo history
+│   ├── wasm/                                # WASM bridge modules
+│   │   ├── bridge.ts                        # Module loader & lifecycle
+│   │   ├── crypto.ts                        # ChaCha20, ML-DSA65, ML-KEM1024, X25519
+│   │   ├── compression.ts                   # LZ4/Brotli/Zstd
+│   │   ├── drive.ts                         # VirtualDrive + IndexedDB
+│   │   ├── storage.ts                       # IndexedDB KV store
+│   │   ├── sync.ts                          # Sync engine
+│   │   ├── oauth.ts                         # OAuth flow
+│   │   ├── transfer.ts                      # Cross-backend transfer
+│   │   ├── native-fs.ts                     # File System Access API
+│   │   └── data.ts                          # IndexedDB data layer
+│   ├── types/index.ts                       # TypeScript type definitions
+│   ├── configs/                             # artMaker.ts, windowMenus.ts
+│   └── directives/clickOutside.ts           # Click-outside directive
+├── src-tauri/                               # Tauri v2 desktop app
+│   ├── tauri.conf.json                      # Tauri configuration
+│   ├── capabilities/default.json            # Permissions
+│   └── src/
+│       ├── main.rs                          # Process entry point
+│       ├── lib.rs                           # AppState, 60+ IPC handlers, plugins
+│       ├── commands/                        # 23 command modules
+│       │   ├── files.rs                     # File CRUD, folder ops, loose groups
+│       │   ├── encryption.rs                # PQC encrypt/decrypt/keygen
+│       │   ├── compression.rs               # Compress/decompress/stats
+│       │   ├── search.rs                    # Tantivy search & suggest
+│       │   ├── faces.rs                     # Face detection & clustering
+│       │   ├── sync.rs                      # Sync config & pipeline
+│       │   ├── portable_db.rs               # .cybermanju operations
+│       │   ├── accounts.rs                  # Storage accounts
+│       │   ├── collections.rs               # Collection CRUD
+│       │   ├── users.rs                     # Auth, RBAC, permissions
+│       │   ├── trash.rs                     # Trash/recycle bin
+│       │   ├── versions.rs                  # File versioning
+│       │   ├── share.rs                     # Share links
+│       │   ├── import.rs                    # File import & scan
+│       │   ├── transfer.rs                  # Cross-backend transfer
+│       │   ├── web.rs                       # Web search & fetch
+│       │   ├── map.rs                       # GPS/EXIF
+│       │   ├── batch.rs                     # Batch operations
+│       │   ├── audit.rs                     # Audit log
+│       │   ├── duplicates.rs                # Duplicate detection
+│       │   ├── diagnostics.rs              # Crash log
+│       │   ├── kv.rs                        # Key-value store
+│       │   ├── dashboard.rs                 # Dashboard lifecycle
+│       │   └── system_info.rs               # OS/hardware info
+│       ├── db/schema.rs                     # redb wrapper
+│       ├── crypto/mod.rs                    # Tauri crypto module
+│       ├── compression/mod.rs               # Tauri compression module
+│       ├── search/mod.rs                    # Tauri search module
+│       ├── sync/                            # Sync pipeline, OAuth, backends
+│       ├── transfer/mod.rs                  # Transfer state
+│       ├── preview/mod.rs                   # Thumbnail generation
+│       ├── faces/mod.rs                     # Face pipeline
+│       ├── tree_sitter/mod.rs               # Code parsing
+│       └── web_dashboard/mod.rs             # Embedded HTTP server (port 3456)
+├── architecture.jsonl                       # Machine-readable architecture context
+├── ARCHITECTURE.md                          # Full architecture documentation (799 lines)
+├── worklog.md                               # Development work log
+├── tasks.md                                 # Development tasks
+├── system.md                                # System prompt
+├── AGENTS.md                                # AI agents guide
+├── Dockerfile                               # Multi-stage Docker build
+├── docker-compose.yml                       # ZimaOS-compatible Compose
+├── docker/server/                           # Standalone Docker server
+├── .github/workflows/ci.yml                 # CI/CD pipeline
+├── aur/                                     # Arch Linux PKGBUILD
+└── keymaps/                                 # Keyboard shortcut keymaps
+```
+
+---
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          CYBERMANJU DRIVE                               │
+│                                                                         │
+│  ┌──────────────────────────┐    ┌─────────────────────────────────┐   │
+│  │    FRONTEND (Vue 3 + TS)  │    │        BACKEND (Rust)           │   │
+│  │                           │    │                                 │   │
+│  │  ┌─────────────────────┐  │    │  ┌───────────────────────────┐  │   │
+│  │  │    80+ Components   │  │    │  │   Tauri IPC Handlers      │  │   │
+│  │  │  (25 UI + 55 App)   │  │    │  │   (commands/*.rs — 23     │  │   │
+│  │  └─────────┬───────────┘  │    │  │    modules, 60+ commands) │  │   │
+│  │            │              │    │  └───────────┬───────────────┘  │   │
+│  │  ┌─────────▼───────────┐  │    │              │                 │   │
+│  │  │    Pinia Stores      │  │    │  ┌───────────▼─────────────┐  │   │
+│  │  │  (app + history)     │  │    │  │     Workspace Crates    │  │   │
+│  │  └─────────┬───────────┘  │    │  │                         │  │   │
+│  │            │              │    │  │  ┌──────┐ ┌──────────┐  │  │   │
+│  │  ┌─────────▼───────────┐  │    │  │  │ db/  │ │ crypto/  │  │  │   │
+│  │  │    useTauri.ts       │◄─┼────┼──┼─►│ redb │ │ PQC      │  │  │   │
+│  │  │  Triple-mode IPC    │  │    │  │  │ 21   │ │ ML-KEM   │  │  │   │
+│  │  │  Tauri / WASM / REST│  │    │  │  │ tbls │ │ ML-DSA   │  │  │   │
+│  │  └─────────┬───────────┘  │    │  │  └──────┘ └──────────┘  │  │   │
+│  │            │              │    │  │  ┌──────┐ ┌──────────┐  │  │   │
+│  │  ┌─────────▼───────────┐  │    │  │  │search│ │compress/ │  │  │   │
+│  │  │     WASM Bridge     │  │    │  │  │Tantivy││LZ4→Zstd  │  │  │   │
+│  │  │  (11 modules)       │  │    │  │  │BM25   │ │→Brotli   │  │  │   │
+│  │  │  IndexedDB + Crypto │  │    │  │  └──────┘ └──────────┘  │  │   │
+│  │  └─────────┬───────────┘  │    │  │  ┌──────┐ ┌──────────┐  │  │   │
+│  │            │              │    │  │  │sync/ │ │ faces/   │  │  │   │
+│  │  ┌─────────▼───────────┐  │    │  │  │7 bknds││4 cluster │  │  │   │
+│  │  │   REST API Client    │  │    │  │  └──────┘ └──────────┘  │  │   │
+│  │  └─────────┬───────────┘  │    │  └──────────────────────────┘  │   │
+│  │            │              │    │                                 │   │
+│  └────────────┼──────────────┘    └─────────────────────────────────┘   │
+│               │                                                        │
+│     ┌─────────┴──────────┐                                             │
+│  Desktop  Browser  WASM/Pages  Docker/ZimaOS                            │
+│  (Tauri)  (REST)    (SPA)    (0.0.0.0:3456)                            │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Runtime Modes
+
+| Mode | Entry Point | Transport | Use Case |
+|------|------------|-----------|----------|
+| **Tauri Desktop** | `src-tauri/src/main.rs` | Tauri IPC (Conduit 2.4x) | Native desktop with full filesystem access |
+| **Web Dashboard** | Embedded HTTP on `0.0.0.0:3456` | REST API (fetch) | Browser from any device; Docker/ZimaOS |
+| **WASM/GitHub Pages** | `dist-wasm/` static files | SPA + WASM + IndexedDB | Public showcase, no backend needed |
+
+The composable `src/composables/useTauri.ts` auto-detects environment via `window.__TAURI__`
+and routes commands through the appropriate transport with automatic fallback.
+
+---
+
+## Cross-Crate Dependency Graph
+
+```
+cybermanju-types (root types — used by ALL)
+  ├── cybermanju-crypto (PQC engine)
+  │     ├── cybermanju-portable-db
+  │     └── cybermanju-drive-wasm (standalone pure-Rust)
+  ├── cybermanju-compression (LZ4→Zstd→Brotli)
+  │     ├── cybermanju-portable-db
+  │     ├── cybermanju-drive-wasm
+  │     └── cybermanju-cli
+  ├── cybermanju-search (Tantivy)
+  │     ├── cybermanju-web
+  │     └── src-tauri
+  ├── cybermanju-db (redb)
+  │     ├── cybermanju-portable-db
+  │     ├── cybermanju-cli
+  │     └── src-tauri
+  ├── cybermanju-web (browser + DuckDuckGo)
+  ├── cybermanju-faces (face clustering)
+  │     └── src-tauri
+  ├── cybermanju-backends (7 storage backends)
+  │     ├── cybermanju-cli
+  │     └── src-tauri
+  ├── cybermanju-portable-db (.cybermanju format)
+  │     ├── cybermanju-cli
+  │     └── src-tauri
+  ├── cybermanju-cli (CLI/TUI) — standalone binary
+  ├── cybermanju-tests (integration tests)
+  └── src-tauri — ORCHESTRATES ALL CRATES
+```
+
+---
+
+## Data Flow
+
+```
+Import / Scan Directory
+  │
+  ▼
+FileNode stored in redb (files table) + Tantivy index (add_document)
+  │
+  ├──▶ Encrypt (optional)
+  │     ML-KEM encapsulate → HKDF derive key → ChaCha20Poly1305 → .enc.meta.json
+  │     Or sign: ML-DSA sign_message
+  │
+  ├──▶ Compress (optional)
+  │     LZ4 → Zstd → Brotli cascade → CompressionStats reported
+  │
+  ├──▶ Face Detection
+  │     Extract embeddings → SimHash index → Auto-select cluster algorithm → FaceGroup stored
+  │
+  ├──▶ Sync to Backends
+  │     Compress → Generate preview → Upload → Link → (optionally) delete raw
+  │     FileRelation stored in redb
+  │
+  ├──▶ Portable DB Recovery
+  │     Triple-compress file → BLAKE3-dedup → Store as .cyb3 blob → RecoveryEntry
+  │
+  ├──▶ Trash
+  │     TrashItem in redb → FileNode removed from active listing → Restorable
+  │
+  ├──▶ Share
+  │     Generate random token → ShareLink in redb → /api/shared/{token}
+  │
+  └──▶ Version
+        FileVersion created with snapshot data → Revert possible
+```
 
 ---
 
@@ -166,16 +455,8 @@ Output installers are in `src-tauri/target/release/bundle/`.
 ```bash
 # Install system dependencies
 sudo pacman -S \
-  webkit2gtk-4.1 \
-  gtk3 \
-  libayatana-appindicator \
-  librsvg \
-  libsoup3 \
-  pkg-config \
-  base-devel \
-  openssl \
-  nodejs \
-  npm
+  webkit2gtk-4.1 gtk3 libayatana-appindicator librsvg libsoup3 \
+  pkg-config base-devel openssl nodejs npm
 
 # Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -189,11 +470,9 @@ npm run tauri:build
 Or install from AUR:
 
 ```bash
-# Using makepkg
 cd aur/
 makepkg -si
-
-# Using an AUR helper (e.g., yay)
+# Or with an AUR helper:
 yay -S cybermanju-drive
 ```
 
@@ -214,17 +493,20 @@ The container runs as a non-root user with persistent data in `/data`.
 ### WASM / GitHub Pages
 
 ```bash
+# Build Rust WASM module
+npm run wasm:build-rust
+
 # Build frontend for web deployment
 npm run build:wasm
 ```
 
-Output is in `dist-wasm/`. The CI pipeline automatically deploys this to GitHub Pages on push to `main`.
+Output is in `dist-wasm/`. The CI pipeline automatically deploys to GitHub Pages on push to `main`.
 
 ---
 
 ## ZimaOS Installation
 
-Cybermanju Drive is packaged as a ZimaOS App Store application with full metadata:
+Cybermanju Drive is packaged as a ZimaOS App Store application with full x-casaos metadata:
 
 1. **Add the app** to your ZimaOS instance via the App Store, or deploy manually with:
    ```bash
@@ -250,11 +532,25 @@ Cybermanju Drive is packaged as a ZimaOS App Store application with full metadat
 
 ### Tauri IPC Commands
 
-The desktop app exposes 40+ Tauri IPC commands registered in `src-tauri/src/lib.rs`. See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full data flow documentation.
+60+ IPC commands across 23 modules, registered in `src-tauri/src/lib.rs`:
+
+| Module | Key Commands |
+|--------|-------------|
+| `files` | list_files, get_file, create_folder, delete_file, rename_file, move_file, get_preview |
+| `search` | search_files, search_files_paginated, suggest |
+| `encryption` | encrypt_file, decrypt_file, get_encryption_status, generate_keypair, list_keys |
+| `compression` | compress_file, decompress_file, get_compression_stats |
+| `faces` | detect_faces, recluster_faces, rename_face_group, merge_face_groups, find_similar_faces |
+| `sync` | create_sync_config, start_sync, get_sync_progress, test_sync_connection, cancel_sync |
+| `portable_db` | sync_portable_db, record_file_relation, store_compressed_for_recovery, repack_portable_db |
+| `users` | register_user, authenticate_user, grant_file_permission, verify_file_access |
+| `trash` | list_trash, restore_from_trash, empty_trash |
+| `versions` | list_file_versions, create_file_version, revert_file_version, snapshot_all_versions |
+| `transfer` | transfer_files, get_transfer_progress, cancel_transfer |
 
 ### Web Dashboard REST API
 
-When running as a Docker container or with the embedded web dashboard, all data is accessible via REST:
+When running as a Docker container or with the embedded web dashboard:
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -283,115 +579,6 @@ Full REST API documentation with request/response schemas is in [ARCHITECTURE.md
 
 ---
 
-## Project Structure
-
-```
-cybermanju-drive/
-├── .github/workflows/
-│   └── ci.yml                          # Rust check, Docker build, WASM build, Pages deploy
-├── docker/
-│   └── server/
-│       ├── Cargo.toml                  # Standalone server dependencies
-│       └── src/main.rs                 # Docker entrypoint (web_dashboard + static files)
-├── public/
-│   └── tauri.svg                       # App icon
-├── scripts/
-│   ├── build-all.sh                    # Build desktop + Docker + WASM
-│   ├── build-wasm.sh                   # Build WASM for web
-│   ├── check-all.sh                    # Run all checks
-│   └── dev.sh                          # Development helper
-├── src/
-│   ├── assets/main.css                 # Global styles
-│   ├── components/
-│   │   ├── FileGrid.vue                # Main file browser (grid/list/masonry)
-│   │   ├── TopBar.vue                  # Search bar, view toggles, user menu
-│   │   ├── Sidebar.vue                 # Navigation, tree, locations, collections
-│   │   ├── StatusBar.vue               # Bottom status bar
-│   │   ├── FilePreview.vue             # File preview panel
-│   │   ├── DashboardOverlay.vue        # Startup/loading overlay
-│   │   ├── SyncPanel.vue               # Cloud sync configuration and progress
-│   │   ├── CompressionPanel.vue        # Compression stats and controls
-│   │   ├── EncryptionPanel.vue         # PQC key management and encryption
-│   │   ├── FaceGroupingPanel.vue       # Face detection and person clusters
-│   │   ├── MapView.vue                 # GPS map with geo-markers
-│   │   ├── CollectionsPanel.vue        # Collection management
-│   │   ├── CodeIntelligencePanel.vue   # Source code symbol extraction
-│   │   ├── WebDashboardPanel.vue       # Dashboard status and endpoints
-│   │   ├── UserManagementPanel.vue     # User/role/permission management
-│   │   ├── MatrixRain.vue              # Matrix digital rain animation
-│   │   └── PrayerFlags.vue             # Animated prayer flag decorations
-│   ├── composables/
-│   │   └── useTauri.ts                 # Dual-mode IPC/REST composable
-│   ├── stores/
-│   │   └── app.ts                      # Pinia store with all state and actions
-│   ├── types/
-│   │   └── index.ts                    # TypeScript type definitions + design tokens
-│   ├── App.vue                         # Root component
-│   └── main.ts                         # Vue app entry point
-├── src-tauri/
-│   ├── build.rs                        # Tauri build script
-│   ├── Cargo.toml                      # Rust dependencies
-│   ├── Cargo.lock                      # Locked dependency versions
-│   ├── capabilities/default.json       # Tauri v2 capability permissions
-│   ├── icons/icon.svg                  # App icon
-│   ├── tauri.conf.json                 # Tauri configuration
-│   └── src/
-│       ├── main.rs                     # Tauri process entry point
-│       ├── lib.rs                      # Core library: module registration, AppState, Tauri builder
-│       ├── commands/
-│       │   ├── mod.rs                  # Command module exports
-│       │   ├── files.rs                # File CRUD, folders, loose groups
-│       │   ├── accounts.rs             # Storage account management
-│       │   ├── collections.rs          # Collection CRUD
-│       │   ├── compression.rs          # Compress/decompress commands
-│       │   ├── encryption.rs           # Encrypt/decrypt, keypair generation
-│       │   ├── faces.rs                # Face detection trigger and listing
-│       │   ├── map.rs                  # GPS file listing, EXIF extraction
-│       │   ├── search.rs               # Search and autocomplete commands
-│       │   ├── sync.rs                 # Sync config CRUD, start/cancel/progress
-│       │   ├── users.rs                # Register, authenticate, RBAC permissions
-│       │   ├── dashboard.rs            # Web dashboard start/stop/status
-│       │   └── import.rs               # File import, directory scan, index rebuild
-│       ├── db/
-│       │   ├── mod.rs                  # redb wrapper, 11 table definitions
-│       │   └── schema.rs               # All Rust structs (FileNode, User, etc.)
-│       ├── compression/
-│       │   ├── mod.rs                  # Module exports
-│       │   └── triple.rs               # TripleCompressor: LZ4 → ZSTD → Brotli
-│       ├── crypto/
-│       │   ├── mod.rs                  # Module exports
-│       │   └── pqc.rs                  # PQC engine, ChaCha20Poly1305, ML-DSA sign/verify
-│       ├── faces/
-│       │   └── mod.rs                  # Face embeddings, cosine distance, DBSCAN clustering
-│       ├── preview/
-│       │   └── mod.rs                  # Lanczos3 thumbnail, metadata extraction
-│       ├── search/
-│       │   ├── mod.rs                  # Module exports
-│       │   └── tantivy_index.rs        # Tantivy schema, indexing, BM25 search, autocomplete
-│       ├── sync/
-│       │   ├── mod.rs                  # Module exports
-│       │   ├── models.rs               # SyncConfig, SyncProgress, SyncResult, StorageBackend trait
-│       │   ├── backends.rs             # Local, GitHub, Google Drive, Google Photos implementations
-│       │   └── pipeline.rs             # SyncPipeline: scan → compress → preview → upload → link → clean
-│       ├── tree_sitter/
-│       │   └── mod.rs                  # Language detection, heuristic symbol extraction
-│       └── web_dashboard/
-│           └── mod.rs                  # Embedded HTTP server, REST API router, handlers
-├── Dockerfile                          # Multi-stage Docker build (Node → Rust → Alpine)
-├── docker-compose.yml                  # Docker Compose with ZimaOS x-casaos metadata
-├── index.html                          # Vite HTML entry point
-├── package.json                        # Node.js dependencies and scripts
-├── tsconfig.json                       # TypeScript configuration
-├── tsconfig.node.json                  # TypeScript config for Vite/Node
-├── vite.config.ts                      # Vite config for Tauri desktop
-├── vite.config.wasm.ts                 # Vite config for WASM/GitHub Pages
-├── env.d.ts                            # Vite environment type declarations
-├── ARCHITECTURE.md                     # Detailed architecture documentation
-└── README.md                           # This file
-```
-
----
-
 ## Scripts
 
 | Command | Description |
@@ -401,8 +588,9 @@ cybermanju-drive/
 | `npm run build` | Type-check + build frontend |
 | `npm run tauri:build` | Build production desktop installer |
 | `npm run build:wasm` | Build frontend for web/GitHub Pages |
+| `npm run wasm:build-rust` | Build Rust WASM module via wasm-pack |
 | `npm run typecheck` | TypeScript type checking |
-| `npm run rust:check` | Cargo check |
+| `npm run rust:check` | Cargo check (all crates) |
 | `npm run rust:clippy` | Cargo clippy lints |
 | `npm run rust:fmt` | Check Rust formatting |
 | `npm run rust:test` | Run Rust tests |

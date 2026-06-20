@@ -79,6 +79,7 @@
           <button class="am-preset-btn" @click="applyPreset('matrixMode')">MATRIX MODE</button>
           <button class="am-preset-btn" @click="applyPreset('glitchCore')">GLITCH CORE</button>
           <button class="am-preset-btn" @click="applyPreset('heavenly')">HEAVENLY</button>
+          <button class="am-preset-btn" @click="applyPreset('neuralDream')">NEURAL DREAM</button>
           <button class="am-preset-btn am-randomize" @click="randomize">RANDOMIZE</button>
           <button class="am-preset-btn am-reset" @click="resetDefaults">RESET</button>
         </div>

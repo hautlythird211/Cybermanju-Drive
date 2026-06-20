@@ -2,9 +2,6 @@ use cybermanju_types::sync::{RemoteFile, StorageBackend, SyncBackendType};
 use std::fs;
 use std::path::Path;
 
-/// Mega.nz cloud storage backend.
-/// Uses the `megalib` crate for all Mega API operations.
-/// Token format: `email|password`
 pub struct MegaBackend {
     email: String,
     password: String,
@@ -62,12 +59,8 @@ impl MegaBackend {
 }
 
 impl StorageBackend for MegaBackend {
-    fn name(&self) -> &str {
-        "Mega"
-    }
-    fn backend_type(&self) -> SyncBackendType {
-        SyncBackendType::Mega
-    }
+    fn name(&self) -> &str { "Mega" }
+    fn backend_type(&self) -> SyncBackendType { SyncBackendType::Mega }
 
     fn upload_file(&self, local_path: &str, remote_path: &str) -> Result<String, String> {
         let data = fs::read(local_path).map_err(|e| format!("read: {}", e))?;
@@ -76,15 +69,8 @@ impl StorageBackend for MegaBackend {
 
         self.rt.block_on(async {
             let session = self.login_inner().await?;
-            let path = megalib::Path::new("/Root")
-                .join(&parent)
-                .map_err(|e| format!("path: {}", e))?;
-            let folder = session
-                .ensure_folder(&path)
-                .await
-                .map_err(|e| format!("ensure folder: {}", e))?;
-            folder
-                .upload(data, &name)
+            session
+                .upload_from_bytes(&data, &name, &parent)
                 .await
                 .map_err(|e| format!("upload: {}", e))?;
             Ok(format!("mega://{}/{}", parent, name))
@@ -96,50 +82,29 @@ impl StorageBackend for MegaBackend {
 
         self.rt.block_on(async {
             let session = self.login_inner().await?;
-            let path = megalib::Path::new("/Root");
-            let root = session
-                .find_folder(&path)
+            let node = session
+                .stat(remote_path)
                 .await
-                .map_err(|e| format!("find root: {}", e))?;
-            let nodes = root
-                .get_children()
-                .await
-                .map_err(|e| format!("list children: {}", e))?;
-            let node = nodes
-                .into_iter()
-                .find(|n| n.name() == name)
+                .map_err(|e| format!("stat: {}", e))?
                 .ok_or_else(|| format!("file not found: {}", name))?;
-            let data = node
-                .download()
-                .await
-                .map_err(|e| format!("download: {}", e))?;
             if let Some(p) = Path::new(local_path).parent() {
                 fs::create_dir_all(p).map_err(|e| format!("mkdir: {}", e))?;
             }
-            fs::write(local_path, &data).map_err(|e| format!("write: {}", e))?;
+            session
+                .download_to_file(&node, local_path)
+                .await
+                .map_err(|e| format!("download: {}", e))?;
             Ok(())
         })
     }
 
     fn delete_file(&self, remote_path: &str) -> Result<(), String> {
-        let name = self.remote_name(remote_path);
-
         self.rt.block_on(async {
             let session = self.login_inner().await?;
-            let path = megalib::Path::new("/Root");
-            let root = session
-                .find_folder(&path)
+            session
+                .rm(remote_path)
                 .await
-                .map_err(|e| format!("find root: {}", e))?;
-            let nodes = root
-                .get_children()
-                .await
-                .map_err(|e| format!("list children: {}", e))?;
-            let node = nodes
-                .into_iter()
-                .find(|n| n.name() == name)
-                .ok_or_else(|| format!("file not found: {}", name))?;
-            node.delete().await.map_err(|e| format!("delete: {}", e))?;
+                .map_err(|e| format!("delete: {}", e))?;
             Ok(())
         })
     }
@@ -147,24 +112,19 @@ impl StorageBackend for MegaBackend {
     fn list_files(&self, _prefix: &str) -> Result<Vec<RemoteFile>, String> {
         self.rt.block_on(async {
             let session = self.login_inner().await?;
-            let path = megalib::Path::new("/Root");
-            let root = session
-                .find_folder(&path)
+            let nodes = session
+                .list("/Root", false)
                 .await
-                .map_err(|e| format!("find root: {}", e))?;
-            let nodes = root
-                .get_children()
-                .await
-                .map_err(|e| format!("list children: {}", e))?;
+                .map_err(|e| format!("list: {}", e))?;
             Ok(nodes
                 .into_iter()
-                .filter(|n| n.node_type() == 0) // 0 = file
+                .filter(|n| n.is_file())
                 .map(|n| RemoteFile {
-                    name: n.name().to_string(),
-                    path: n.name().to_string(),
-                    size_bytes: n.size() as u64,
+                    name: n.name.clone(),
+                    path: n.name.clone(),
+                    size_bytes: n.size as u64,
                     modified_at: String::new(),
-                    url: format!("mega://{}", n.handle()),
+                    url: format!("mega://{}", n.handle),
                 })
                 .collect())
         })

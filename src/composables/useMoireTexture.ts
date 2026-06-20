@@ -1,4 +1,4 @@
-import { ref, shallowRef, onUnmounted, type Ref } from 'vue'
+import { shallowRef } from 'vue'
 
 export interface MoireOptions {
   width: number
@@ -127,14 +127,13 @@ export function useMoireTexture(options?: Partial<MoireOptions>) {
       ctx.drawImage(offscreen, 0, 0, destW, destH)
     } else {
       // Fallback: render directly (lower perf but works anywhere)
-      const timeScale = time * 0.004
       for (let l = 0; l < layers; l++) {
-        const angle = rot + (l / layers) * Math.PI / 3 + timeScale * 0.05 * (l + 1) * 0.3
-        const layerSpacing = spacing * (1 + l * 0.25)
+        const angle = rot + (l / layers) * Math.PI / 3 + time * 0.0002 * (l + 1) * 0.3
+        const layerSpacing = spacing * (1 + l * 0.3)
         const cosA = Math.cos(angle)
         const sinA = Math.sin(angle)
-        const offset = timeScale * (1 + l * 0.2) * layerSpacing
-        const hueOff = l * 30
+        const offset = time * speed * (1 + l * 0.2) * layerSpacing
+        const hueOff = l * 40
 
         ctx.beginPath()
         for (let line = -50; line < Math.max(destW, destH) * 2 + 50; line++) {
@@ -143,14 +142,13 @@ export function useMoireTexture(options?: Partial<MoireOptions>) {
           const ly = sinA * proj
           if (lx < -layerSpacing || lx > destW + layerSpacing || ly < -layerSpacing || ly > destH + layerSpacing) continue
 
-          const hue = (hueShift + hueOff + line * 2 + time * 0.2) % 360
-          const alpha = (0.12 + (Math.sin(line * 0.25 + l + time * 0.02) * 0.5 + 0.5) * 0.3) * contrast
           const perpX = -sinA * 9999
           const perpY = cosA * 9999
           ctx.moveTo(lx - perpX, ly - perpY)
           ctx.lineTo(lx + perpX, ly + perpY)
         }
-        ctx.strokeStyle = `hsla(${hueOff|0},40,45,0.12)`
+        const lHue = (hueShift + hueOff) % 360
+        ctx.strokeStyle = `hsla(${lHue|0},40,45,0.12)`
         ctx.lineWidth = lw
         ctx.stroke()
       }
@@ -160,56 +158,10 @@ export function useMoireTexture(options?: Partial<MoireOptions>) {
   function draw() {
     if (!offCtx || !offscreen || !canvas.value) return
     t++
-    renderFrame(offscreen.getContext('2d')!, 1, 1, t)
-    // Actually render to the output canvas
+
     const ctx = canvas.value.getContext('2d')
     if (ctx) {
-      const iw = internalW
-      const ih = internalH
-      offCtx.fillStyle = `hsl(${opts.hueShift}, ${opts.saturation}%, ${opts.brightness}%)`
-      offCtx.fillRect(0, 0, iw, ih)
-
-      const spacing = (opts.baseSpacing ?? 18) * (opts.scale ?? 0.25)
-      const speed = (opts.speed ?? 1) * 0.005
-      const layers = opts.layers ?? 4
-      const rot = opts.baseRotation ?? 0.15
-      const hueShift = opts.hueShift ?? 0
-      const sat = opts.saturation ?? 50
-      const bright = opts.brightness ?? 45
-      const contrast = opts.contrast ?? 0.6
-      const lw = opts.lineWidth ?? 0.5
-
-      for (let l = 0; l < layers; l++) {
-        const angle = rot + (l / layers) * Math.PI / 3 + t * 0.0002 * (l + 1) * 0.3
-        const layerSpacing = spacing * (1 + l * 0.3)
-        const cosA = Math.cos(angle)
-        const sinA = Math.sin(angle)
-        const offset = t * speed * (1 + l * 0.2) * layerSpacing
-
-        for (let line = -50; line < Math.max(iw, ih) * 2 + 50; line++) {
-          const proj = line * layerSpacing + offset
-          const x = cosA * proj
-          const y = sinA * proj
-
-          if (x < -layerSpacing || x > iw + layerSpacing || y < -layerSpacing || y > ih + layerSpacing) continue
-
-          const hue = (hueShift + l * 40 + line * 3 + t * 0.3) % 360
-          const alpha = (0.15 + (Math.sin(line * 0.3) * 0.5 + 0.5) * 0.35) * contrast
-          offCtx.strokeStyle = `hsla(${hue|0}, ${sat}%, ${bright + 20 + Math.sin(line * 0.2) * 15|0}%, ${alpha})`
-          offCtx.lineWidth = lw + (Math.sin(line * 0.4 + l) * 0.5 + 0.5) * 1.2
-          offCtx.beginPath()
-
-          const perpX = -sinA * 9999
-          const perpY = cosA * 9999
-          offCtx.moveTo(x - perpX, y - perpY)
-          offCtx.lineTo(x + perpX, y + perpY)
-          offCtx.stroke()
-        }
-      }
-
-      ctx.imageSmoothingEnabled = false
-      ctx.clearRect(0, 0, opts.width, opts.height)
-      ctx.drawImage(offscreen, 0, 0, opts.width, opts.height)
+      renderFrame(ctx, opts.width, opts.height, t)
     }
 
     animId = requestAnimationFrame(draw)

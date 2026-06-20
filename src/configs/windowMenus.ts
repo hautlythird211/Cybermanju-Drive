@@ -380,6 +380,7 @@ const ART_MAKER_MENUS: MenuGroup[] = [
       { id: 'matrix', label: 'Matrix Mode', icon: 'lightning-bolt-outline', action: () => { store.artSettings = applyPreset(store.artSettings, 'matrixMode') } },
       { id: 'glitch', label: 'Glitch Core', icon: 'lightning-bolt', action: () => { store.artSettings = applyPreset(store.artSettings, 'glitchCore') } },
       { id: 'heaven', label: 'Heavenly', icon: 'weather-partly-cloudy', action: () => { store.artSettings = applyPreset(store.artSettings, 'heavenly') } },
+      { id: 'neuralDream', label: 'Neural Dream', icon: 'brain', action: () => { store.artSettings = applyPreset(store.artSettings, 'neuralDream') } },
       { id: 'randomize', label: 'Randomize', icon: 'shuffle-variant', action: () => { store.artSettings = randomizeSettings(store.artSettings) } },
       { id: 'reset', label: 'Reset Defaults', icon: 'restore', action: () => { store.artSettings = { ...DEFAULT_SETTINGS, layers: { ...DEFAULT_SETTINGS.layers } } } },
     ],

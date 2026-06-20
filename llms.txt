@@ -1,0 +1,52 @@
+# Cybermanju Drive — LLM Context
+
+## Project
+Quantum-resistant encrypted file manager with AI face grouping, triple-layer compression, full-text search, GPS map view, multi-user access control, and 7-backend cloud sync. Runs as Tauri v2 desktop, Docker/ZimaOS web dashboard (:3456), or WASM/GitHub Pages SPA.
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| ARCHITECTURE.md | Full architecture docs (799 lines): modules, data flow, DB schema, REST API, deployment |
+| architecture.jsonl | Machine-readable architecture context for AI (35 types, 356 lines) |
+| AGENTS.md | AI agent guide: repo layout, patterns, build commands, key files |
+| README.md | Project overview, features, tech stack, build instructions, API docs (605 lines) |
+| system.md | .cybermanju portable database design document (324 lines) |
+| Cargo.toml | Workspace root — 13 member crates |
+| src-tauri/src/lib.rs | Core orchestrator: AppState, 68 IPC handlers, 12 Tauri plugins, web dashboard |
+| src/composables/useTauri.ts | Triple-mode IPC bridge (1067 lines): Tauri Conduit → WASM → REST |
+| src/stores/app.ts | Central Pinia store — all application state |
+| src/wasm/bridge.ts | WASM module async loader |
+| crates/types/src/schema.rs | Shared data types (296 lines): FileNode, User, etc. |
+| crates/crypto/src/pqc.rs | PQC engine (845 lines): ML-KEM-1024, ML-DSA-65, ChaCha20Poly1305 |
+| crates/db/src/database.rs | redb database layer (844 lines): 21 tables, CRUD, portable DB methods |
+| crates/portable-db/src/lib.rs | .cybermanju format pack/unpack/sync (581 lines) |
+| crates/faces/src/lib.rs | Face clustering: SimHash LSH, Chinese Whispers, HDBSCAN (1238+ lines) |
+| crates/backends/src/*.rs | 7 storage backends: Local, GitHub, GitLab, GDrive, GPhotos, Telegram, Mega |
+| crates/drive-wasm/src/*.rs | WASM bridge: crypto, compression, VirtualDrive, SyncEngine |
+
+## Build Commands
+
+npm run typecheck         # TypeScript check
+npm run rust:check        # Cargo check (all crates)
+npm run rust:clippy       # Clippy lints
+npm run rust:test         # Run all Rust tests
+npm run check:all         # TS + cargo check + clippy
+npm run tauri:build       # Desktop installer
+npm run build:wasm        # WASM/GitHub Pages build
+npm run tauri:dev         # Dev mode with HMR
+docker build -t cybermanju-drive:latest .  # Docker image
+
+## Architecture Patterns
+
+- Triple-mode IPC: useTauri.ts auto-detects Tauri/WASM/REST and routes commands
+- Cross-crate: cybermanju-types used by ALL crates; src-tauri orchestrates everything
+- Data flow: Import → redb + Tantivy → Encrypt (ML-KEM) → Compress (LZ4→Zstd→Brotli) → Face detect → Sync → Portable DB → Trash/Share/Version
+- Tauri → Crate mapping: files.rs→db, encryption.rs→crypto, compression.rs→compression, search.rs→search, faces.rs→faces, sync.rs→backends, portable_db.rs→portable-db
+- 21 redb tables: files, accounts, collections, face_groups, encryption_keys, users, sync_configs, parent_index, trash, audit_log, file_versions, share_links, file_relations, deletion_log, recovery_store, etc.
+
+## Code Style
+- Rust: 2021 edition, serde camelCase rename for API types
+- TypeScript: strict, camelCase, Vue 3 Composition API `<script setup>`
+- Frontend: Pinia stores, composables, Os-prefixed UI components
+- Errors: anyhow::Result in Rust, descriptive Error throws in TS

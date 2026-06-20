@@ -243,6 +243,26 @@ export function useWindowManager() {
     return id
   }
 
+  function compactSlots() {
+    const screenGroups = new Map<string, WindowState[]>()
+    for (const w of windows.value) {
+      if (w.minimized) continue
+      const key = `${w.screenX},${w.screenY}`
+      if (!screenGroups.has(key)) screenGroups.set(key, [])
+      screenGroups.get(key)!.push(w)
+    }
+    for (const [, group] of screenGroups) {
+      group.sort((a, b) => a.tileSlot - b.tileSlot)
+      group.forEach((w, i) => { w.tileSlot = i })
+    }
+  }
+
+  function arrangeCurrentScreen() {
+    const { width, height } = lastContainerSize.value
+    compactSlots()
+    retileAll(width, height)
+  }
+
   function close(id: string) {
     const idx = windows.value.findIndex(w => w.id === id)
     if (idx === -1) return
@@ -251,6 +271,7 @@ export function useWindowManager() {
     windowFocusHistory.value = windowFocusHistory.value.filter(w => w !== id)
     setTimeout(() => {
       windows.value = windows.value.filter(w => w.id !== id)
+      arrangeCurrentScreen()
     }, 300)
   }
 
@@ -262,6 +283,7 @@ export function useWindowManager() {
       setTimeout(() => {
         win.minimized = true
         win.animState = 'idle'
+        arrangeCurrentScreen()
       }, 300)
     }
   }
@@ -273,6 +295,7 @@ export function useWindowManager() {
       win.animState = 'entering'
       setTimeout(() => {
         win.animState = 'idle'
+        arrangeCurrentScreen()
       }, 350)
       focus(id)
     }
@@ -343,8 +366,8 @@ export function useWindowManager() {
       win.previousBounds = { x: win.x, y: win.y, width: win.width, height: win.height }
       win.x = 0
       win.y = 0
-      win.width = window.innerWidth
-      win.height = window.innerHeight
+      win.width = lastContainerSize.value.width
+      win.height = lastContainerSize.value.height
       win.maximized = true
     }
   }
@@ -368,7 +391,8 @@ export function useWindowManager() {
   function updateTilePosition(id: string, containerWidth: number, containerHeight: number) {
     const win = windows.value.find(w => w.id === id)
     if (!win || win.maximized) return
-    const tile = getTileRect(win.screenX, win.screenY, win.tileSlot, containerWidth, containerHeight)
+    const count = getWindowsForScreen(win.screenX, win.screenY).length
+    const tile = getTileRect(win.screenX, win.screenY, win.tileSlot, containerWidth, containerHeight, count)
     win.x = tile.x
     win.y = tile.y
     win.width = tile.width
@@ -379,7 +403,8 @@ export function useWindowManager() {
     lastContainerSize.value = { width: containerWidth, height: containerHeight }
     for (const win of windows.value) {
       if (win.minimized || win.maximized || win.animState === 'exiting') continue
-      const tile = getTileRect(win.screenX, win.screenY, win.tileSlot, containerWidth, containerHeight)
+      const count = getWindowsForScreen(win.screenX, win.screenY).length
+      const tile = getTileRect(win.screenX, win.screenY, win.tileSlot, containerWidth, containerHeight, count)
       win.x = tile.x
       win.y = tile.y
       win.width = tile.width
@@ -389,6 +414,7 @@ export function useWindowManager() {
 
   function arrangeWindows() {
     const { width, height } = lastContainerSize.value
+    compactSlots()
     retileAll(width, height)
   }
 
@@ -418,6 +444,8 @@ export function useWindowManager() {
     updateTilePosition,
     retileAll,
     arrangeWindows,
+    arrangeCurrentScreen,
+    compactSlots,
     getTileRect,
     getWindowsForScreen,
     getAllScreens,
@@ -425,7 +453,6 @@ export function useWindowManager() {
     openWindowCount,
     isOpen,
     inlinePanels,
-    TILE_GAP,
   }
 }
 

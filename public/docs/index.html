@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cybermanju Drive — Documentation</title>
+  <style>
+    :root {
+      --bg: #0a0e14;
+      --bg-card: #111820;
+      --bg-hover: #1a2430;
+      --border: #1e2a3a;
+      --accent: #00d4ff;
+      --accent2: #00ff41;
+      --accent3: #ffb800;
+      --text: #c8d6e5;
+      --text-dim: #6b7b8d;
+      --text-bright: #e8f0f8;
+      --font: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+    .container { max-width: 960px; margin: 0 auto; }
+    header {
+      text-align: center;
+      padding: 60px 0 40px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 40px;
+    }
+    h1 {
+      font-size: 2.2em;
+      background: linear-gradient(135deg, var(--accent), var(--accent2), var(--accent3));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 1em;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 4px;
+      font-size: 0.75em;
+      margin: 2px;
+      border: 1px solid var(--border);
+    }
+    .badge-rust { border-color: #dea584; color: #dea584; }
+    .badge-ts { border-color: #3178c6; color: #3178c6; }
+    .badge-vue { border-color: #42b883; color: #42b883; }
+    .badge-tauri { border-color: #ffc131; color: #ffc131; }
+    h2 {
+      color: var(--text-bright);
+      font-size: 1.3em;
+      margin: 36px 0 16px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    h3 {
+      color: var(--text-bright);
+      font-size: 1.05em;
+      margin: 24px 0 10px;
+    }
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .card:hover {
+      background: var(--bg-hover);
+      border-color: var(--accent);
+    }
+    .card a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .card a::after {
+      content: ' →';
+      opacity: 0.5;
+    }
+    .card .desc {
+      color: var(--text-dim);
+      font-size: 0.85em;
+      margin-top: 4px;
+    }
+    .doc-list {
+      list-style: none;
+      margin: 12px 0;
+    }
+    .doc-list li {
+      padding: 10px 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 8px;
+      transition: background 0.15s;
+    }
+    .doc-list li:hover { background: var(--bg-hover); }
+    .doc-list a {
+      color: var(--accent2);
+      text-decoration: none;
+    }
+    .doc-list .desc {
+      color: var(--text-dim);
+      font-size: 0.82em;
+      margin-top: 2px;
+    }
+    pre, code {
+      font-family: var(--font);
+      font-size: 0.9em;
+    }
+    .cmd-block {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin: 8px 0;
+      color: var(--accent2);
+      font-size: 0.85em;
+      overflow-x: auto;
+    }
+    footer {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.82em;
+      padding: 40px 0 20px;
+      border-top: 1px solid var(--border);
+      margin-top: 40px;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    @media (max-width: 640px) {
+      .card-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Cybermanju Drive</h1>
+      <div class="subtitle">Quantum-resistant encrypted file manager · v0.1.0</div>
+      <div style="margin-top: 10px;">
+        <span class="badge badge-rust">Rust 2021</span>
+        <span class="badge badge-ts">TypeScript 5.8</span>
+        <span class="badge badge-vue">Vue 3.5</span>
+        <span class="badge badge-tauri">Tauri v2</span>
+      </div>
+    </header>
+
+    <section>
+      <h2>Documentation</h2>
+      <div class="card-grid">
+        <div class="card">
+          <a href="../../README.md">README</a>
+          <div class="desc">Project overview, features, build instructions, API reference, ZimaOS install guide</div>
+        </div>
+        <div class="card">
+          <a href="../../ARCHITECTURE.md">Architecture</a>
+          <div class="desc">Full system architecture: modules, data flow, DB schema, REST API, deployment (799 lines)</div>
+        </div>
+        <div class="card">
+          <a href="../../AGENTS.md">Agent Guide</a>
+          <div class="desc">AI coding assistant reference: repo layout, patterns, build commands, key files</div>
+        </div>
+        <div class="card">
+          <a href="../../system.md">Portable DB System</a>
+          <div class="desc">.cybermanju portable database format: pack/unpack, encryption, recovery (324 lines)</div>
+        </div>
+        <div class="card">
+          <a href="../../tasks.md">Development Tasks</a>
+          <div class="desc">Current and past refactoring tasks, architectural decisions, change tracking</div>
+        </div>
+        <div class="card">
+          <a href="../../worklog.md">Work Log</a>
+          <div class="desc">Development work log: codebase audit, ZimaOS, CI/CD, stub elimination</div>
+        </div>
+        <div class="card">
+          <a href="../../architecture.jsonl">architecture.jsonl</a>
+          <div class="desc">Machine-readable architecture context for AI assistants (JSONL, 356 lines)</div>
+        </div>
+        <div class="card">
+          <a href="../../RELEASE_NOTES.md">Release Notes</a>
+          <div class="desc">Version history and changelog</div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Key Architectural Patterns</h2>
+
+      <h3>Triple-Mode IPC (useTauri.ts)</h3>
+      <p>The frontend communicates with the backend via a three-tier fallback:</p>
+      <div class="cmd-block">
+        1. Tauri Conduit IPC (2.4x faster) — desktop app with `window.__TAURI__`<br>
+        2. WASM bridge (IndexedDB) — browser with WASM support<br>
+        3. REST API (HTTP fetch) — Web Dashboard on port 3456
+      </div>
+
+      <h3>Cross-Crate Dependencies</h3>
+      <div class="cmd-block">
+        cybermanju-types ──► ALL crates (root types)<br>
+        cybermanju-portable-db ──► types + crypto + compression + db<br>
+        src-tauri ──► ALL workspace crates (orchestrator)<br>
+        cybermanju-drive-wasm ──► standalone pure Rust (no C bindings)
+      </div>
+
+      <h3>Data Flow</h3>
+      <div class="cmd-block">
+        Import → FileNode in redb + Tantivy index → Encrypt (ML-KEM) → Compress<br>
+        (LZ4→Zstd→Brotli) → Face detect (auto-cluster) → Sync to backends<br>
+        (compress→preview→upload→link) → Portable DB → Trash/Share/Version
+      </div>
+    </section>
+
+    <section>
+      <h2>Build Commands</h2>
+      <div class="cmd-block">
+        npm run typecheck         # TypeScript type checking<br>
+        npm run rust:check        # Cargo check (all crates)<br>
+        npm run rust:clippy       # Cargo clippy lints<br>
+        npm run rust:test         # Run all Rust tests<br>
+        npm run check:all         # TypeScript + cargo check + clippy<br>
+        npm run tauri:build       # Production desktop installer<br>
+        npm run build:wasm        # WASM/GitHub Pages build<br>
+        docker build -t cybermanju-drive:latest .  # Docker image<br>
+        docker compose up -d      # Run with Docker Compose
+      </div>
+    </section>
+
+    <section>
+      <h2>Workspace Crates (13)</h2>
+      <ul class="doc-list">
+        <li><strong>types</strong> — Foundation types: FileNode, User, StorageBackend trait<br><span class="desc">crates/types/</span></li>
+        <li><strong>crypto</strong> — PQC engine: ML-KEM-1024, ML-DSA-65, ChaCha20Poly1305, X25519 hybrid<br><span class="desc">crates/crypto/</span></li>
+        <li><strong>compression</strong> — Triple-layer: LZ4 → Zstd → Brotli cascade<br><span class="desc">crates/compression/</span></li>
+        <li><strong>search</strong> — Tantivy full-text search with BM25, fuzzy, autocomplete<br><span class="desc">crates/search/</span></li>
+        <li><strong>db</strong> — redb embedded database with 21 tables<br><span class="desc">crates/db/</span></li>
+        <li><strong>portable-db</strong> — .cybermanju portable database format<br><span class="desc">crates/portable-db/</span></li>
+        <li><strong>web</strong> — Browser engine, DuckDuckGo search, HTML renderer<br><span class="desc">crates/web/</span></li>
+        <li><strong>faces</strong> — Face clustering: SimHash LSH, Chinese Whispers, HDBSCAN<br><span class="desc">crates/faces/</span></li>
+        <li><strong>backends</strong> — 7 storage backends: Local, GitHub, GitLab, GDrive, GPhotos, Telegram, Mega<br><span class="desc">crates/backends/</span></li>
+        <li><strong>cli</strong> — CLI/TUI app with clap + ratatui<br><span class="desc">crates/cli/</span></li>
+        <li><strong>drive-wasm</strong> — WASM bridge: crypto, compression, VirtualDrive, SyncEngine<br><span class="desc">crates/drive-wasm/</span></li>
+        <li><strong>tests</strong> — Integration tests<br><span class="desc">crates/tests/</span></li>
+        <li><strong>src-tauri</strong> — Tauri v2 desktop app orchestrating all crates, 68 IPC commands<br><span class="desc">src-tauri/</span></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Deployment Modes</h2>
+      <table style="width:100%; border-collapse:collapse; margin:12px 0;">
+        <tr style="border-bottom:1px solid var(--border);">
+          <th style="text-align:left; padding:8px 12px; color:var(--text-bright);">Mode</th>
+          <th style="text-align:left; padding:8px 12px; color:var(--text-bright);">Transport</th>
+          <th style="text-align:left; padding:8px 12px; color:var(--text-bright);">Use Case</th>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px 12px;">Tauri Desktop</td>
+          <td style="padding:8px 12px; color:var(--accent);">Conduit IPC (2.4x)</td>
+          <td style="padding:8px 12px; color:var(--text-dim);">Native desktop, full filesystem access</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px 12px;">Web Dashboard</td>
+          <td style="padding:8px 12px; color:var(--accent2);">REST API :3456</td>
+          <td style="padding:8px 12px; color:var(--text-dim);">Browser, Docker, ZimaOS NAS</td>
+        </tr>
+        <tr>
+          <td style="padding:8px 12px;">WASM / GitHub Pages</td>
+          <td style="padding:8px 12px; color:var(--accent3);">SPA + IndexedDB</td>
+          <td style="padding:8px 12px; color:var(--text-dim);">Public showcase, no backend</td>
+        </tr>
+      </table>
+    </section>
+
+    <section>
+      <h2>License</h2>
+      <p style="color:var(--text-dim);">MIT — Copyright Cybermanju</p>
+    </section>
+
+    <footer>
+      <a href="https://github.com/cybermanju/cybermanju-drive">github.com/cybermanju/cybermanju-drive</a>
+      &nbsp;·&nbsp; <a href="../../architecture.jsonl">architecture.jsonl</a>
+      &nbsp;·&nbsp; <a href="../../llms.txt">llms.txt</a>
+    </footer>
+  </div>
+</body>
+</html>

@@ -6,6 +6,8 @@ pub enum SyncBackendType {
     Local,
     GitHub,
     GitLab,
+    Codeberg,
+    Gitea,
     GoogleDrive,
     GooglePhotos,
     Telegram,
@@ -18,6 +20,8 @@ impl std::fmt::Display for SyncBackendType {
             Self::Local => write!(f, "local"),
             Self::GitHub => write!(f, "gitHub"),
             Self::GitLab => write!(f, "gitLab"),
+            Self::Codeberg => write!(f, "codeberg"),
+            Self::Gitea => write!(f, "gitea"),
             Self::GoogleDrive => write!(f, "googleDrive"),
             Self::GooglePhotos => write!(f, "googlePhotos"),
             Self::Telegram => write!(f, "telegram"),
@@ -120,6 +124,12 @@ pub struct SyncConfig {
     pub create_previews: bool,
     pub delete_raw_after_sync: bool,
     pub max_concurrent_uploads: u32,
+    /// Use Git LFS for large file storage
+    pub use_git_lfs: bool,
+    /// Separate LFS blob repo (e.g. "owner/blobs-repo") — if empty, uses same repo
+    pub lfs_repo: Option<String>,
+    /// Repo layout: "flat" (default), "sharded" (hash-prefix dirs), "split" (separate meta+blob repos)
+    pub repo_layout: Option<String>,
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
 }
@@ -156,6 +166,165 @@ pub struct RemoteFile {
     pub modified_at: String,
     pub url: String,
 }
+
+// ---------------------------------------------------------------------------
+// Git LFS types
+// ---------------------------------------------------------------------------
+
+/// Git LFS batch API request body.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LfsBatchRequest {
+    pub operation: String,
+    pub transfers: Vec<String>,
+    pub objects: Vec<LfsObject>,
+    pub hash_algo: Option<String>,
+}
+
+/// An object reference in LFS operations.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LfsObject {
+    pub oid: String,
+    pub size: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authenticated: Option<bool>,
+}
+
+/// Single object response from LFS batch API.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LfsObjectResponse {
+    pub oid: String,
+    pub size: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub actions: Option<LfsActions>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<LfsError>,
+}
+
+/// Upload/download/verify actions for an LFS object.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LfsActions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub download: Option<LfsAction>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub upload: Option<LfsAction>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub verify: Option<LfsAction>,
+}
+
+/// A single LFS action (upload/download/verify) with URL and headers.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LfsAction {
+    pub href: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub header: Option<std::collections::HashMap<String, String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<String>,
+}
+
+/// LFS batch API response.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LfsBatchResponse {
+    pub transfer: Option<String>,
+    pub objects: Vec<LfsObjectResponse>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hash_algo: Option<String>,
+}
+
+/// LFS error detail.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LfsError {
+    pub code: i32,
+    pub message: String,
+}
+
+/// Git LFS pointer file content (the small text file that replaces the large file in Git).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LfsPointer {
+    pub version: String,   // "https://git-lfs.github.com/spec/v1"
+    pub oid: String,       // SHA-256 hex of the large file
+    pub size: u64,         // Size in bytes
+}
+
+impl LfsPointer {
+    pub fn to_string(&self) -> String {
+        format!(
+            "version {}\noid sha256:{}\nsize {}\n",
+            self.version, self.oid, self.size
+        )
+    }
+
+    pub fn from_string(s: &str) -> Result<Self, String> {
+        let mut version = String::new();
+        let mut oid = String::new();
+        let mut size = 0u64;
+        for line in s.lines() {
+            if let Some(v) = line.strip_prefix("version ") {
+                version = v.to_string();
+            } else if let Some(v) = line.strip_prefix("oid sha256:") {
+                oid = v.to_string();
+            } else if let Some(v) = line.strip_prefix("size ") {
+                size = v.parse().map_err(|e| format!("invalid size: {}", e))?;
+            }
+        }
+        if version.is_empty() || oid.is_empty() || size == 0 {
+            return Err("Invalid LFS pointer".to_string());
+        }
+        Ok(Self { version, oid, size })
+    }
+
+    /// Check if a file is an LFS pointer (starts with "version ").
+    pub fn is_lfs_pointer(data: &[u8]) -> bool {
+        data.starts_with(b"version ")
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Repo layout types
+// ---------------------------------------------------------------------------
+
+/// Describes how the .cybermanju sync structures the remote repository.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum RepoLayout {
+    /// Flat structure: all files in the repo root /cybermanju_sync/
+    Flat,
+    /// Sharded by BLAKE3 hash prefix: blobs/ab/cd/abcdef...cyb3
+    Sharded,
+    /// Split repos: meta in main repo, blobs in a separate LFS blob repo
+    Split,
+}
+
+impl std::fmt::Display for RepoLayout {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Flat => write!(f, "flat"),
+            Self::Sharded => write!(f, "sharded"),
+            Self::Split => write!(f, "split"),
+        }
+    }
+}
+
+impl RepoLayout {
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "sharded" => Self::Sharded,
+            "split" => Self::Split,
+            _ => Self::Flat,
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// StorageBackend trait
+// ---------------------------------------------------------------------------
 
 pub trait StorageBackend: Send + Sync {
     fn name(&self) -> &str;

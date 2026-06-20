@@ -47,7 +47,7 @@
 │     │                  │      │  │  ┌────────┐ └───────────┘ │  │   │
 │  ┌──▼──┐  ┌────────┐   │      │  │  │ sync/ │ ┌───────────┐ │  │   │
 │  │Tauri│  │HTTP    │   │      │  │  │Backends│ │ faces/    │ │  │   │
-│  │ IPC │  │REST    │   │      │  │  │4 types │ │ONNX/DBSCAN│ │  │   │
+│  │ IPC │  │REST    │   │      │  │  │7 types  │ │ONNX/DBSCAN│ │  │   │
 │  └──┬──┘  └────┬───┘   │      │  │  └────────┘ └───────────┘ │  │   │
 │     │         │        │      │  └────────────────────────────┘  │   │
 └─────┼─────────┼────────┴──────┴──────────────────────────────────┘   │
@@ -85,7 +85,7 @@ The frontend composable `useTauri.ts` auto-detects the environment via `window._
               ┌────────────────┼────────────────────┐
               │                │                    │
          commands/        web_dashboard/         AppState
-       (12 modules)      (HTTP server)        (db + index + compressor)
+        (23 modules)      (HTTP server)        (db + index + compressor)
               │
     ┌─────────┼──────────┬──────────┬──────────┬──────────┐
     │         │          │          │          │          │
@@ -113,15 +113,15 @@ The frontend composable `useTauri.ts` auto-detects the environment via `window._
 
 | Module | Path | Responsibility |
 |--------|------|---------------|
-| **commands/** | `src-tauri/src/commands/` | 12 Tauri IPC handler files translating frontend calls into core module operations |
-| **db/** | `src-tauri/src/db/` | redb ACID database wrapper with 11 tables, read/write transaction management |
+| **commands/** | `src-tauri/src/commands/` | 23 Tauri IPC handler files translating frontend calls into core module operations |
+| **db/** | `src-tauri/src/db/` | redb ACID database wrapper with 21 tables, read/write transaction management |
 | **crypto/** | `src-tauri/src/crypto/` | Post-quantum cryptography: ChaCha20Poly1305 AEAD + rustpq ML-KEM/ML-DSA key management |
 | **compression/** | `src-tauri/src/compression/` | Triple-layer cascading compression (LZ4 -> ZSTD-15 -> Brotli-11) |
 | **search/** | `src-tauri/src/search/` | Tantivy full-text search with BM25 ranking, faceted filtering, term dictionary autocomplete |
 | **faces/** | `src-tauri/src/faces/` | Face detection embeddings and DBSCAN clustering via connected components |
 | **tree_sitter/** | `src-tauri/src/tree_sitter/` | Code intelligence: language detection for 50+ extensions, heuristic symbol extraction |
 | **preview/** | `src-tauri/src/preview/` | Lanczos3 thumbnail generation, media metadata extraction |
-| **sync/** | `src-tauri/src/sync/` | Storage backend trait + 4 implementations (Local, GitHub, Google Drive, Google Photos) |
+| **sync/** | `src-tauri/src/sync/` | Storage backend trait + 7 implementations (Local, GitHub, GitLab, Google Drive, Google Photos, Telegram, Mega) |
 | **web_dashboard/** | `src-tauri/src/web_dashboard/` | Embedded HTTP/1.1 server on port 3456 with REST API |
 
 ---

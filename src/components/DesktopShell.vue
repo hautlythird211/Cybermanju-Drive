@@ -129,11 +129,17 @@ function exitOverview() {
   hoverScreen.value = null
 }
 
+let resizeTimeout: ReturnType<typeof setTimeout> | null = null
+
 function retileFromResize() {
-  if (gridRef.value && store.autoArrange) {
-    const rect = gridRef.value.getBoundingClientRect()
-    wm.retileAll(rect.width, rect.height)
-  }
+  if (resizeTimeout) clearTimeout(resizeTimeout)
+  resizeTimeout = setTimeout(() => {
+    if (gridRef.value && store.autoArrange) {
+      const rect = gridRef.value.getBoundingClientRect()
+      wm.retileAll(rect.width, rect.height)
+    }
+    resizeTimeout = null
+  }, 80)
 }
 
 function forceRetile() {
@@ -292,6 +298,7 @@ watch(overview, async (val) => {
 })
 
 onUnmounted(() => {
+  if (resizeTimeout) clearTimeout(resizeTimeout)
   gsapCtx.value?.revert()
   window.removeEventListener('resize', retileFromResize)
 })
@@ -350,7 +357,7 @@ onUnmounted(() => {
   z-index: 1;
   width: 100%;
   height: 100%;
-  padding: 8px;
+  padding: 0;
   transition: opacity 0.2s, filter 0.2s;
   will-change: transform, opacity;
 }
