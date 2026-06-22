@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import wasm from "vite-plugin-wasm";
 import topLevelAwait from "vite-plugin-top-level-await";
+import { VitePWA } from "vite-plugin-pwa";
 import { resolve } from "path";
 
 // Determine the base path:
@@ -16,7 +17,33 @@ const base =
     : "/");
 
 export default defineConfig({
-  plugins: [vue(), wasm(), topLevelAwait()],
+  plugins: [
+    vue(),
+    wasm(),
+    topLevelAwait(),
+    VitePWA({
+      registerType: "autoUpdate",
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,wasm}"],
+        maximumFileSizeToCacheInBytes: 50_000_000, // 50MB for WASM
+      },
+      manifest: {
+        name: "Cybermanju Drive",
+        short_name: "Cybermanju",
+        description: "Quantum-resistant encrypted file manager",
+        theme_color: "#1a1a2e",
+        background_color: "#0f0f23",
+        display: "standalone",
+        icons: [
+          {
+            src: "/tauri.svg",
+            sizes: "any",
+            type: "image/svg+xml",
+          },
+        ],
+      },
+    }),
+  ],
   resolve: {
     alias: {
       "@": resolve(__dirname, "src"),

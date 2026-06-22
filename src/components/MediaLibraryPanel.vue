@@ -6,7 +6,7 @@ import { useMedia } from '@/composables/useMedia'
 import type { FileNode, FileMediaData } from '@/types'
 
 const store = useAppStore()
-const { openMediaOverlay, getMediaInfo } = useMedia()
+const { openMediaOverlay, getFileBytesForPreview, getMediaInfo } = useMedia()
 
 const emit = defineEmits<{
   close: []
@@ -16,6 +16,7 @@ const filterType = ref<'all' | 'image' | 'video' | 'audio'>('all')
 const sortBy = ref<'name' | 'date' | 'size'>('date')
 const sortDir = ref<'asc' | 'desc'>('desc')
 const loading = ref(false)
+const openingFileId = ref<string | null>(null)
 
 const mediaFiles = computed(() => {
   let files = store.files.filter(f => {
@@ -77,25 +78,28 @@ function getMediaIcon(file: FileNode): string {
   return 'mdi:file-outline'
 }
 
-function openMedia(file: FileNode) {
-  const mime = file.mimeType || ''
-  const type = mime.startsWith('image/') ? 'image' : mime.startsWith('video/') ? 'video' : 'audio'
-  const fileData: FileMediaData = {
-    fileId: file.id,
-    filename: file.name,
-    mimeType: mime,
-    isImage: mime.startsWith('image/'),
-    isVideo: mime.startsWith('video/'),
-    isAudio: mime.startsWith('audio/'),
-    availableResolutions: [
-      { level: 'r0', keyTier: 'preview', encrypted: true },
-      { level: 'r1', keyTier: 'preview', encrypted: true },
-      { level: 'r2', keyTier: 'content', encrypted: true },
-      { level: 'r3', keyTier: 'content', encrypted: true },
-    ],
-    selectedResolution: 'r3',
+async function openMedia(file: FileNode) {
+  if (openingFileId.value) return
+  openingFileId.value = file.id
+  loading.value = true
+  try {
+    const mime = file.mimeType || ''
+    const type = mime.startsWith('image/') ? 'image' : mime.startsWith('video/') ? 'video' : 'audio'
+
+    // Uncompress-on-demand: fetch file bytes from disk, decompress layers
+    const fileBytes = await getFileBytesForPreview(file.id)
+
+    // Get media info from the decompressed bytes
+    const mediaData = await getMediaInfo(file.id, file.name, fileBytes)
+
+    openMediaOverlay(type, mediaData, fileBytes)
+  } catch (e) {
+    console.error('Failed to open media:', e)
+    store.notifyError?.(`Failed to open ${file.name}: ${e}`)
+  } finally {
+    loading.value = false
+    openingFileId.value = null
   }
-  openMediaOverlay(type, fileData, new Uint8Array(0))
 }
 
 function handleKeydown(e: KeyboardEvent) {

@@ -152,6 +152,12 @@ pub struct AuditEntry {
     pub user_id: Option<String>,
     pub details: Option<serde_json::Value>,
     pub timestamp: String,
+    /// BLAKE3 hash of the previous entry's serialized JSON (for chain verification).
+    #[serde(default)]
+    pub prev_hash: String,
+    /// BLAKE3 hash of this entry (without the entry_hash field itself).
+    #[serde(default)]
+    pub entry_hash: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

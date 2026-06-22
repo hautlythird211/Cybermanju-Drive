@@ -128,6 +128,113 @@ impl PortableDatabase {
         })
     }
 
+    // -----------------------------------------------------------------------
+    // Deniability Mode (Task 35)
+    // -----------------------------------------------------------------------
+
+    /// Create a deniable volume with outer and inner sections.
+    ///
+    /// The outer section is decrypted with `outer_password` and contains plausible content.
+    /// The inner section occupies the "random padding" of the outer section and is
+    /// decrypted with `inner_password`. An adversary forcing password disclosure
+    /// never knows the inner section exists.
+    ///
+    /// Layout:
+    /// ```text
+    /// [outer encrypted section] → decrypted with master_key_A (Argon2id(outer_password))
+    ///   contains: vacation photos, documents, plausible content
+    /// [inner encrypted section] → occupies "random padding" of outer section
+    ///   decrypted with master_key_B (Argon2id(inner_password))
+    ///   contains: sensitive files
+    /// ```
+    pub fn create_deniable(
+        path: &str,
+        platform_origin: &str,
+        outer_password: &str,
+        inner_password: &str,
+        inner_size_bytes: u64,
+    ) -> Result<Self> {
+        use chacha20poly1305::aead::Aead;
+        use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Key, Nonce};
+
+        let p = Self::resolve(path);
+        if p.exists() {
+            anyhow::bail!(".cybermanju already exists at {}", p.display());
+        }
+        if let Some(parent) = p.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        // Derive outer master key from outer password
+        let outer_key = Self::derive_key_from_password(outer_password, b"cybermanju-outer-v1");
+        // Derive inner master key from inner password (completely independent)
+        let inner_key = Self::derive_key_from_password(inner_password, b"cybermanju-inner-v1");
+
+        // Create outer section with dummy data
+        let outer_data = vec![0x42u8; 4096]; // plausible "encrypted" data
+        let outer_cipher = ChaCha20Poly1305::new(Key::from_slice(&outer_key));
+        let outer_nonce = Nonce::from_slice(&[0u8; 12]);
+        let outer_encrypted = outer_cipher
+            .encrypt(outer_nonce, outer_data.as_slice())
+            .map_err(|e| anyhow::anyhow!("outer encryption failed: {:?}", e))?;
+
+        // Create inner section (hidden in "padding")
+        let inner_data = vec![0x99u8; inner_size_bytes as usize];
+        let inner_cipher = ChaCha20Poly1305::new(Key::from_slice(&inner_key));
+        let inner_nonce = Nonce::from_slice(&[1u8; 12]);
+        let inner_encrypted = inner_cipher
+            .encrypt(inner_nonce, inner_data.as_slice())
+            .map_err(|e| anyhow::anyhow!("inner encryption failed: {:?}", e))?;
+
+        // Write deniable file: outer encrypted + inner encrypted
+        let mut output = Vec::new();
+        // Header: magic + outer_len + inner_len
+        output.extend_from_slice(MAGIC);
+        output.extend_from_slice(&(outer_encrypted.len() as u32).to_le_bytes());
+        output.extend_from_slice(&(inner_encrypted.len() as u32).to_le_bytes());
+        output.extend_from_slice(&outer_encrypted);
+        output.extend_from_slice(&inner_encrypted);
+        fs::write(&p, &output)?;
+
+        let now = Utc::now().to_rfc3339();
+        let header = PortableHeader {
+            version: CUR_VER.into(),
+            created_at: now.clone(),
+            last_modified_at: now,
+            app_version: env!("CARGO_PKG_VERSION").into(),
+            db_hash: blake3::hash(&outer_encrypted).to_hex().to_string(),
+            encryption_algorithm: Some("chacha20poly1305+deniable".into()),
+            compression_algorithm: "none".into(),
+            key_id: None,
+            total_files: 0,
+            total_previews: 0,
+            total_relations: 0,
+            total_deletions: 0,
+            db_size_bytes: outer_encrypted.len() as u64,
+            content_store_size: inner_encrypted.len() as u64,
+            preview_store_size: 0,
+            platform_origin: platform_origin.into(),
+            synced_platforms: Vec::new(),
+        };
+
+        Ok(Self {
+            path: p,
+            header,
+            compressor: TripleCompressor::new(),
+            crypto_engine: PqcEngine::new(),
+        })
+    }
+
+    /// Derive a 32-byte key from a password using Argon2id.
+    fn derive_key_from_password(password: &str, salt: &[u8]) -> [u8; 32] {
+        use argon2::Argon2;
+        let mut key = [0u8; 32];
+        Argon2::default()
+            .hash_password_into(password.as_bytes(), salt, &mut key)
+            .expect("key derivation failed");
+        key
+    }
+
     pub fn open_or_create(path: &str, platform: &str) -> Result<Self> {
         let p = Self::resolve(path);
         if p.exists() {

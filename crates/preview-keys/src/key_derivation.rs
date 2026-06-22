@@ -1,6 +1,5 @@
 use aes_gcm::aead::Aead;
 use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
-use chacha20poly1305::aead::Aead as ChaChaAead;
 use chacha20poly1305::{ChaCha20Poly1305, Key as ChaChaKey, Nonce as ChaChaNonce};
 use hkdf::Hkdf;
 use rand::RngCore;
@@ -197,6 +196,33 @@ pub fn decrypt_content(
     cipher
         .decrypt(nonce, &data[12..])
         .map_err(|e| PreviewKeyError::DecryptionFailed(e.to_string()))
+}
+
+/// Derive the shard MAC key from master key using HKDF.
+pub fn derive_shard_mac_key(master_key: &[u8; 32], shard_id: &str) -> [u8; 32] {
+    let hk = Hkdf::<Sha256>::new(Some(b"cybermanju-shard-mac-v1"), master_key);
+    let mut key = [0u8; 32];
+    hk.expand(shard_id.as_bytes(), &mut key)
+        .expect("HKDF expand failed for shard MAC key");
+    key
+}
+
+/// Compute a keyed shard MAC: BLAKE3-keyed(shard_mac_key, content).
+pub fn compute_shard_mac(content: &[u8], shard_id: &str, master_key: &[u8; 32]) -> [u8; 32] {
+    let mac_key = derive_shard_mac_key(master_key, shard_id);
+    *blake3::keyed_hash(&mac_key, content).as_bytes()
+}
+
+/// Verify a shard MAC with constant-time comparison.
+pub fn verify_shard_mac(
+    content: &[u8],
+    shard_id: &str,
+    master_key: &[u8; 32],
+    expected: &[u8; 32],
+) -> bool {
+    use subtle::ConstantTimeEq;
+    let computed = compute_shard_mac(content, shard_id, master_key);
+    computed.ct_eq(expected).into()
 }
 
 #[cfg(test)]

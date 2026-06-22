@@ -33,10 +33,10 @@ pub enum ResolutionError {
     IntegrityCheckFailed { expected: String, got: String },
 
     #[error("Serialization error: {0}")]
-    SerializationError(#[from] serde_json::Error),
+    SerializationError(String),
 
     #[error("IO error: {0}")]
-    IoError(#[from] std::io::Error),
+    IoError(String),
 
     #[error("Codec error: {0}")]
     CodecError(String),
@@ -52,6 +52,9 @@ pub enum ResolutionError {
 
     #[error("Invalid resolution level: {0}")]
     InvalidResolutionLevel(String),
+
+    #[error("Resolution not found: {0}")]
+    ResolutionNotFound(String),
 
     #[error("Blob region out of bounds: offset {offset} + length {length} exceeds content size {content_size}")]
     BlobRegionOutOfBounds {

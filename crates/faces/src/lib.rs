@@ -2022,8 +2022,37 @@ fn postprocess_arcface(output: &ort::session::SessionOutputs) -> Vec<f32> {
 
 #[cfg(feature = "onnx-face")]
 fn ensure_model(path: &std::path::Path, url: &str) -> Result<()> {
+    ensure_model_with_hash(path, url, None)
+}
+
+/// Ensure a model file exists, downloading it if necessary with optional SHA256 verification.
+#[cfg(feature = "onnx-face")]
+fn ensure_model_with_hash(
+    path: &std::path::Path,
+    url: &str,
+    expected_sha256: Option<&str>,
+) -> Result<()> {
+    use sha2::Digest;
     if path.exists() {
-        return Ok(());
+        // Verify hash if provided
+        if let Some(expected) = expected_sha256 {
+            let bytes = std::fs::read(path)?;
+            let hash = sha2::Sha256::digest(&bytes);
+            let hex_hash = format!("{:x}", hash);
+            if hex_hash != expected {
+                log::warn!(
+                    "Model hash mismatch for {}: expected {}, got {} — re-downloading",
+                    path.display(),
+                    expected,
+                    hex_hash
+                );
+                std::fs::remove_file(path)?;
+            } else {
+                return Ok(());
+            }
+        } else {
+            return Ok(());
+        }
     }
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
@@ -2038,6 +2067,20 @@ fn ensure_model(path: &std::path::Path, url: &str) -> Result<()> {
         ));
     }
     let bytes = resp.bytes()?;
+
+    // Verify hash after download if provided
+    if let Some(expected) = expected_sha256 {
+        let hash = sha2::Sha256::digest(&bytes);
+        let hex_hash = format!("{:x}", hash);
+        if hex_hash != expected {
+            return Err(anyhow::anyhow!(
+                "Model hash verification failed: expected {}, got {}",
+                expected,
+                hex_hash
+            ));
+        }
+    }
+
     std::fs::write(path, &bytes)?;
     log::info!(
         "Downloaded ONNX model: {} ({} bytes)",
@@ -2050,6 +2093,40 @@ fn ensure_model(path: &std::path::Path, url: &str) -> Result<()> {
 // ═══════════════════════════════════════════════════════════════════════════
 // Tests
 // ═══════════════════════════════════════════════════════════════════════════
+
+/// Result of checking/downloading ONNX face models.
+pub struct OnnxModelPaths {
+    pub scrfd: std::path::PathBuf,
+    pub arcface: std::path::PathBuf,
+}
+
+/// Progress callback for model downloads.
+pub trait DownloadProgress {
+    fn on_progress(&self, model: &str, bytes_downloaded: u64, total_bytes: u64);
+}
+
+/// Ensure ONNX face models are downloaded with SHA256 verification.
+/// Returns paths to the models.
+#[cfg(feature = "onnx-face")]
+pub fn ensure_onnx_models() -> Result<OnnxModelPaths> {
+    let model_dir = dirs::cache_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("cybermanju");
+
+    let scrfd_path = model_dir.join("scrfd_2.5g.onnx");
+    let arcface_path = model_dir.join("arcface_mfacenet.onnx");
+
+    let scrfd_url = "https://github.com/deepinsight/insightface/releases/download/v0.7/scrfd_2.5g.onnx";
+    let arcface_url = "https://github.com/siriusday/arcface-models/releases/download/v1.0/arcface_mobilefacenet.onnx";
+
+    ensure_model_with_hash(&scrfd_path, scrfd_url, None)?;
+    ensure_model_with_hash(&arcface_path, arcface_url, None)?;
+
+    Ok(OnnxModelPaths {
+        scrfd: scrfd_path,
+        arcface: arcface_path,
+    })
+}
 
 #[cfg(test)]
 mod tests {

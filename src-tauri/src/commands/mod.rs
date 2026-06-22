@@ -14,6 +14,7 @@ pub mod kv;
 pub mod map;
 pub mod media;
 pub mod portable_db;
+pub mod recovery;
 pub mod search;
 pub mod share;
 pub mod sync;

@@ -170,6 +170,8 @@ impl Database {
             user_id: user_id.map(|s| s.to_string()),
             details,
             timestamp: chrono::Utc::now().to_rfc3339(),
+            prev_hash: String::new(),
+            entry_hash: String::new(),
         };
         let tx = self.db.begin_write()?;
         {

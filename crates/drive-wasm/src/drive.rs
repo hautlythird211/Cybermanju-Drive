@@ -2,6 +2,28 @@ use crate::types::*;
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = cybermanjuStorage)]
+    fn persist_file_node(json: &str) -> JsValue;
+
+    #[wasm_bindgen(js_namespace = cybermanjuStorage)]
+    fn load_all_files() -> JsValue;
+
+    #[wasm_bindgen(js_namespace = cybermanjuStorage)]
+    fn remove_file_node(id: &str) -> JsValue;
+}
+
+fn persist_node(node: &WasmFileNode) {
+    if let Ok(json) = serde_json::to_string(node) {
+        let _ = persist_file_node(&json);
+    }
+}
+
+fn remove_node(id: &str) {
+    let _ = remove_file_node(id);
+}
+
+#[wasm_bindgen]
 pub struct VirtualDrive {
     files: Vec<WasmFileNode>,
     quota: DriveQuota,
@@ -22,6 +44,21 @@ impl VirtualDrive {
         }
     }
 
+    /// Hydrate from IndexedDB on startup.
+    pub fn hydrate_from_storage() -> Self {
+        let mut drive = VirtualDrive::new();
+        let js_val = load_all_files();
+        if !js_val.is_undefined() && !js_val.is_null() {
+            if let Ok(arr) = serde_wasm_bindgen::from_value::<Vec<WasmFileNode>>(js_val) {
+                for f in arr {
+                    drive.update_quota(&f);
+                    drive.files.push(f);
+                }
+            }
+        }
+        drive
+    }
+
     pub fn create_file(
         &mut self,
         name: &str,
@@ -32,6 +69,7 @@ impl VirtualDrive {
         let size = node.size_bytes;
         let is_folder = node.file_type == "folder";
         let id = node.id.clone();
+        persist_node(&node);
         self.files.push(node);
         self.quota.used_bytes += size;
         if is_folder {
@@ -51,6 +89,7 @@ impl VirtualDrive {
             .position(|f| f.id == file_id)
             .ok_or_else(|| JsValue::from_str("File not found"))?;
         let removed = self.files.remove(idx);
+        remove_node(file_id);
         if removed.file_type == "folder" {
             self.quota.folder_count = self.quota.folder_count.saturating_sub(1);
         } else {
@@ -117,6 +156,7 @@ impl VirtualDrive {
             .ok_or_else(|| JsValue::from_str("File not found"))?;
         file.name = new_name.to_string();
         file.modified_at = chrono::Utc::now().to_rfc3339();
+        persist_node(file);
         Ok(())
     }
 
@@ -132,6 +172,7 @@ impl VirtualDrive {
             .ok_or_else(|| JsValue::from_str("File not found"))?;
         file.parent_id = new_parent_id;
         file.modified_at = chrono::Utc::now().to_rfc3339();
+        persist_node(file);
         Ok(())
     }
 
@@ -153,6 +194,7 @@ impl VirtualDrive {
             self.quota.used_bytes.saturating_sub(diff)
         };
         file.modified_at = chrono::Utc::now().to_rfc3339();
+        persist_node(file);
         Ok(())
     }
 
@@ -164,6 +206,7 @@ impl VirtualDrive {
             .ok_or_else(|| JsValue::from_str("File not found"))?;
         file.tags = tags;
         file.modified_at = chrono::Utc::now().to_rfc3339();
+        persist_node(file);
         Ok(())
     }
 
@@ -175,6 +218,7 @@ impl VirtualDrive {
             .ok_or_else(|| JsValue::from_str("File not found"))?;
         file.is_starred = !file.is_starred;
         file.modified_at = chrono::Utc::now().to_rfc3339();
+        persist_node(file);
         Ok(file.is_starred)
     }
 

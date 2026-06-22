@@ -9,6 +9,7 @@ import { useDrag } from '@/composables/useDrag'
 import { useSwipe } from '@/composables/useSwipe'
 import { useTouchConfig, type TouchAction } from '@/composables/useTouchConfig'
 import { useWindowManager } from '@/composables/useWindowManager'
+import { useMedia } from '@/composables/useMedia'
 import { defaultKpl, defaultKpd } from '@/keymaps'
 import { ShortcutsKey } from '@/composables/shortcutsKey'
 import { kvGet } from '@/wasm/storage'
@@ -37,7 +38,9 @@ import type { PanelType, FileNode } from '@/types'
 const store = useAppStore()
 const wm = useWindowManager()
 
-useKeyboardShortcuts(getGlobalShortcuts(store))
+const { mediaOverlayVisible, mediaOverlayType, mediaFileData, mediaFileBytes, openMediaOverlay, closeMediaOverlay } = useMedia()
+
+useKeyboardShortcuts(getGlobalShortcuts(store, closeMediaOverlay))
 
 const shortcutOverrides = ref<Record<string, string>>({})
 try {
@@ -540,10 +543,8 @@ function handleUpload() {
 }
 
 import { useLogin } from '@/composables/useLogin'
-import { useMedia } from '@/composables/useMedia'
 
 const { restoreSession } = useLogin()
-const { mediaOverlayVisible, mediaOverlayType, mediaFileData, mediaFileBytes, openMediaOverlay, closeMediaOverlay } = useMedia()
 
 const bootPhase = ref<'boot' | 'desktop'>('boot')
 

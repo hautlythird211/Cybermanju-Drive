@@ -1,5 +1,6 @@
 import { ref, computed, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { useAppStore } from '@/stores/app'
 import type {
   FileMediaData,
   ResolutionData,
@@ -102,6 +103,38 @@ export function useMedia() {
     })
   }
 
+  async function getFileBytesForPreview(fileId: string): Promise<Uint8Array> {
+    const result = await invoke<number[]>('get_file_bytes_for_preview', {
+      fileId,
+    })
+    return new Uint8Array(result)
+  }
+
+  async function getFileRawBytes(fileId: string): Promise<Uint8Array> {
+    const result = await invoke<number[]>('get_file_raw_bytes', {
+      fileId,
+    })
+    return new Uint8Array(result)
+  }
+
+  async function getTextPreview(fileId: string, maxChars?: number): Promise<string> {
+    return await invoke<string>('get_text_preview', {
+      fileId,
+      maxChars,
+    })
+  }
+
+  async function getMediaInfoWithPreview(
+    fileId: string,
+    filename: string
+  ): Promise<{ mediaData: FileMediaData; fileBytes: Uint8Array }> {
+    const [mediaData, fileBytesArr] = await invoke<[FileMediaData, number[]]>(
+      'get_media_info_with_preview',
+      { fileId, filename }
+    )
+    return { mediaData, fileBytes: new Uint8Array(fileBytesArr) }
+  }
+
   async function batchGenerateThumbnails(
     items: [string, Uint8Array][],
     maxSize: number = 200,
@@ -129,10 +162,15 @@ export function useMedia() {
     fileData: FileMediaData,
     fileBytes: Uint8Array
   ) {
+    const store = useAppStore()
     mediaOverlayType.value = type
     mediaFileData.value = fileData
     mediaFileBytes.value = fileBytes
     mediaOverlayVisible.value = true
+    store.mediaOverlayVisible = true
+    store.mediaOverlayType = type
+    store.mediaFileData = fileData
+    store.mediaFileBytes = fileBytes
     if (type === 'image') {
       currentResolution.value = 'r3'
     } else if (type === 'video') {
@@ -141,9 +179,13 @@ export function useMedia() {
   }
 
   function closeMediaOverlay() {
+    const store = useAppStore()
     mediaOverlayVisible.value = false
     mediaFileData.value = null
     mediaFileBytes.value = null
+    store.mediaOverlayVisible = false
+    store.mediaFileData = null
+    store.mediaFileBytes = null
     playbackState.value = 'stopped'
     playbackPosition.value = { currentSecs: 0, totalSecs: 0, speed: 1 }
     slideshowActive.value = false
@@ -233,6 +275,10 @@ export function useMedia() {
     generateThumbnail,
     detectMediaType,
     batchGenerateThumbnails,
+    getFileBytesForPreview,
+    getFileRawBytes,
+    getTextPreview,
+    getMediaInfoWithPreview,
     openMediaOverlay,
     closeMediaOverlay,
     setResolution,

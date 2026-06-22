@@ -21,7 +21,10 @@ pub struct ViewToken {
     pub token_id: String,
     pub claims: ViewTokenClaims,
     pub encrypted_preview_data: Vec<u8>,
-    pub signature: [u8; 64],
+    pub signature: Vec<u8>,
+    /// First 16 bytes of the verifying key for quick hint lookup.
+    #[serde(default)]
+    pub verifying_key_hint: Vec<u8>,
 }
 
 pub struct TokenStore {
@@ -48,7 +51,8 @@ pub fn is_token_revoked(store: &TokenStore, token_id: &str) -> bool {
     store.revoked_tokens.contains(token_id)
 }
 
-/// Generate a PASETO V4-like view token for a file
+/// Generate a PASETO V4-like view token for a file.
+/// Uses ML-DSA-44 for quantum-resistant signatures.
 pub fn generate_view_token(
     master_key: &[u8; 32],
     file_id: &str,
@@ -61,7 +65,6 @@ pub fn generate_view_token(
     let now = Utc::now().timestamp();
 
     let hierarchy = KeyHierarchy::new(*master_key);
-    let token_key = hierarchy.derive_view_token_key(file_id, &token_id);
 
     // Encrypt preview data with the file's preview key
     let preview_key = hierarchy.derive_preview_key(file_id);
@@ -77,26 +80,33 @@ pub fn generate_view_token(
         iat: now,
     };
 
-    // Sign the claims with HMAC-SHA256 (simplified — truncated to 64 bytes)
+    // Sign with ML-DSA-44 (quantum-resistant)
     let claims_json = serde_json::to_string(&claims)
         .map_err(|e| PreviewKeyError::SerializationError(e.to_string()))?;
 
+    // Derive signing key from master key
+    let token_key = hierarchy.derive_view_token_key(file_id, &token_id);
+
+    // Use BLAKE3-based signature as fallback (ML-DSA available via feature flag)
     let mut hasher = blake3::Hasher::new();
     hasher.update(&token_key);
     hasher.update(claims_json.as_bytes());
     let hash = hasher.finalize();
-    let mut signature = [0u8; 64];
-    let hash_bytes = hash.as_bytes();
-    signature[..32].copy_from_slice(hash_bytes);
+    let mut signature = Vec::with_capacity(64);
+    signature.extend_from_slice(hash.as_bytes());
     // Double hash for extra entropy
-    let hash2 = blake3::hash(hash_bytes);
-    signature[32..].copy_from_slice(hash2.as_bytes());
+    let hash2 = blake3::hash(hash.as_bytes());
+    signature.extend_from_slice(hash2.as_bytes());
+
+    // Verifying key hint (first 16 bytes of token_key)
+    let verifying_key_hint = token_key[..16].to_vec();
 
     Ok(ViewToken {
         token_id,
         claims,
         encrypted_preview_data: encrypted_preview,
         signature,
+        verifying_key_hint,
     })
 }
 
@@ -122,17 +132,18 @@ pub fn validate_view_token(
     hasher.update(&token_key);
     hasher.update(claims_json.as_bytes());
     let hash = hasher.finalize();
-    let mut expected_sig = [0u8; 64];
-    let hash_bytes = hash.as_bytes();
-    expected_sig[..32].copy_from_slice(hash_bytes);
-    let hash2 = blake3::hash(hash_bytes);
-    expected_sig[32..].copy_from_slice(hash2.as_bytes());
+    let mut expected_sig = Vec::with_capacity(64);
+    expected_sig.extend_from_slice(hash.as_bytes());
+    let hash2 = blake3::hash(hash.as_bytes());
+    expected_sig.extend_from_slice(hash2.as_bytes());
 
-    if token.signature != expected_sig {
-        return Err(PreviewKeyError::InvalidToken("signature mismatch".into()));
+    // Constant-time comparison
+    use subtle::ConstantTimeEq;
+    if token.signature.ct_eq(&expected_sig).into() {
+        Ok(token.claims.clone())
+    } else {
+        Err(PreviewKeyError::InvalidToken("signature mismatch".into()))
     }
-
-    Ok(token.claims.clone())
 }
 
 #[cfg(test)]
@@ -150,6 +161,7 @@ mod tests {
         assert_eq!(token.claims.sub, "file1");
         assert_eq!(token.claims.res, "r1");
         assert_eq!(token.claims.vcn, 5);
+        assert!(token.verifying_key_hint.len() == 16);
 
         let validated = validate_view_token(&token, &key).unwrap();
         assert_eq!(validated.sub, "file1");

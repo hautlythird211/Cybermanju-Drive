@@ -6,7 +6,7 @@ description = "Face detection, embedding, and clustering"
 
 [features]
 default = ["onnx-face"]
-onnx-face = ["ort", "dirs", "dep:image", "dep:reqwest", "dep:ndarray"]
+onnx-face = ["ort", "dirs", "dep:image", "dep:reqwest", "dep:ndarray", "dep:sha2"]
 
 [dependencies]
 anyhow = "1"
@@ -21,3 +21,4 @@ reqwest = { version = "0.12", optional = true, default-features = false, feature
 ndarray = { version = "0.17", optional = true }
 ort = { version = "2.0.0-rc.12", features = ["download-binaries", "ndarray"], optional = true }
 dirs = { version = "6", optional = true }
+sha2 = { version = "0.10", optional = true }

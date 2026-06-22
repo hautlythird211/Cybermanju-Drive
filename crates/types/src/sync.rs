@@ -12,6 +12,12 @@ pub enum SyncBackendType {
     GooglePhotos,
     Telegram,
     Mega,
+    Nostr,
+    Iroh,
+    Torrent,
+    ActivityPub,
+    Lan,
+    Rclone,
 }
 
 impl std::fmt::Display for SyncBackendType {
@@ -26,6 +32,12 @@ impl std::fmt::Display for SyncBackendType {
             Self::GooglePhotos => write!(f, "googlePhotos"),
             Self::Telegram => write!(f, "telegram"),
             Self::Mega => write!(f, "mega"),
+            Self::Nostr => write!(f, "nostr"),
+            Self::Iroh => write!(f, "iroh"),
+            Self::Torrent => write!(f, "torrent"),
+            Self::ActivityPub => write!(f, "activityPub"),
+            Self::Lan => write!(f, "lan"),
+            Self::Rclone => write!(f, "rclone"),
         }
     }
 }

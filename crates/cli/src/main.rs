@@ -12,6 +12,7 @@ use cybermanju_crypto::{
 mod backends;
 mod harvest;
 mod portable;
+mod shard_browser;
 mod transfer;
 mod tui;
 

@@ -6,9 +6,12 @@ description = "Resolution tree, shard format, and root index for Cybermanju Driv
 
 [dependencies]
 cybermanju-types = { path = "../types" }
+cybermanju-erasure = { path = "../erasure" }
+cybermanju-preview-keys = { path = "../preview-keys" }
 blake3 = "1.5"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "2"
+memmap2 = "0.9"

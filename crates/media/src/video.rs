@@ -3,6 +3,87 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
+use crate::thumbnail::ThumbnailResult;
+
+/// Extract a video frame at the given percentage of duration.
+/// Uses ffmpeg-next if available, otherwise falls back to a placeholder.
+pub fn extract_frame_at_percent(path: &Path, percent: f64) -> Result<ThumbnailResult> {
+    #[cfg(feature = "ffmpeg")]
+    {
+        extract_frame_ffmpeg(path, percent)
+    }
+    #[cfg(not(feature = "ffmpeg"))]
+    {
+        let _ = (path, percent);
+        crate::thumbnail::generate_video_thumbnail_placeholder(320, 180)
+    }
+}
+
+#[cfg(feature = "ffmpeg")]
+fn extract_frame_ffmpeg(path: &Path, percent: f64) -> Result<ThumbnailResult> {
+    use ffmpeg_next as ffmpeg;
+    ffmpeg::init().map_err(|e| anyhow::anyhow!("ffmpeg init: {}", e))?;
+
+    let mut ictx =
+        ffmpeg::format::input(path).map_err(|e| anyhow::anyhow!("ffmpeg open: {}", e))?;
+
+    let duration = ictx.duration() as f64 / ffmpeg::ffi::AV_TIME_BASE as f64;
+    let seek_ts = (duration * percent.clamp(0.0, 1.0) * 1_000_000.0) as i64;
+
+    ictx.seek(seek_ts, ..=seek_ts)
+        .map_err(|e| anyhow::anyhow!("ffmpeg seek: {}", e))?;
+
+    let mut decoder = {
+        let stream = ictx
+            .streams()
+            .best(ffmpeg::media::Type::Video)
+            .ok_or_else(|| anyhow::anyhow!("no video stream"))?;
+        let context = ffmpeg::codec::context::Parameters::from_stream(&stream)
+            .map_err(|e| anyhow::anyhow!("codec params: {}", e))?;
+        context.decoder().map_err(|e| anyhow::anyhow!("decoder: {}", e))?
+    };
+
+    let mut frame = ffmpeg::util::frame::video::Video::empty();
+    for (stream, packet) in ictx.packets() {
+        if stream.index() == decoder.id() {
+            decoder
+                .send_packet(&packet)
+                .map_err(|e| anyhow::anyhow!("send packet: {}", e))?;
+            if decoder.receive_frame(&mut frame).is_ok() {
+                break;
+            }
+        }
+    }
+
+    let width = frame.width();
+    let height = frame.height();
+    let data = frame.data(0);
+    let stride = frame.stride(0);
+
+    let mut rgba = Vec::with_capacity((width * height * 4) as usize);
+    for y in 0..height {
+        let row_start = (y * stride as u32) as usize;
+        let row_end = row_start + (width as usize) * 3;
+        if row_end <= data.len() {
+            for x in 0..width as usize {
+                let px = row_start + x * 3;
+                rgba.push(data[px]);
+                rgba.push(data[px + 1]);
+                rgba.push(data[px + 2]);
+                rgba.push(255);
+            }
+        }
+    }
+
+    Ok(ThumbnailResult {
+        data: rgba,
+        width,
+        height,
+        format: "rgba".to_string(),
+        size_bytes: (width * height * 4) as usize,
+    })
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VideoInfo {

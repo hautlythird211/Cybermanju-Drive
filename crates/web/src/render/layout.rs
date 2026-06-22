@@ -70,16 +70,14 @@ impl Default for StyleProps {
 }
 
 pub struct LayoutEngine {
-    base_width: f32,
 }
 
 impl LayoutEngine {
     pub fn new() -> Self {
-        Self { base_width: 800.0 }
+        Self { }
     }
 
     pub fn layout(&self, doc: &HtmlDocument, width: u32) -> Vec<LayoutBox> {
-        self.base_width = width as f32;
         let mut boxes = Vec::new();
         let (mut x, mut y) = (0.0, 0.0);
 

@@ -8,12 +8,14 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::path::Path;
 use std::sync::RwLock;
 use tantivy::{
     collector::{Count, TopDocs},
     query::QueryParser,
     schema::*,
-    Index, IndexReader, IndexWriter, ReloadPolicy, TantivyDocument,
+    directory::MmapDirectory,
+    Index, IndexReader, IndexSettings, IndexWriter, ReloadPolicy, TantivyDocument,
 };
 
 /// Search result item
@@ -81,7 +83,7 @@ pub struct SearchIndex {
 
 impl SearchIndex {
     /// Create or open the Tantivy search index.
-    /// If the index directory already exists, opens it; otherwise creates fresh.
+    /// Uses MmapDirectory for persistent storage across sessions.
     pub fn new(path: &str) -> Result<Self> {
         let mut schema_builder = Schema::builder();
 
@@ -106,10 +108,12 @@ impl SearchIndex {
 
         let schema = schema_builder.build();
 
-        // Create index if it doesn't exist, open if it does
-        let index = match Index::open_in_dir(path) {
-            Ok(idx) => idx,
-            Err(_) => Index::create_in_dir(path, schema.clone())?,
+        // Use MmapDirectory for persistent disk-backed index
+        let dir = MmapDirectory::open(path)?;
+        let index = if Index::exists(&dir).unwrap_or(false) {
+            Index::open(dir)?
+        } else {
+            Index::create(dir, schema.clone(), IndexSettings::default())?
         };
 
         // Writer with 50MB heap

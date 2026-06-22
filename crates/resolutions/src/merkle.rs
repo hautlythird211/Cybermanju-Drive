@@ -74,33 +74,40 @@ impl ResolutionMerkleTree {
     /// Verify that a resolution leaf is part of this tree.
     pub fn verify_leaf(&self, level: &str, data: &[u8], proof: &MerkleProof) -> bool {
         let leaf_hash = blake3::hash(data);
+        let leaf_hex = leaf_hash.to_hex().to_string();
 
-        // Find the expected leaf hash
+        // Find the expected leaf hash (hex string)
         let expected = match self.leaf_hashes.get(level) {
-            Some(h) => h.as_bytes().to_vec(),
+            Some(h) => h,
             None => return false,
         };
 
-        if leaf_hash.as_bytes() != expected.as_slice() {
+        if leaf_hex != *expected {
             return false;
         }
 
-        // Walk the proof path
-        let mut current = leaf_hash.as_bytes().to_vec();
+        // Walk the proof path — siblings are hex string bytes
+        let mut current = leaf_hex.into_bytes();
 
         for step in &proof.path {
             match step {
                 MerkleStep::Left(sibling) => {
-                    current = blake3::hashv(&[sibling, &current]).as_bytes().to_vec();
+                    let mut combined = Vec::with_capacity(sibling.len() + current.len());
+                    combined.extend_from_slice(sibling);
+                    combined.extend_from_slice(&current);
+                    current = blake3::hash(&combined).to_hex().to_string().into_bytes();
                 }
                 MerkleStep::Right(sibling) => {
-                    current = blake3::hashv(&[&current, sibling]).as_bytes().to_vec();
+                    let mut combined = Vec::with_capacity(current.len() + sibling.len());
+                    combined.extend_from_slice(&current);
+                    combined.extend_from_slice(sibling);
+                    current = blake3::hash(&combined).to_hex().to_string().into_bytes();
                 }
             }
         }
 
-        // Verify against root
-        current.as_slice() == hex::decode(&self.root_hash).unwrap_or_default()
+        // Verify against root (hex string bytes)
+        current == self.root_hash.as_bytes()
     }
 
     /// Generate a Merkle proof for a specific resolution level.
@@ -117,7 +124,7 @@ impl ResolutionMerkleTree {
         // Level 0 (pairs): combine adjacent leaves
         let sibling_idx = if idx % 2 == 0 { idx + 1 } else { idx - 1 };
         let sibling_level = levels.get(sibling_idx)?;
-        let sibling_hash = self.leaf_hashes.get(sibling_level)?.as_bytes().to_vec();
+        let sibling_hash = self.leaf_hashes.get(*sibling_level)?.as_bytes().to_vec();
 
         if idx % 2 == 0 {
             path.push(MerkleStep::Right(sibling_hash));
@@ -129,10 +136,11 @@ impl ResolutionMerkleTree {
         let parent_idx = idx / 2;
         let inter_idx = if parent_idx == 0 { 1 } else { 0 };
         if let Some(root_sibling) = self.intermediate_hashes.get(inter_idx) {
+            let root_sibling_bytes = root_sibling.as_bytes().to_vec();
             if parent_idx == 0 {
-                path.push(MerkleStep::Right(root_sibling.as_bytes().to_vec()));
+                path.push(MerkleStep::Right(root_sibling_bytes));
             } else {
-                path.push(MerkleStep::Left(root_sibling.as_bytes().to_vec()));
+                path.push(MerkleStep::Left(root_sibling_bytes));
             }
         }
 
@@ -177,21 +185,27 @@ pub struct MerkleProof {
 
 impl MerkleProof {
     /// Verify this proof against a root hash and leaf hash.
-    pub fn verify(&self, root_hash: &[u8], leaf_hash: &[u8]) -> bool {
-        let mut current = leaf_hash.to_vec();
+    pub fn verify(&self, root_hash_hex: &str, leaf_hash_hex: &str) -> bool {
+        let mut current = leaf_hash_hex.as_bytes().to_vec();
 
         for step in &self.path {
             match step {
                 MerkleStep::Left(sibling) => {
-                    current = blake3::hashv(&[sibling, &current]).as_bytes().to_vec();
+                    let mut combined = Vec::with_capacity(sibling.len() + current.len());
+                    combined.extend_from_slice(sibling);
+                    combined.extend_from_slice(&current);
+                    current = blake3::hash(&combined).to_hex().to_string().into_bytes();
                 }
                 MerkleStep::Right(sibling) => {
-                    current = blake3::hashv(&[&current, sibling]).as_bytes().to_vec();
+                    let mut combined = Vec::with_capacity(current.len() + sibling.len());
+                    combined.extend_from_slice(&current);
+                    combined.extend_from_slice(sibling);
+                    current = blake3::hash(&combined).to_hex().to_string().into_bytes();
                 }
             }
         }
 
-        current.as_slice() == root_hash
+        current == root_hash_hex.as_bytes()
     }
 }
 
@@ -276,8 +290,120 @@ mod tests {
         let tree = ResolutionMerkleTree::build(&hashes);
 
         let proof = tree.prove("r2").unwrap();
-        let leaf = blake3::hash(b"medium_data");
-        let root = hex::decode(&tree.root_hash).unwrap();
-        assert!(proof.verify(&root, leaf.as_bytes()));
+        let leaf_hex = blake3::hash(b"medium_data").to_hex().to_string();
+        assert!(proof.verify(&tree.root_hash, &leaf_hex));
+    }
+}
+
+/// Sparse incremental Merkle tree supporting O(log n) updates.
+///
+/// For large libraries (100K+ files), rebuilding the entire tree is too slow.
+/// This tree stores leaves and caches intermediate nodes, only recomputing
+/// the path from updated leaf to root.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IncrementalMerkleTree {
+    /// Leaf store: file_id → {resolution → hash}
+    pub leaves: HashMap<String, HashMap<String, String>>,
+    /// Cached intermediate nodes: node_path → hash
+    pub cache: HashMap<String, String>,
+    /// Height of the tree (ceil(log2(capacity)))
+    pub height: usize,
+    /// Capacity (maximum number of leaves)
+    pub capacity: usize,
+}
+
+impl IncrementalMerkleTree {
+    /// Create a new incremental Merkle tree with given capacity.
+    pub fn new(capacity: usize) -> Self {
+        let height = if capacity <= 1 {
+            0
+        } else {
+            (capacity as f64).log2().ceil() as usize
+        };
+        Self {
+            leaves: HashMap::new(),
+            cache: HashMap::new(),
+            height,
+            capacity,
+        }
+    }
+
+    /// Map a file_id to a deterministic leaf index using BLAKE3.
+    pub fn file_id_to_leaf_index(&self, file_id: &str) -> usize {
+        let hash = blake3::hash(file_id.as_bytes());
+        let bytes = hash.as_bytes();
+        let val = u64::from_le_bytes([
+            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+        ]);
+        (val % self.capacity as u64) as usize
+    }
+
+    /// O(log n) update: update one file's resolution hashes and recompute path to root.
+    pub fn update_file(&mut self, file_id: &str, resolution_hashes: &HashMap<String, String>) {
+        let leaf_idx = self.file_id_to_leaf_index(file_id);
+        self.leaves
+            .insert(file_id.to_string(), resolution_hashes.clone());
+        self.recompute_path(leaf_idx);
+    }
+
+    /// Recompute the path from a leaf index to the root.
+    fn recompute_path(&mut self, leaf_idx: usize) {
+        let mut idx = leaf_idx;
+        for level in 0..self.height {
+            let sibling_idx = if idx % 2 == 0 { idx + 1 } else { idx - 1 };
+            let node_key = format!("{}:{}", level, idx);
+            let sibling_key = format!("{}:{}", level, sibling_idx);
+
+            let left_hash = self.cache.get(&node_key).cloned().unwrap_or_default();
+            let right_hash = self.cache.get(&sibling_key).cloned().unwrap_or_default();
+
+            let combined = format!("{}||{}", left_hash, right_hash);
+            let parent_hash = blake3::hash(combined.as_bytes()).to_hex().to_string();
+            let parent_key = format!("{}:{}", level + 1, idx / 2);
+            self.cache.insert(parent_key, parent_hash);
+
+            idx /= 2;
+        }
+    }
+
+    /// Get the current root hash.
+    pub fn root(&self) -> String {
+        if self.leaves.is_empty() {
+            return blake3::hash(b"empty").to_hex().to_string();
+        }
+        self.cache
+            .get(&format!("{}:0", self.height))
+            .cloned()
+            .unwrap_or_else(|| blake3::hash(b"empty").to_hex().to_string())
+    }
+
+    /// Generate a Merkle proof for one file's resolution.
+    pub fn prove_file_resolution(
+        &self,
+        file_id: &str,
+        _resolution: &str,
+    ) -> Option<MerkleProof> {
+        let leaf_idx = self.file_id_to_leaf_index(file_id);
+        let mut path = Vec::new();
+        let mut idx = leaf_idx;
+
+        for level in 0..self.height {
+            let sibling_idx = if idx % 2 == 0 { idx + 1 } else { idx - 1 };
+            let sibling_key = format!("{}:{}", level, sibling_idx);
+            let sibling_bytes = self
+                .cache
+                .get(&sibling_key)
+                .map(|h| h.as_bytes().to_vec())
+                .unwrap_or_default();
+
+            if idx % 2 == 0 {
+                path.push(MerkleStep::Right(sibling_bytes));
+            } else {
+                path.push(MerkleStep::Left(sibling_bytes));
+            }
+            idx /= 2;
+        }
+
+        Some(MerkleProof { path })
     }
 }

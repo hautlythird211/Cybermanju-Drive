@@ -35,7 +35,7 @@ export function useKeyboardShortcuts(shortcuts: Shortcut[]) {
   onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 }
 
-export function getGlobalShortcuts(store: ReturnType<typeof useAppStore>): Shortcut[] {
+export function getGlobalShortcuts(store: ReturnType<typeof useAppStore>, closeMediaOverlay?: () => void): Shortcut[] {
   return [
     {
       key: 'k', ctrl: true, handler: () => { store.commandPaletteOpen = !store.commandPaletteOpen },
@@ -47,9 +47,11 @@ export function getGlobalShortcuts(store: ReturnType<typeof useAppStore>): Short
     },
     {
       key: 'Escape', handler: () => {
+        if (store.mediaOverlayVisible) { closeMediaOverlay?.(); store.mediaOverlayVisible = false; return }
         if (store.commandPaletteOpen) { store.commandPaletteOpen = false; return }
         if (store.showEncryptionPanel) { store.showEncryptionPanel = false; return }
         if (store.showCompressionPanel) { store.showCompressionPanel = false; return }
+        if (store.showMediaConfigPanel) { store.showMediaConfigPanel = false; return }
         if (store.selectedFileId) { store.selectedFileId = null; return }
       },
       description: 'Close panel / deselect file',

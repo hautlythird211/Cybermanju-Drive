@@ -33,8 +33,8 @@ pub fn resize_bilinear(
     Ok(resized.to_rgba8().to_vec())
 }
 
-/// Encode raw RGBA bytes to WebP format
-pub fn to_webp(input: &[u8], width: u32, height: u32, quality: u8) -> Result<Vec<u8>, RecoveryError> {
+/// Encode raw RGBA bytes to WebP format (lossless)
+pub fn to_webp(input: &[u8], width: u32, height: u32, _quality: u8) -> Result<Vec<u8>, RecoveryError> {
     let img = RgbaImage::from_raw(width, height, input.to_vec())
         .ok_or_else(|| RecoveryError::ImageError("invalid image dimensions".into()))?;
 
@@ -42,8 +42,8 @@ pub fn to_webp(input: &[u8], width: u32, height: u32, quality: u8) -> Result<Vec
     let rgb = dynamic.to_rgb8();
 
     let mut buf = Vec::new();
-    let encoder = WebPEncoder::new(&mut buf);
-    encoder.write_image(&rgb, width, height, image::ImageFormat::WebP.into())
+    let encoder = WebPEncoder::new_lossless(&mut buf);
+    encoder.encode(&rgb, width, height, image::ExtendedColorType::Rgb8)
         .map_err(|e| RecoveryError::ImageError(e.to_string()))?;
     Ok(buf)
 }
@@ -57,8 +57,8 @@ pub fn to_jpeg(input: &[u8], width: u32, height: u32, quality: u8) -> Result<Vec
     let rgb = dynamic.to_rgb8();
 
     let mut buf = Vec::new();
-    let encoder = JpegEncoder::new_with_quality(&mut buf, quality);
-    encoder.write_image(&rgb, width, height, image::ColorType::Rgb8.into())
+    let mut encoder = JpegEncoder::new_with_quality(&mut buf, quality);
+    encoder.encode(&rgb, width, height, image::ExtendedColorType::Rgb8)
         .map_err(|e| RecoveryError::ImageError(e.to_string()))?;
     Ok(buf)
 }
@@ -142,8 +142,8 @@ pub fn calculate_ssim(original: &[u8], reconstructed: &[u8], width: u32, height:
         .map(|(&o, &r)| (o as f64 - mean_o) * (r as f64 - mean_r))
         .sum::<f64>() / n;
 
-    let c1 = (0.01 * 255.0).powi(2);
-    let c2 = (0.03 * 255.0).powi(2);
+    let c1 = (0.01_f64 * 255.0).powi(2);
+    let c2 = (0.03_f64 * 255.0).powi(2);
 
     let ssim = ((2.0 * mean_o * mean_r + c1) * (2.0 * cov + c2))
         / ((mean_o.powi(2) + mean_r.powi(2) + c1) * (var_o + var_r + c2));

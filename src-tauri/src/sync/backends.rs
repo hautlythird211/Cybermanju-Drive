@@ -76,11 +76,54 @@ pub fn create_backend(config: &SyncConfig) -> Result<Box<dyn StorageBackend>, St
             let cfg = serde_json::json!({ "password": parts[1] });
             cybermanju_backends::create_backend(&config.backend_type, parts[0], &cfg)
         }
+        SyncBackendType::Nostr => {
+            let cfg = serde_json::json!({
+                "relays": [],
+                "nip96_host": config.base_path,
+            });
+            cybermanju_backends::create_backend(&config.backend_type, token, &cfg)
+        }
+        SyncBackendType::Iroh => {
+            let cfg = serde_json::json!({
+                "gateway_url": config.base_path,
+            });
+            cybermanju_backends::create_backend(&config.backend_type, token, &cfg)
+        }
+        SyncBackendType::Torrent => {
+            let cfg = serde_json::json!({
+                "save_dir": config.base_path.as_deref().unwrap_or("/tmp/torrents"),
+                "seed_port": 6881u64,
+                "tracker_url": config.repo_name,
+            });
+            cybermanju_backends::create_backend(&config.backend_type, token, &cfg)
+        }
+        SyncBackendType::ActivityPub => {
+            let cfg = serde_json::json!({
+                "collection_id": config.repo_name.as_deref().unwrap_or_default(),
+                "actor_id": config.account_id.as_deref().unwrap_or_default(),
+                "endpoint": config.base_path.as_deref().unwrap_or_default(),
+            });
+            cybermanju_backends::create_backend(&config.backend_type, token, &cfg)
+        }
+        SyncBackendType::Lan => {
+            let cfg = serde_json::json!({
+                "service_name": "_cybermanju._tcp",
+            });
+            cybermanju_backends::create_backend(&config.backend_type, token, &cfg)
+        }
+        SyncBackendType::Rclone => {
+            let cfg = serde_json::json!({
+                "remote_name": config.repo_name,
+                "rclone_path": config.base_path.as_deref().unwrap_or("rclone"),
+            });
+            cybermanju_backends::create_backend(&config.backend_type, token, &cfg)
+        }
     }
 }
 
 // Re-export all shared backend structs for any code that references them directly.
 pub use cybermanju_backends::{
-    transfer_files, CodebergBackend, GitHubBackend, GitLabBackend, GiteaBackend,
-    GoogleDriveBackend, GooglePhotosBackend, LocalBackend, MegaBackend, TelegramBackend,
+    transfer_files, ActivityPubBackend, CodebergBackend, GitHubBackend, GitLabBackend,
+    GiteaBackend, GoogleDriveBackend, GooglePhotosBackend, IrohBackend, LanBackend,
+    LocalBackend, MegaBackend, NostrBackend, RcloneBackend, TelegramBackend, TorrentBackend,
 };

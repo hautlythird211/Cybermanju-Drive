@@ -14,6 +14,8 @@
 //   7. Proper shutdown via mpsc signal channel, thread join on Drop
 //   8. Rate limiting: 100 requests per minute per IP address
 
+pub mod websocket;
+
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
 use std::net::{TcpListener, TcpStream};
@@ -27,6 +29,7 @@ use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation}
 use log::{error, info, warn};
 use rand_core::{OsRng, RngCore};
 use redb::{Database as RedbDb, ReadableTable, TableDefinition};
+use sha2::{Sha256, Digest};
 use serde::{Deserialize, Serialize};
 
 // ─── Table definitions (must match db/mod.rs) ────────────────────────
@@ -163,6 +166,8 @@ pub struct WebDashboard {
     pub server_thread: Mutex<Option<thread::JoinHandle<()>>>,
     #[allow(dead_code)]
     pub shutdown_tx: Mutex<Option<mpsc::Sender<()>>>,
+    /// WebSocket event bus for live push notifications
+    pub ws_event_bus: Arc<websocket::WebSocketEventBus>,
 }
 
 impl WebDashboard {
@@ -182,6 +187,7 @@ impl WebDashboard {
             rate_limits: Mutex::new(HashMap::new()),
             server_thread: Mutex::new(None),
             shutdown_tx: Mutex::new(None),
+            ws_event_bus: Arc::new(websocket::WebSocketEventBus::new()),
         }
     }
 
@@ -203,6 +209,7 @@ impl WebDashboard {
             rate_limits: Mutex::new(HashMap::new()),
             server_thread: Mutex::new(None),
             shutdown_tx: Mutex::new(None),
+            ws_event_bus: Arc::new(websocket::WebSocketEventBus::new()),
         }
     }
 
@@ -696,6 +703,11 @@ pub fn handle_request(
                 &serde_json::to_string(&status).unwrap_or_default(),
                 origin,
             )
+        }
+
+        // ─── LAN peer challenge-response (no auth required for LAN peers) ───
+        ["api", "lan", "challenge"] if method == "POST" => {
+            handle_lan_challenge(db, body, origin)
         }
 
         // ─── Root / health check ─────────────────────────────────
@@ -1698,6 +1710,101 @@ fn get_permissions_for_file(db: &RedbDb, file_id: &str, origin: Option<&str>) ->
 }
 
 // ─── Argon2 helpers ──────────────────────────────────────────────────
+
+/// Handle LAN peer challenge-response.
+/// Expects JSON body: { "nonce": "<64 hex chars>" }
+/// Returns: { "signature": "<sha256 hex>", "pubkey": "<blake3 hex>", "service": "cybermanju-drive" }
+///
+/// The device signing key is loaded from the META_TABLE ("device_signing_key" entry).
+fn handle_lan_challenge(db: &RedbDb, body: &str, origin: Option<&str>) -> String {
+    let req: serde_json::Value = match serde_json::from_str(body) {
+        Ok(v) => v,
+        Err(e) => return json_error(400, &format!("Invalid JSON: {}", e), origin),
+    };
+
+    let nonce_hex = req.get("nonce").and_then(|v| v.as_str()).unwrap_or("");
+    if nonce_hex.is_empty() {
+        return json_error(400, "nonce is required", origin);
+    }
+
+    // Decode nonce
+    let nonce = match hex::decode(nonce_hex) {
+        Ok(n) => n,
+        Err(_) => return json_error(400, "invalid nonce hex encoding", origin),
+    };
+    if nonce.len() != 32 {
+        return json_error(400, "nonce must be 32 bytes", origin);
+    }
+
+    // Load device signing key from database
+    let device_key = {
+        let tx = match db.begin_read() {
+            Ok(tx) => tx,
+            Err(e) => return json_error(500, &format!("Read error: {}", e), origin),
+        };
+        let table = match tx.open_table(META_TABLE) {
+            Ok(t) => t,
+            Err(e) => return json_error(500, &format!("Table open error: {}", e), origin),
+        };
+
+        match table.get("device_signing_key") {
+            Ok(Some(val)) => {
+                let key_hex = val.value().to_string();
+                match hex::decode(&key_hex) {
+                    Ok(k) if k.len() == 32 => k,
+                    _ => return json_error(500, "invalid device signing key in database", origin),
+                }
+            }
+            Ok(None) => {
+                // Generate a new device signing key and store it
+                let mut key = [0u8; 32];
+                OsRng.fill_bytes(&mut key);
+                let key_hex = hex::encode(key);
+
+                let tx_write = match db.begin_write() {
+                    Ok(tx) => tx,
+                    Err(e) => return json_error(500, &format!("Write error: {}", e), origin),
+                };
+                {
+                    let mut wt = match tx_write.open_table(META_TABLE) {
+                        Ok(t) => t,
+                        Err(e) => return json_error(500, &format!("Table open error: {}", e), origin),
+                    };
+                    if wt.insert("device_signing_key", key_hex.as_str()).is_err() {
+                        return json_error(500, "Failed to store device signing key", origin);
+                    }
+                }
+                if tx_write.commit().is_err() {
+                    return json_error(500, "Failed to commit device signing key", origin);
+                }
+                key.to_vec()
+            }
+            Err(e) => return json_error(500, &format!("Database read error: {}", e), origin),
+        }
+    };
+
+    // Compute challenge response: SHA256(nonce || pubkey_hash)
+    let pubkey_hash = blake3::hash(&device_key);
+    let pubkey_hex = hex::encode(pubkey_hash.as_bytes());
+
+    let mut hasher = Sha256::new();
+    hasher.update(&nonce);
+    hasher.update(pubkey_hex.as_bytes());
+    let sig = hex::encode(hasher.finalize());
+
+    let response = serde_json::json!({
+        "signature": sig,
+        "pubkey": pubkey_hex,
+        "service": "cybermanju-drive",
+    });
+
+    http_response(
+        200,
+        "application/json",
+        &serde_json::to_string(&response).unwrap_or_default(),
+        origin,
+    )
+}
 
 fn argon2_hash(password: &str) -> Result<String, String> {
     use argon2::{

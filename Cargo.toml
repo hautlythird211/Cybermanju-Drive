@@ -16,6 +16,7 @@ members = [
     "crates/erasure",
     "crates/resolutions",
     "crates/preview-keys",
+    "crates/recovery",
     "src-tauri",
 ]
 resolver = "2"

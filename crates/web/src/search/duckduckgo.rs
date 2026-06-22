@@ -26,7 +26,7 @@ impl DuckDuckGoEngine {
     async fn search_lite(&self, query: &str) -> Result<SearchResponse, SearchError> {
         let url = format!(
             "https://lite.duckduckgo.com/lite/?q={}",
-            url::form_urlencoded::byte_serialize(query.as_bytes())
+            url::form_urlencoded::byte_serialize(query.as_bytes()).collect::<String>()
         );
         let resp = self.client.get(&url).send().await?;
         let body = resp.text().await?;
@@ -98,9 +98,10 @@ impl DuckDuckGoEngine {
             });
         }
 
+        let total = results.len();
         Ok(SearchResponse {
             results,
-            total_estimate: Some(results.len()),
+            total_estimate: Some(total),
             source: SearchSourceType::DuckDuckGo,
             query: query.to_string(),
             suggestion: None,

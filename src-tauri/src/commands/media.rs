@@ -2,6 +2,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
+use crate::db::schema::FileNode as DbFileNode;
 use crate::AppState;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -222,4 +223,129 @@ pub async fn batch_generate_thumbnails_cmd(
 ) -> Result<Vec<(String, Option<cybermanju_media::ThumbnailResult>)>, String> {
     let results = cybermanju_media::batch_generate_thumbnails(&items, max_size, &format, quality);
     Ok(results.into_iter().map(|(id, r)| (id, r.ok())).collect())
+}
+
+/// Read a file from disk, decompress all compression layers, and return raw bytes.
+/// This is the core "uncompress-on-demand" pipeline for media preview.
+#[tauri::command]
+pub async fn get_file_bytes_for_preview(
+    file_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<u8>, String> {
+    let db = state.db.read().map_err(|e| e.to_string())?;
+    let tx = db.begin_read().map_err(|e| e.to_string())?;
+    let table = tx
+        .open_table(crate::db::Database::get_files_table())
+        .map_err(|e| e.to_string())?;
+    let value = table
+        .get(file_id.as_str())
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("File not found: {}", file_id))?;
+    let file_node: DbFileNode =
+        serde_json::from_str(value.value()).map_err(|e| e.to_string())?;
+    drop(tx);
+
+    // Resolve file path from context_data
+    let file_path = file_node
+        .context_data
+        .as_ref()
+        .and_then(|ctx| ctx.get("original_path").and_then(|v| v.as_str()))
+        .filter(|p| std::path::Path::new(p).exists())
+        .ok_or_else(|| {
+            format!(
+                "File '{}' has no accessible path on disk. Import the file first.",
+                file_node.name
+            )
+        })?;
+
+    let data = std::fs::read(file_path)
+        .map_err(|e| format!("Failed to read file at {}: {}", file_path, e))?;
+
+    // Decompress all layers (Brotli → Zstd → LZ4 in reverse order)
+    if file_node.compression_layers.is_empty() {
+        return Ok(data);
+    }
+
+    let mut result = data;
+    // Decompress in reverse order: layers were applied as LZ4→Zstd→Brotli
+    // so we reverse: Brotli→Zstd→LZ4
+    for layer in file_node.compression_layers.iter().rev() {
+        let decompressed = match layer.as_str() {
+            "brotli" => state.compression.decompress_brotli(&result).ok(),
+            "zstd" => state.compression.decompress_zstd(&result).ok(),
+            "lz4" => state.compression.decompress_lz4(&result).ok(),
+            _ => None,
+        };
+        if let Some(d) = decompressed {
+            result = d;
+        }
+    }
+
+    Ok(result)
+}
+
+/// Read a file from disk and return the raw (potentially compressed) bytes.
+/// Useful when the caller wants to handle decompression themselves.
+#[tauri::command]
+pub async fn get_file_raw_bytes(
+    file_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<u8>, String> {
+    let db = state.db.read().map_err(|e| e.to_string())?;
+    let tx = db.begin_read().map_err(|e| e.to_string())?;
+    let table = tx
+        .open_table(crate::db::Database::get_files_table())
+        .map_err(|e| e.to_string())?;
+    let value = table
+        .get(file_id.as_str())
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("File not found: {}", file_id))?;
+    let file_node: DbFileNode =
+        serde_json::from_str(value.value()).map_err(|e| e.to_string())?;
+    drop(tx);
+
+    let file_path = file_node
+        .context_data
+        .as_ref()
+        .and_then(|ctx| ctx.get("original_path").and_then(|v| v.as_str()))
+        .filter(|p| std::path::Path::new(p).exists())
+        .ok_or_else(|| {
+            format!(
+                "File '{}' has no accessible path on disk.",
+                file_node.name
+            )
+        })?;
+
+    std::fs::read(file_path).map_err(|e| format!("Failed to read file at {}: {}", file_path, e))
+}
+
+/// Read a text/code file from disk, decompress if needed, and return the content as UTF-8.
+/// Used for inline preview of .txt, .md, .json, .rs, .py, .csv, .log, etc.
+#[tauri::command]
+pub async fn get_text_preview(
+    file_id: String,
+    max_chars: Option<usize>,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    let bytes = get_file_bytes_for_preview(file_id, state).await?;
+    let max = max_chars.unwrap_or(50_000);
+    let text = if bytes.len() > max {
+        String::from_utf8_lossy(&bytes[..max]).to_string() + "\n... (truncated)"
+    } else {
+        String::from_utf8_lossy(&bytes).to_string()
+    };
+    Ok(text)
+}
+
+/// Get media info with file bytes loaded from disk (uncompress-on-demand).
+/// Combines get_file_bytes_for_preview + get_media_info in a single call.
+#[tauri::command]
+pub async fn get_media_info_with_preview(
+    file_id: String,
+    filename: String,
+    state: State<'_, AppState>,
+) -> Result<(FileMediaData, Vec<u8>), String> {
+    let bytes = get_file_bytes_for_preview(file_id.clone(), state.clone()).await?;
+    let media_data = get_media_info(file_id, filename, bytes.clone(), state).await?;
+    Ok((media_data, bytes))
 }

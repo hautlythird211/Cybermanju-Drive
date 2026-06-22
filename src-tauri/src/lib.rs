@@ -19,7 +19,7 @@ use commands::faces as face_cmd;
 use commands::sync as sync_cmd;
 use commands::{
     accounts, audit, batch, collections, dashboard, encryption, files, import as import_cmd, map,
-    portable_db, search as search_cmd, share, trash, users, versions,
+    portable_db, recovery, search as search_cmd, share, trash, users, versions,
 };
 use db::Database;
 use std::sync::{Arc, RwLock};
@@ -313,6 +313,7 @@ pub fn run() {
             trash::delete_from_trash,
             // Audit log
             audit::get_audit_log,
+            audit::verify_audit_chain,
             // Batch operations
             batch::batch_delete,
             batch::batch_encrypt,
@@ -373,6 +374,13 @@ pub fn run() {
             commands::media::detect_media_type_cmd,
             commands::media::get_image_dimensions_cmd,
             commands::media::batch_generate_thumbnails_cmd,
+            commands::media::get_file_bytes_for_preview,
+            commands::media::get_file_raw_bytes,
+            commands::media::get_text_preview,
+            commands::media::get_media_info_with_preview,
+            // Recovery
+            recovery::upscale_file,
+            recovery::upscale_region,
         ])
         .run(tauri::generate_context!())
         .expect("Fatal error while running Cybermanju Drive — see logs above");

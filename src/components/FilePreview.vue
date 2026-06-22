@@ -232,12 +232,13 @@ import { useMedia } from '@/composables/useMedia'
 import type { FileNode, ResolutionLevel } from '@/types'
 
 const store = useAppStore()
-const { openMediaOverlay } = useMedia()
+const { openMediaOverlay, getFileBytesForPreview, getMediaInfo } = useMedia()
 
 const decryptError = ref<string | null>(null)
 const showTagInput = ref(false)
 const newTag = ref('')
 const selectedResolution = ref<ResolutionLevel>('r3')
+const openingInViewer = ref(false)
 
 const resolutions = [
   { level: 'r0' as ResolutionLevel, label: 'R0', desc: '200x150 Thumb', estSize: '~3 KB' },
@@ -261,22 +262,25 @@ const currentResEstSize = computed(() => {
   return res?.estSize || 'Unknown'
 })
 
-function openInViewer() {
-  if (!store.selectedFile) return
-  const file = store.selectedFile
-  const mime = file.mimeType || ''
-  const type = mime.startsWith('image/') ? 'image' : mime.startsWith('video/') ? 'video' : 'audio'
-  const fileData = {
-    fileId: file.id,
-    filename: file.name,
-    mimeType: mime,
-    isImage: mime.startsWith('image/'),
-    isVideo: mime.startsWith('video/'),
-    isAudio: mime.startsWith('audio/'),
-    availableResolutions: resolutions.map(r => ({ level: r.level, keyTier: r.level === 'r0' || r.level === 'r1' ? 'preview' : 'content', encrypted: true })),
-    selectedResolution: selectedResolution.value,
+async function openInViewer() {
+  if (!store.selectedFile || openingInViewer.value) return
+  openingInViewer.value = true
+  try {
+    const file = store.selectedFile
+    const mime = file.mimeType || ''
+    const type = mime.startsWith('image/') ? 'image' : mime.startsWith('video/') ? 'video' : 'audio'
+
+    // Uncompress-on-demand: fetch real bytes from disk
+    const fileBytes = await getFileBytesForPreview(file.id)
+    const mediaData = await getMediaInfo(file.id, file.name, fileBytes)
+
+    openMediaOverlay(type, mediaData, fileBytes)
+  } catch (e) {
+    console.error('Failed to open in viewer:', e)
+    store.notifyError?.(`Failed to open: ${e}`)
+  } finally {
+    openingInViewer.value = false
   }
-  openMediaOverlay(type, fileData as any, new Uint8Array(0))
 }
 
 // Tag color cache
