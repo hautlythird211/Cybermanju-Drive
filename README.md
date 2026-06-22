@@ -63,7 +63,7 @@
 - Argon2id password hashing with cryptographically secure salts
 - JWT-like session tokens (jsonwebtoken + HMAC-SHA256)
 
-### Cloud Sync (7 Backends)
+### Cloud Sync (10 Backends)
 - **Local** — filesystem copy to any local directory
 - **GitHub** — Contents API + Releases for large files (up to 2GB)
 - **GitLab** — GitLab API
@@ -158,7 +158,7 @@
 
 ```
 cybermanju-drive/
-├── crates/                                  # 13 Rust workspace crates
+├── crates/                                  # 17 Rust workspace crates
 │   ├── types/                               # src/schema.rs + sync.rs — shared data types
 │   ├── crypto/                              # src/pqc.rs — ML-KEM, ML-DSA, ChaCha20Poly1305
 │   ├── compression/                         # LZ4→Zstd→Brotli triple-layer pipeline
@@ -167,7 +167,7 @@ cybermanju-drive/
 │   ├── portable-db/                         # .cybermanju portable database format
 │   ├── web/                                 # Browser engine, DuckDuckGo search, HTML renderer
 │   ├── faces/                               # Face detection & 4 clustering algorithms
-│   ├── backends/                            # 7 storage backends (Local, GitHub, GitLab, GDrive, GPhotos, Telegram, Mega)
+│   ├── backends/                            # 10 storage backends (Local, GitHub, GitLab, Codeberg, Gitea, GDrive, GPhotos, Telegram, Mega + Git LFS)
 │   ├── cli/                                 # CLI/TUI (clap + ratatui)
 │   ├── drive-wasm/                          # WASM bridge (crypto, compression, drive, sync)
 │   └── tests/                               # Integration tests
@@ -347,7 +347,7 @@ cybermanju-types (root types — used by ALL)
   ├── cybermanju-web (browser + DuckDuckGo)
   ├── cybermanju-faces (face clustering)
   │     └── src-tauri
-  ├── cybermanju-backends (7 storage backends)
+  ├── cybermanju-backends (10 storage backends)
   │     ├── cybermanju-cli
   │     └── src-tauri
   ├── cybermanju-portable-db (.cybermanju format)

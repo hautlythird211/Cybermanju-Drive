@@ -8,7 +8,7 @@ Cybermanju Drive is a quantum-resistant encrypted file manager with AI face grou
 
 ```
 cybermanju-drive/
-├── crates/                          # 13 Rust workspace crates
+├── crates/                          # 17 Rust workspace crates
 │   ├── types/                       # Shared data types (FileNode, User, etc.)
 │   ├── crypto/                      # PQC engine: ML-KEM, ML-DSA, ChaCha20Poly1305
 │   ├── compression/                 # Triple-layer: LZ4 → Zstd → Brotli

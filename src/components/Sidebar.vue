@@ -143,6 +143,31 @@
         </div>
       </div>
 
+      <div v-if="store.sidebarSection === 'media'" class="sidebar-section">
+        <div class="section-header">MEDIA LIBRARY</div>
+        <div class="media-stats">
+          <div class="media-stat">
+            <span class="media-stat-icon image">[]</span>
+            <span class="media-stat-label">Images</span>
+            <span class="media-stat-count">{{ mediaCounts.image }}</span>
+          </div>
+          <div class="media-stat">
+            <span class="media-stat-icon video">[]</span>
+            <span class="media-stat-label">Videos</span>
+            <span class="media-stat-count">{{ mediaCounts.video }}</span>
+          </div>
+          <div class="media-stat">
+            <span class="media-stat-icon audio">[]</span>
+            <span class="media-stat-label">Audio</span>
+            <span class="media-stat-count">{{ mediaCounts.audio }}</span>
+          </div>
+        </div>
+        <div class="tools-list">
+          <button class="ql-item" @click="store.currentPanel = 'media-library'">[@] BROWSE ALL MEDIA</button>
+          <button class="ql-item" @click="store.showMediaConfigPanel = !store.showMediaConfigPanel">[S] MEDIA SETTINGS</button>
+        </div>
+      </div>
+
       <div v-if="store.sidebarSection === 'sync'" class="sidebar-section">
         <div class="section-header" @click="store.currentPanel = 'sync'">STORAGE SYNC &gt;</div>
         <div class="section-body">
@@ -239,6 +264,7 @@ const sectionTabs = computed(() => {
     { id: 'loose', label: 'LOOSE', icon: '[%]' },
     { id: 'sync', label: 'SYNC', icon: '[~]' },
     { id: 'users', label: 'USERS', icon: '[!]' },
+    { id: 'media', label: 'MEDIA', icon: '[@]' },
     { id: 'dashboard', label: 'REMOTE', icon: '[@]' },
     { id: 'tools', label: 'TOOLS', icon: '[@]' },
   )
@@ -248,6 +274,17 @@ const sectionTabs = computed(() => {
 const rootFolders = computed(() =>
   store.files.filter(f => f.fileType === 'folder' && !f.parentId)
 )
+
+const mediaCounts = computed(() => {
+  const counts = { image: 0, video: 0, audio: 0 }
+  store.files.forEach(f => {
+    const mime = f.mimeType || ''
+    if (mime.startsWith('image/')) counts.image++
+    else if (mime.startsWith('video/')) counts.video++
+    else if (mime.startsWith('audio/')) counts.audio++
+  })
+  return counts
+})
 
 function showTreeContextMenu(e: MouseEvent) {
   ctx.open(e, 'sidebar_bg')
@@ -522,6 +559,47 @@ function openCollection(col: { id: string; name: string; itemIds: string[] }) {
 .qa-btn:hover {
   border-color: #FFFFFF;
   color: #FFFFFF;
+}
+
+.media-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.media-stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.media-stat-icon {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  width: 20px;
+  text-align: center;
+}
+
+.media-stat-icon.image { color: #00ff41; }
+.media-stat-icon.video { color: #b388ff; }
+.media-stat-icon.audio { color: #5af0ff; }
+
+.media-stat-label {
+  font-size: 10px;
+  color: rgba(255,255,255,0.6);
+  letter-spacing: 0.5px;
+  flex: 1;
+}
+
+.media-stat-count {
+  font-size: 10px;
+  font-weight: 800;
+  color: #FFFFFF;
+  font-family: var(--font-mono);
 }
 
 .collapse-btn {

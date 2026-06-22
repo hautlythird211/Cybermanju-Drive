@@ -31,6 +31,7 @@ import MobileNav from '@/components/MobileNav.vue'
 import ContextMenu from '@/components/ContextMenu.vue'
 import CrashReporter from '@/components/CrashReporter.vue'
 import MediaOverlay from '@/components/MediaOverlay.vue'
+import MediaConfigPanel from '@/components/MediaConfigPanel.vue'
 import type { PanelType, FileNode } from '@/types'
 
 const store = useAppStore()
@@ -643,6 +644,10 @@ function handleLandingLaunch() {
         <MediaOverlay
           :visible="mediaOverlayVisible"
           @close="closeMediaOverlay"
+        />
+        <MediaConfigPanel
+          v-if="store.showMediaConfigPanel"
+          @close="store.showMediaConfigPanel = false"
         />
     </template>
   </div>

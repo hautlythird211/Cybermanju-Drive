@@ -65,6 +65,9 @@
     <!-- Activity Panel -->
     <ActivityPanel v-if="panelType === 'activity'" />
 
+    <!-- Media Library Panel -->
+    <MediaLibraryPanel v-if="panelType === 'media-library'" />
+
     <!-- Favorites Panel -->
     <div v-if="panelType === 'favorites'" class="panel-page">
       <div class="panel-card">
@@ -158,6 +161,7 @@ import ActivityPanel from '@/components/ActivityPanel.vue'
 import TrashPanel from '@/components/TrashPanel.vue'
 import HistoryPanel from '@/components/HistoryPanel.vue'
 import DuplicatesPanel from '@/components/DuplicatesPanel.vue'
+import MediaLibraryPanel from '@/components/MediaLibraryPanel.vue'
 
 const props = defineProps<{
   panelType: PanelType

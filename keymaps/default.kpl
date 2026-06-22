@@ -46,6 +46,18 @@ show_permissions=Ctrl+Shift+P
 duplicate=Ctrl+D
 rotate_cw=Ctrl+Shift+R
 rotate_ccw=Ctrl+Alt+R
+media_play=Space
+media_pause=Space
+media_stop=Escape
+media_fullscreen=F
+media_mute=M
+media_next=ArrowRight
+media_prev=ArrowLeft
+media_zoom_in=+
+media_zoom_out=-
+media_zoom_reset=0
+media_toggle_exif=I
+media_slideshow=S
 
 [View]
 toggle_grid=Ctrl+Shift+1

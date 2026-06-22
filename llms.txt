@@ -1,7 +1,7 @@
 # Cybermanju Drive — LLM Context
 
 ## Project
-Quantum-resistant encrypted file manager with AI face grouping, triple-layer compression, full-text search, GPS map view, multi-user access control, and 7-backend cloud sync. Runs as Tauri v2 desktop, Docker/ZimaOS web dashboard (:3456), or WASM/GitHub Pages SPA.
+Quantum-resistant encrypted file manager with AI face grouping, triple-layer compression, full-text search, GPS map view, multi-user access control, and 10-backend cloud sync. Runs as Tauri v2 desktop, Docker/ZimaOS web dashboard (:3456), or WASM/GitHub Pages SPA.
 
 ## Key Files
 
@@ -12,7 +12,7 @@ Quantum-resistant encrypted file manager with AI face grouping, triple-layer com
 | AGENTS.md | AI agent guide: repo layout, patterns, build commands, key files |
 | README.md | Project overview, features, tech stack, build instructions, API docs (605 lines) |
 | system.md | .cybermanju portable database design document (324 lines) |
-| Cargo.toml | Workspace root — 13 member crates |
+| Cargo.toml | Workspace root — 17 member crates |
 | src-tauri/src/lib.rs | Core orchestrator: AppState, 68 IPC handlers, 12 Tauri plugins, web dashboard |
 | src/composables/useTauri.ts | Triple-mode IPC bridge (1067 lines): Tauri Conduit → WASM → REST |
 | src/stores/app.ts | Central Pinia store — all application state |
@@ -22,7 +22,7 @@ Quantum-resistant encrypted file manager with AI face grouping, triple-layer com
 | crates/db/src/database.rs | redb database layer (844 lines): 21 tables, CRUD, portable DB methods |
 | crates/portable-db/src/lib.rs | .cybermanju format pack/unpack/sync (581 lines) |
 | crates/faces/src/lib.rs | Face clustering: SimHash LSH, Chinese Whispers, HDBSCAN (1238+ lines) |
-| crates/backends/src/*.rs | 7 storage backends: Local, GitHub, GitLab, GDrive, GPhotos, Telegram, Mega |
+| crates/backends/src/*.rs | 10 storage backends: Local, GitHub, GitLab, Codeberg, Gitea, GDrive, GPhotos, Telegram, Mega + Git LFS |
 | crates/drive-wasm/src/*.rs | WASM bridge: crypto, compression, VirtualDrive, SyncEngine |
 
 ## Build Commands

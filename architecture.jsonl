@@ -1,13 +1,14 @@
-{"type": "project_overview", "name": "Cybermanju Drive", "version": "0.1.0", "description": "Quantum-resistant encrypted file manager with AI face grouping, triple-layer compression, code intelligence, GPS map view, web dashboard, multi-user access control, cross-platform cloud sync via 7 backends, TUI CLI, and portable DB. Runs as Tauri v2 desktop, Docker container with web dashboard on :3456, or WASM/GitHub Pages SPA.", "license": "MIT", "identifier": "com.cybermanju.drive", "languages": ["Rust 2021", "TypeScript 5.8", "Vue 3.5"], "repository": "https://github.com/cybermanju/cybermanju-drive.git"}
+{"type": "project_overview", "name": "Cybermanju Drive", "version": "0.1.0", "description": "Quantum-resistant encrypted file manager with AI face grouping, triple-layer compression, code intelligence, GPS map view, web dashboard, multi-user access control, cross-platform cloud sync via 10 backends, TUI CLI, and portable DB. Runs as Tauri v2 desktop, Docker container with web dashboard on :3456, or WASM/GitHub Pages SPA.", "license": "MIT", "identifier": "com.cybermanju.drive", "languages": ["Rust 2021", "TypeScript 5.8", "Vue 3.5"], "repository": "https://github.com/cybermanju/cybermanju-drive.git"}
 {"type": "deployment_modes", "modes": [
   {"name": "Tauri Desktop (primary)", "entry": "src-tauri/src/main.rs → lib.rs", "transport": "Tauri IPC via Conduit plugin (2.4x faster)", "use_case": "Native desktop app with full filesystem access, tray icon, clipboard, serial port, snap layout (Windows)"},
   {"name": "Web Dashboard (Docker/ZimaOS)", "entry": "embedded HTTP server in web_dashboard/mod.rs", "transport": "REST API on 0.0.0.0:3456, JWT auth", "use_case": "Browser access from any device on network; Docker containers; ZimaOS NAS App Store"},
   {"name": "WASM/GitHub Pages", "entry": "dist-wasm/ static files via vite.config.wasm.ts", "transport": "SPA + WASM bridge (IndexedDB) via cybermanju-drive-wasm crate", "use_case": "Public showcase, no backend, read-only with local IndexedDB persistence"}
 ]}
-{"type": "workspace_layout", "root": "Cargo.toml [workspace, resolver=2]", "members_count": 13, "members": [
+{"type": "workspace_layout", "root": "Cargo.toml [workspace, resolver=2]", "members_count": 18, "members": [
   "crates/types", "crates/crypto", "crates/compression", "crates/search", "crates/db",
   "crates/portable-db", "crates/web", "crates/faces", "crates/tests", "crates/drive-wasm",
-  "crates/cli", "crates/backends", "src-tauri"
+  "crates/cli", "crates/backends", "crates/media", "crates/erasure", "crates/resolutions",
+  "crates/preview-keys", "src-tauri"
 ]}
 {"type": "crate_detail", "name": "cybermanju-types", "path": "crates/types", "src_files": ["src/lib.rs", "src/schema.rs", "src/sync.rs"], "description": "Foundation types crate — every other crate (including src-tauri) depends on this. Defines all data models, enums, and the StorageBackend trait.", "deps": ["serde (derive)", "serde_json"], "exports": [
   {"schema types": ["FileNode", "Account", "Collection", "CollectionItem", "FaceGroup", "EncryptionKey", "LooseGroup", "User", "UserFilePermission", "Location", "TrashItem", "AuditEntry", "FileVersion", "ShareLink", "FileRelation", "DeletionRecord", "RecoveryEntry", "PortableHeader", "ContentStoreEntry", "PreviewStoreEntry"]},
@@ -332,7 +333,7 @@
   "deploy-pages: GitHub Pages deployment from dist-wasm/ on main push"
 ]}
 {"type": "key_files_reference", "files": [
-  {"path": "Cargo.toml", "purpose": "Workspace root manifest — 13 member crates, resolver=2"},
+  {"path": "Cargo.toml", "purpose": "Workspace root manifest — 17 member crates, resolver=2"},
   {"path": "package.json", "purpose": "Frontend deps (Vue, Pinia, MapLibre, GSAP, Tauri plugins) and 20+ npm scripts"},
   {"path": "src-tauri/src/lib.rs", "purpose": "Core orchestrator: AppState init, 12 Tauri plugin registrations, 68 command handlers, web dashboard lifecycle"},
   {"path": "src-tauri/src/main.rs", "purpose": "Tauri process entry point — calls lib::run()"},

@@ -91,6 +91,7 @@ const commands = computed<CommandGroup[]>(() => [
       { id: 'nav-favorites', label: 'Go to Favorites', icon: '[*]', action: () => { store.currentPanel = 'favorites' as PanelType } },
       { id: 'nav-recent', label: 'Go to Recent Files', icon: '[T]', action: () => { store.currentPanel = 'recent' as PanelType } },
       { id: 'nav-activity', label: 'Go to Activity Log', icon: '[~]', action: () => { store.currentPanel = 'activity' as PanelType } },
+      { id: 'nav-media', label: 'Go to Media Library', icon: '[@]', action: () => { store.currentPanel = 'media-library' as PanelType } },
     ],
   },
   {

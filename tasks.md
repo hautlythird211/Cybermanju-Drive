@@ -1,6 +1,8 @@
-# Cybermanju Drive — CLI ↔ Tauri Backend Refactoring
+# Cybermanju Drive — Development Tasks
 
-## Problem
+## Task 1: CLI ↔ Tauri Backend Refactoring (Completed)
+
+### Problem
 
 The CLI (`crates/cli`) and Tauri desktop app (`src-tauri`) each had **independent,
 duplicated implementations** of all 7 storage backends (Local, GitHub, GitLab,
@@ -9,10 +11,30 @@ the Tauri version had better error messages + a safer `safe_join`, the CLI
 version had Google Photos download fix, the Mega backend used completely
 different APIs (`megalib::MegaClient` vs `megalib::SessionHandle`).
 
-## Solution
+### Solution
 
 Extract all backend implementations into a new shared workspace crate —
 `crates/backends` (`cybermanju-backends`). Both apps now delegate to it.
+
+## Task 2: Workspace Expansion (Completed)
+
+Expanded workspace from 12 to 17 crates:
+
+| Crate | Purpose | Status |
+|-------|---------|--------|
+| `crates/media` | Image processing, video thumbnails, metadata extraction | ✅ In workspace |
+| `crates/erasure` | Reed-Solomon, fountain codes, Shamir secret sharing | ✅ In workspace |
+| `crates/resolutions` | Merkle tree shard resolution for distributed storage | ✅ In workspace |
+| `crates/preview-keys` | Key derivation and view token generation | ✅ In workspace |
+| `crates/recovery` | Recovery and reconstruction pipeline | ⚠️ Exists but not in workspace |
+
+## Task 3: Documentation Overhaul (Completed)
+
+Updated all documentation files to reflect current state:
+- **ARCHITECTURE.md**: Fixed component count (16→80+), added WASM mode, added 11 missing DB tables, added Codeberg/Gitea/Telegram/Mega backends, added 5 new crates to module list
+- **RELEASE_NOTES.md**: Fixed version (0.0.1→0.1.0), fixed crate count (12→17), added Codeberg/Gitea backends
+- **worklog.md**: Added 4 comprehensive task entries covering all major development phases
+- **tasks.md**: Added current task tracking
 
 ## New Crate: `crates/backends/`
 
@@ -23,12 +45,16 @@ crates/backends/
 │   ├── lib.rs            — Factory function + re-exports
 │   ├── util.rs           — safe_join() + http_client()
 │   ├── local.rs          — LocalBackend
-│   ├── github.rs         — GitHubBackend
+│   ├── github.rs         — GitHubBackend (Contents API + Git LFS)
 │   ├── gitlab.rs         — GitLabBackend
+│   ├── codeberg.rs       — CodebergBackend (Forgejo API)
+│   ├── gitea.rs          — GiteaBackend (self-hosted)
 │   ├── google_drive.rs   — GoogleDriveBackend
 │   ├── google_photos.rs  — GooglePhotosBackend
 │   ├── telegram.rs       — TelegramBackend
 │   ├── mega.rs           — MegaBackend (tokio runtime)
+│   ├── git_lfs.rs        — GitLfsClient (batch API)
+│   ├── repo_layout.rs    — .cybermanju repo structure manager
 │   └── transfer.rs       — transfer_files()
 ```
 
@@ -49,9 +75,10 @@ crates/backends/
 - Fixed `Display` for `SyncBackendType`: `"github"` → `"gitHub"`, `"gitlab"` → `"gitLab"` (matches Tauri)
 
 ### `crates/backends/` (new)
-- 7 backend implementations consolidated from the best of both apps
+- 10 backend implementations consolidated from the best of both apps
 - `safe_join` from Tauri (parent-directory validation, symlink rejection)
 - `MegaBackend` using `megalib::SessionHandle` + `tokio::runtime::Runtime`
+- `GitLfsClient` for large file uploads via Git LFS batch API
 - `transfer_files()` shared transfer function
 - Factory `create_backend()` with per-backend config extraction
 
@@ -71,6 +98,7 @@ crates/backends/
 
 ### `Cargo.toml` (workspace root)
 - Added `crates/backends` to workspace members
+- Added `crates/media`, `crates/erasure`, `crates/resolutions`, `crates/preview-keys` to workspace members
 
 ## Type compatibility
 

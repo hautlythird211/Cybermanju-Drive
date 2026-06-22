@@ -16,6 +16,45 @@
         <img :src="store.selectedFile.thumbnailPath" class="preview-image" :alt="store.selectedFile.name" />
       </div>
 
+      <!-- Resolution Picker (for media files) -->
+      <div v-if="isMediaFile" class="preview-section">
+        <div class="section-label">RESOLUTION</div>
+        <div class="resolution-grid">
+          <button
+            v-for="res in resolutions"
+            :key="res.level"
+            class="res-btn"
+            :class="{ active: selectedResolution === res.level }"
+            @click="selectedResolution = res.level"
+          >
+            <div class="res-level">{{ res.label }}</div>
+            <div class="res-desc">{{ res.desc }}</div>
+            <div v-if="res.level === 'r3'" class="res-badge full">ORIGINAL</div>
+            <div v-else-if="res.level === 'r2'" class="res-badge high">HD</div>
+            <div v-else-if="res.level === 'r1'" class="res-badge mid">SD</div>
+            <div v-else class="res-badge low">THUMB</div>
+          </button>
+        </div>
+        <div class="resolution-info">
+          <div class="res-info-row">
+            <span class="res-info-key">Key Tier</span>
+            <span class="res-info-value" :class="currentResKeyTier">{{ currentResKeyTier }}</span>
+          </div>
+          <div class="res-info-row">
+            <span class="res-info-key">Encrypted</span>
+            <span class="res-info-value">Yes (ChaCha20-Poly1305)</span>
+          </div>
+          <div class="res-info-row">
+            <span class="res-info-key">Estimated Size</span>
+            <span class="res-info-value">{{ currentResEstSize }}</span>
+          </div>
+        </div>
+        <button class="open-viewer-btn" @click="openInViewer">
+          <Icon icon="mdi:image-outline" width="14" height="14" />
+          OPEN IN VIEWER
+        </button>
+      </div>
+
       <!-- Metadata -->
       <div class="preview-section">
         <div class="section-label">Info</div>
@@ -189,13 +228,56 @@
 import { ref, computed } from 'vue'
 import { Icon } from '@iconify/vue'
 import { useAppStore } from '@/stores/app'
-import type { FileNode } from '@/types'
+import { useMedia } from '@/composables/useMedia'
+import type { FileNode, ResolutionLevel } from '@/types'
 
 const store = useAppStore()
+const { openMediaOverlay } = useMedia()
 
 const decryptError = ref<string | null>(null)
 const showTagInput = ref(false)
 const newTag = ref('')
+const selectedResolution = ref<ResolutionLevel>('r3')
+
+const resolutions = [
+  { level: 'r0' as ResolutionLevel, label: 'R0', desc: '200x150 Thumb', estSize: '~3 KB' },
+  { level: 'r1' as ResolutionLevel, label: 'R1', desc: '640x480 SD', estSize: '~45 KB' },
+  { level: 'r2' as ResolutionLevel, label: 'R2', desc: '1920x1080 HD', estSize: '~450 KB' },
+  { level: 'r3' as ResolutionLevel, label: 'R3', desc: 'Original', estSize: 'Full' },
+]
+
+const isMediaFile = computed(() => {
+  if (!store.selectedFile) return false
+  const mime = store.selectedFile.mimeType || ''
+  return mime.startsWith('image/') || mime.startsWith('video/') || mime.startsWith('audio/')
+})
+
+const currentResKeyTier = computed(() => {
+  return selectedResolution.value === 'r0' || selectedResolution.value === 'r1' ? 'preview' : 'content'
+})
+
+const currentResEstSize = computed(() => {
+  const res = resolutions.find(r => r.level === selectedResolution.value)
+  return res?.estSize || 'Unknown'
+})
+
+function openInViewer() {
+  if (!store.selectedFile) return
+  const file = store.selectedFile
+  const mime = file.mimeType || ''
+  const type = mime.startsWith('image/') ? 'image' : mime.startsWith('video/') ? 'video' : 'audio'
+  const fileData = {
+    fileId: file.id,
+    filename: file.name,
+    mimeType: mime,
+    isImage: mime.startsWith('image/'),
+    isVideo: mime.startsWith('video/'),
+    isAudio: mime.startsWith('audio/'),
+    availableResolutions: resolutions.map(r => ({ level: r.level, keyTier: r.level === 'r0' || r.level === 'r1' ? 'preview' : 'content', encrypted: true })),
+    selectedResolution: selectedResolution.value,
+  }
+  openMediaOverlay(type, fileData as any, new Uint8Array(0))
+}
 
 // Tag color cache
 const tagColorCache = new Map<string, string>()
@@ -408,6 +490,111 @@ function handleDelete() {
   height: auto;
   max-height: 200px;
   object-fit: cover;
+}
+
+.resolution-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.res-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 6px;
+  background: #16161c;
+  border: 1px solid #22222a;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.res-btn:hover {
+  background: #1e1e26;
+  border-color: #333;
+}
+
+.res-btn.active {
+  background: rgba(0, 255, 65, 0.08);
+  border-color: #00ff41;
+}
+
+.res-level {
+  font-size: 11px;
+  font-weight: 800;
+  color: #ececf0;
+  letter-spacing: 1px;
+}
+
+.res-btn.active .res-level {
+  color: #00ff41;
+}
+
+.res-desc {
+  font-size: 8px;
+  color: #50505e;
+  letter-spacing: 0.5px;
+}
+
+.res-badge {
+  font-size: 7px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+.res-badge.full { background: rgba(0, 255, 65, 0.15); color: #00ff41; }
+.res-badge.high { background: rgba(179, 136, 255, 0.15); color: #b388ff; }
+.res-badge.mid { background: rgba(90, 240, 255, 0.15); color: #5af0ff; }
+.res-badge.low { background: rgba(80, 80, 94, 0.3); color: #50505e; }
+
+.resolution-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.res-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 9px;
+}
+
+.res-info-key { color: #50505e; letter-spacing: 0.5px; }
+.res-info-value { color: #a0a0b0; font-weight: 600; }
+.res-info-value.preview { color: #5af0ff; }
+.res-info-value.content { color: #b388ff; }
+
+.open-viewer-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px;
+  background: rgba(0, 255, 65, 0.1);
+  border: 1px solid rgba(0, 255, 65, 0.2);
+  border-radius: 8px;
+  color: #00ff41;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.open-viewer-btn:hover {
+  background: rgba(0, 255, 65, 0.15);
+  border-color: rgba(0, 255, 65, 0.4);
 }
 
 .preview-section {

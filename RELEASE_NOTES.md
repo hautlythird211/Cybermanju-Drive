@@ -1,4 +1,4 @@
-# Cybermanju Drive v0.0.1
+# Cybermanju Drive v0.1.0
 
 **Quantum-resistant encrypted file manager** — desktop, mobile, web, Docker, and headless server.
 
@@ -34,9 +34,9 @@
 
 ## Overview
 
-Cybermanju Drive is an end-to-end encrypted file management platform built with Rust and Vue 3. It combines post-quantum cryptography (NIST FIPS 203/204), multi-algorithm compression, AI face clustering, full-text search, and a modular sync engine that connects to 7 cloud backends — all in a single self-contained binary.
+Cybermanju Drive is an end-to-end encrypted file management platform built with Rust and Vue 3. It combines post-quantum cryptography (NIST FIPS 203/204), multi-algorithm compression, AI face clustering, full-text search, and a modular sync engine that connects to 10 cloud backends — all in a single self-contained binary.
 
-The architecture is a **monorepo with 12 Rust workspace crates** plus a TypeScript/Vue 3 frontend, communicating via Tauri v2 IPC. A separate WASM bridge crate makes the core engine available in the browser without the desktop shell.
+The architecture is a **monorepo with 17 Rust workspace crates** plus a TypeScript/Vue 3 frontend, communicating via Tauri v2 IPC. A separate WASM bridge crate makes the core engine available in the browser without the desktop shell.
 
 ---
 
@@ -87,8 +87,10 @@ Orchestrates: **scan → compress → preview → upload → link → clean** in
 | Backend | API | Auth | File Size Limit | Status |
 |---------|-----|------|----------------|--------|
 | **Local** | Filesystem | — | Unlimited | ✅ |
-| **GitHub** | Contents API + Releases | OAuth token | 25 MB (API) / 2 GB (Releases) | ✅ |
+| **GitHub** | Contents API + Git LFS | OAuth token | 25 MB (API) / 2 GB (Releases) | ✅ |
 | **GitLab** | API v4 | OAuth token | Project-dependent | ✅ |
+| **Codeberg** | Forgejo API | OAuth token | 100 MB (Contents) / 2 GB (Releases) | ✅ |
+| **Gitea** | Gitea API | OAuth token | Instance-dependent | ✅ |
 | **Google Drive** | Drive API v3 | OAuth 2.0 refresh | 5 TB per file | ✅ |
 | **Google Photos** | Photos Library API | OAuth 2.0 refresh | 200 MB per photo / 10 GB per video | ✅ (media only) |
 | **Telegram** | Bot API | Bot token | 50 MB per file | ✅ |
@@ -267,24 +269,24 @@ The `crates/drive-wasm` crate compiles to WebAssembly, making the core crypto, c
 ## Installation
 
 ### Windows
-1. Download `Cybermanju.Drive_0.0.1_x64-setup.exe` or `Cybermanju.Drive_0.0.1_x64_en-US.msi`
+1. Download `Cybermanju.Drive_0.1.0_x64-setup.exe` or `Cybermanju.Drive_0.1.0_x64_en-US.msi`
 2. Run the installer (SmartScreen may show a warning — click "Run anyway")
 3. App data is stored at `%LOCALAPPDATA%/cybermanju-drive/`
 
 ### Linux (Debian/Ubuntu)
 ```bash
-sudo dpkg -i Cybermanju.Drive_0.0.1_amd64.deb
+sudo dpkg -i Cybermanju.Drive_0.1.0_amd64.deb
 ```
 
 ### Linux (Fedora/RHEL)
 ```bash
-sudo rpm -i Cybermanju.Drive-0.0.1-1.x86_64.rpm
+sudo rpm -i Cybermanju.Drive-0.1.0-1.x86_64.rpm
 ```
 
 ### Linux (Universal AppImage)
 ```bash
-chmod +x Cybermanju.Drive_0.0.1_amd64.AppImage
-./Cybermanju.Drive_0.0.1_amd64.AppImage
+chmod +x Cybermanju.Drive_0.1.0_amd64.AppImage
+./Cybermanju.Drive_0.1.0_amd64.AppImage
 ```
 
 ### Linux (Flatpak)

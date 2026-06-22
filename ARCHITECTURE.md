@@ -26,9 +26,10 @@
 │  │   FRONTEND (Vue 3)   │    │         BACKEND (Rust)           │   │
 │  │                      │    │                                  │   │
 │  │  ┌────────────────┐  │    │  ┌────────────────────────────┐  │   │
-│  │  │  16 Vue        │  │    │  │     Tauri IPC Handlers     │  │   │
+│  │  │  80+ Vue       │  │    │  │     Tauri IPC Handlers     │  │   │
 │  │  │  Components    │  │    │  │     (commands/*.rs)        │  │   │
-│  │  └───────┬────────┘  │    │  └────────────┬───────────────┘  │   │
+│  │  │ (25 UI+55 App) │  │    │  └────────────┬───────────────┘  │   │
+│  │  └───────┬────────┘  │    │               │                  │   │
 │  │          │           │    │               │                  │   │
 │  │  ┌───────▼────────┐  │    │  ┌────────────▼───────────────┐  │   │
 │  │  │  Pinia Store   │  │    │  │     Core Modules           │  │   │
@@ -37,8 +38,8 @@
 │  │          │           │    │  │  │  db/   │ │  crypto/  │ │  │   │
 │  │  ┌───────▼────────┐  │    │  │  │  redb  │ │ PQC+AEAD  │ │  │   │
 │  │  │  useTauri.ts   │◄─┼────┼──┼─►├────────┤ ├───────────┤ │  │   │
-│  │  │  Dual-mode:    │  │    │  │  │ 11 tbls│ │ChaCha20   │ │  │   │
-│  │  │  IPC / REST    │  │    │  │  └────────┘ │ML-KEM/DSA │ │  │   │
+│  │  │  Triple-mode:  │  │    │  │  │ 21 tbls│ │ChaCha20   │ │  │   │
+│  │  │  IPC/WASM/REST │  │    │  │  └────────┘ │ML-KEM/DSA │ │  │   │
 │  │  └────────┬────────┘  │    │  │  ┌────────┐ └───────────┘ │  │   │
 │  │           │           │    │  │  │ search/│ ┌───────────┐ │  │   │
 │  └───────────┼───────────┘    │  │  │Tantivy │ │compress/  │ │  │   │
@@ -60,7 +61,11 @@
 │  │  ┌────────┐ ┌──────────────┐ ┌───────────┐ ┌───────────────┐  │   │
 │  │  │ Local  │ │   GitHub     │ │Google Drive│ │Google Photos  │  │   │
 │  │  │  FS    │ │Contents API  │ │Drive API  │ │  (curl API)   │  │   │
-│  │  └────────┘ └──────────────┘ └───────────┘ └───────────────┘  │   │
+│  │  └────────┘ │GitLab API v4 │ └───────────┘ └───────────────┘  │   │
+│  │             │Codeberg/Gitea│ ┌───────────┐ ┌───────────────┐  │   │
+│  │             │Git LFS client│ │ Telegram  │ │    Mega.nz    │  │   │
+│  │             └──────────────┘ │  Bot API  │ │  megalib      │  │   │
+│  │                              └───────────┘ └───────────────┘  │   │
 │  └────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -71,9 +76,10 @@
 |------|------------|-----------|----------|
 | **Tauri Desktop** | `src-tauri/src/main.rs` | Tauri IPC (`invoke`) | Native desktop app with full filesystem access |
 | **Web Dashboard** | Embedded HTTP on `0.0.0.0:3456` | REST API (`fetch`) | Browser access from any device; Docker/ZimaOS |
-| **GitHub Pages** | `dist-wasm/` static files | SPA (read-only demo) | Public showcase, no backend |
+| **WASM/GitHub Pages** | `dist-wasm/` static files | SPA + WASM + IndexedDB | Public showcase, no backend needed |
+| **WASM Bridge** | Browser with WASM support | IndexedDB + crypto | Core engine in-browser, offline-capable |
 
-The frontend composable `useTauri.ts` auto-detects the environment via `window.__TAURI__` and routes commands to Tauri IPC or the REST API transparently.
+The frontend composable `useTauri.ts` auto-detects the environment via `window.__TAURI__` and routes commands through Tauri IPC, WASM bridge, or REST API with automatic fallback.
 
 ---
 
@@ -97,16 +103,23 @@ The frontend composable `useTauri.ts` auto-detects the environment via `window._
   ┌──────────────────────────────────────────────────────────┐
   │                     Core Modules                          │
   │                                                          │
-  │   db/          crypto/      compression/    search/      │
-  │   ├── mod.rs   ├── mod.rs   ├── mod.rs      ├── mod.rs   │
-  │   └── schema.rs└── pqc.rs   └── triple.rs   └── tantivy  │
-  │                                         _index.rs        │
-  │   faces/        tree_sitter/    preview/    sync/         │
-  │   └── mod.rs    └── mod.rs      └── mod.rs  ├── mod.rs   │
-  │                                                ├── backends│
-  │                                                ├── models │
-  │                                                └── pipeline│
-  └──────────────────────────────────────────────────────────┘
+│   db/          crypto/      compression/    search/      │
+│   ├── mod.rs   ├── mod.rs   ├── mod.rs      ├── mod.rs   │
+│   └── schema.rs└── pqc.rs   └── triple.rs   └── tantivy  │
+│                                         _index.rs        │
+│   faces/        tree_sitter/    preview/    sync/         │
+│   └── mod.rs    └── mod.rs      └── mod.rs  ├── mod.rs   │
+│                                                ├── backends│
+│                                                ├── models │
+│                                                └── pipeline│
+│   media/        erasure/      resolutions/  preview-keys/ │
+│   ├── thumbnail ├── reed_     ├── shard     ├── key_     │
+│   ├── image_ops │   solomon   ├── merkle    │   derivation│
+│   ├── video     ├── fountain  └── root      └── view_token│
+│   └── info      └── shamir                                  │
+│   recovery/                                                  │
+│   └── pipeline                                               │
+└──────────────────────────────────────────────────────────┘
 ```
 
 ### Module Responsibilities
@@ -114,15 +127,20 @@ The frontend composable `useTauri.ts` auto-detects the environment via `window._
 | Module | Path | Responsibility |
 |--------|------|---------------|
 | **commands/** | `src-tauri/src/commands/` | 23 Tauri IPC handler files translating frontend calls into core module operations |
-| **db/** | `src-tauri/src/db/` | redb ACID database wrapper with 21 tables, read/write transaction management |
-| **crypto/** | `src-tauri/src/crypto/` | Post-quantum cryptography: ChaCha20Poly1305 AEAD + rustpq ML-KEM/ML-DSA key management |
-| **compression/** | `src-tauri/src/compression/` | Triple-layer cascading compression (LZ4 -> ZSTD-15 -> Brotli-11) |
-| **search/** | `src-tauri/src/search/` | Tantivy full-text search with BM25 ranking, faceted filtering, term dictionary autocomplete |
-| **faces/** | `src-tauri/src/faces/` | Face detection embeddings and DBSCAN clustering via connected components |
+| **db/** | `crates/db/` | redb ACID database wrapper with 21 tables, read/write transaction management |
+| **crypto/** | `crates/crypto/` | Post-quantum cryptography: ChaCha20Poly1305 AEAD + ML-KEM/ML-DSA key management |
+| **compression/** | `crates/compression/` | Triple-layer cascading compression (LZ4 -> ZSTD-15 -> Brotli-11) |
+| **search/** | `crates/search/` | Tantivy full-text search with BM25 ranking, faceted filtering, term dictionary autocomplete |
+| **faces/** | `crates/faces/` | Face detection embeddings and DBSCAN clustering via connected components |
 | **tree_sitter/** | `src-tauri/src/tree_sitter/` | Code intelligence: language detection for 50+ extensions, heuristic symbol extraction |
 | **preview/** | `src-tauri/src/preview/` | Lanczos3 thumbnail generation, media metadata extraction |
-| **sync/** | `src-tauri/src/sync/` | Storage backend trait + 7 implementations (Local, GitHub, GitLab, Google Drive, Google Photos, Telegram, Mega) |
+| **sync/** | `crates/backends/` | Storage backend trait + 10 implementations (Local, GitHub, GitLab, Codeberg, Gitea, Google Drive, Google Photos, Telegram, Mega) + Git LFS client |
 | **web_dashboard/** | `src-tauri/src/web_dashboard/` | Embedded HTTP/1.1 server on port 3456 with REST API |
+| **media/** | `crates/media/` | Image processing, video thumbnails, metadata extraction |
+| **erasure/** | `crates/erasure/` | Erasure coding: Reed-Solomon, fountain codes, Shamir secret sharing |
+| **resolutions/** | `crates/resolutions/` | Merkle tree shard resolution for distributed storage |
+| **preview-keys/** | `crates/preview-keys/` | Key derivation and view token generation for encrypted previews |
+| **recovery/** | `crates/recovery/` | Recovery and reconstruction pipeline (orphaned — not in workspace) |
 
 ---
 
@@ -367,6 +385,110 @@ Geographic and storage location metadata.
 |------------|------|-------------|
 | (dynamic) | - | Extensible location records |
 
+### Table: `parent_index`
+
+Mapping from file ID to parent folder ID for fast tree queries.
+
+| JSON Field | Type | Description |
+|------------|------|-------------|
+| `fileId` | `string` | Child file ID |
+| `parentId` | `string` | Parent folder ID |
+
+### Table: `trash`
+
+Soft-deleted files pending permanent removal or restore.
+
+| JSON Field | Type | Description |
+|------------|------|-------------|
+| `id` | `string` | Trash item UUID |
+| `fileId` | `string` | Original file ID |
+| `originalPath` | `string` | Path before deletion |
+| `deletedAt` | `string` | ISO 8601 timestamp |
+| `restorable` | `bool` | Whether the item can be restored |
+
+### Table: `audit_log`
+
+Immutable append-only log of all file operations for compliance.
+
+| JSON Field | Type | Description |
+|------------|------|-------------|
+| `id` | `string` | Log entry UUID |
+| `action` | `string` | Operation type (create, delete, encrypt, etc.) |
+| `fileId` | `string?` | Affected file ID |
+| `userId` | `string?` | Actor user ID |
+| `details` | `object?` | Additional metadata |
+| `timestamp` | `string` | ISO 8601 timestamp |
+
+### Table: `file_versions`
+
+Snapshot-based file versioning for revert operations.
+
+| JSON Field | Type | Description |
+|------------|------|-------------|
+| `id` | `string` | Version UUID |
+| `fileId` | `string` | Parent file ID |
+| `versionNumber` | `u32` | Sequential version number |
+| `snapshotData` | `string` | Serialized file state |
+| `createdAt` | `string` | ISO 8601 timestamp |
+
+### Table: `share_links`
+
+Token-based share links with optional expiration.
+
+| JSON Field | Type | Description |
+|------------|------|-------------|
+| `id` | `string` | Share link UUID |
+| `fileId` | `string` | Shared file ID |
+| `token` | `string` | Random access token |
+| `expiresAt` | `string?` | Optional expiration timestamp |
+| `createdAt` | `string` | ISO 8601 timestamp |
+
+### Table: `file_relations`
+
+Cross-backend file relationship tracking for sync and portable DB.
+
+| JSON Field | Type | Description |
+|------------|------|-------------|
+| `id` | `string` | Relation UUID |
+| `sourceFileId` | `string` | Original file ID |
+| `targetFileId` | `string` | Synced/related file ID |
+| `backend` | `string` | Target backend identifier |
+| `syncedAt` | `string` | ISO 8601 timestamp |
+
+### Table: `deletion_log`
+
+Deletion propagation log for cross-platform sync.
+
+| JSON Field | Type | Description |
+|------------|------|-------------|
+| `id` | `string` | Log entry UUID |
+| `fileId` | `string` | Deleted file ID |
+| `backend` | `string` | Backend where deletion occurred |
+| `deletedAt` | `string` | ISO 8601 timestamp |
+| `propagated` | `bool` | Whether deletion was synced to other backends |
+
+### Table: `recovery_store`
+
+Recovery blobs for portable DB reconstruction.
+
+| JSON Field | Type | Description |
+|------------|------|-------------|
+| `id` | `string` | Recovery entry UUID |
+| `fileId` | `string` | Source file ID |
+| `compressedBlob` | `string` | Triple-compressed file content |
+| `blake3Hash` | `string` | Content hash for deduplication |
+| `createdAt` | `string` | ISO 8601 timestamp |
+
+### Table: `portable_meta`
+
+Portable database metadata for sync and versioning.
+
+| JSON Field | Type | Description |
+|------------|------|-------------|
+| `key` | `string` | Metadata key |
+| `value` | `string` | Metadata value |
+| `updatedAt` | `string` | ISO 8601 timestamp |
+
 ---
 
 ## 5. Storage Backend Architecture
@@ -374,37 +496,45 @@ Geographic and storage location metadata.
 The sync system uses a trait-based backend architecture. All HTTP backends use `curl` subprocess calls to avoid external HTTP dependencies.
 
 ```
-┌───────────────────────────────────────────────┐
-│              StorageBackend Trait             │
-│                                               │
-│  + name() -> &str                             │
-│  + backend_type() -> SyncBackendType          │
-│  + upload_file(local, remote) -> url          │
-│  + download_file(remote, local)               │
-│  + delete_file(remote)                        │
-│  + list_files(prefix) -> Vec<RemoteFile>      │
-│  + get_file_url(remote) -> url                │
-│  + test_connection() -> bool                  │
-└───────────┬───────────┬───────────┬───────────┘
+┌───────────────────────────────────────────────────┐
+│              StorageBackend Trait                 │
+│                                                   │
+│  + name() -> &str                                 │
+│  + backend_type() -> SyncBackendType              │
+│  + upload_file(local, remote) -> url              │
+│  + download_file(remote, local)                   │
+│  + delete_file(remote)                            │
+│  + list_files(prefix) -> Vec<RemoteFile>          │
+│  + get_file_url(remote) -> url                    │
+│  + test_connection() -> bool                      │
+└───────────┬───────────┬───────────┬───────────────┘
             │           │           │
-    ┌───────▼──┐  ┌────▼────┐  ┌──▼────────┐
-    │  Local   │  │ GitHub  │  │Google Drive│
-    │  Backend │  │ Backend │  │  Backend   │
-    │          │  │         │  │            │
-    │ fs::copy │  │ Contents│  │ Drive API  │
-    │ rename   │  │ API v3  │  │ v3 + curl  │
-    │          │  │Releases │  │            │
-    │          │  │ + curl  │  │ multipart  │
-    └──────────┘  └─────────┘  │ upload     │
-                               └─────────────┘
-                                    │
-                              ┌─────▼──────┐
-                              │Google Photos│
-                              │  Backend    │
-                              │             │
-                              │ curl upload │
-                              │ API v1      │
-                              └─────────────┘
+    ┌───────▼──┐  ┌────▼────┐  ┌──▼────────┐  ┌─────────────┐
+    │  Local   │  │ GitHub  │  │Google Drive│  │Google Photos│
+    │  Backend │  │ Backend │  │  Backend   │  │  Backend    │
+    │          │  │ + GitLFS│  │            │  │             │
+    │ fs::copy │  │Contents │  │ Drive API  │  │ curl upload │
+    │ rename   │  │ API v3  │  │ v3 + curl  │  │ API v1      │
+    └──────────┘  └─────────┘  │ multipart  │  └─────────────┘
+                               │ upload     │
+                         ┌─────▼──────┐  ┌─▼──────────┐
+                         │  GitLab    │  │  Codeberg   │
+                         │  Backend   │  │  Backend    │
+                         │            │  │ (Forgejo)   │
+                         │ API v4     │  │ API + curl  │
+                         │ + curl     │  └─────────────┘
+                         └────────────┘
+                         ┌────────────┐  ┌─────────────┐
+                         │   Gitea    │  │   Telegram  │
+                         │  Backend   │  │   Backend   │
+                         │ (self-host)│  │   Bot API   │
+                         │ API + curl │  │   + curl    │
+                         └────────────┘  └─────────────┘
+                         ┌────────────┐
+                         │   Mega     │
+                         │  Backend   │
+                         │ megalib    │
+                         └────────────┘
 ```
 
 ### Backend Details
@@ -412,9 +542,14 @@ The sync system uses a trait-based backend architecture. All HTTP backends use `
 | Backend | Auth | Upload Mechanism | Max File Size |
 |---------|------|-----------------|---------------|
 | **Local** | None | `fs::copy` | Unlimited |
-| **GitHub** | Personal Access Token | Contents API (base64), Releases for >100MB | 100MB (Contents), 2GB (Releases) |
+| **GitHub** | Personal Access Token | Contents API (base64), Git LFS for >100MB | 100MB (Contents), 2GB (Releases) |
+| **GitLab** | OAuth token | GitLab API v4 | Project-dependent |
+| **Codeberg** | Personal Access Token | Forgejo API | 100MB (Contents), 2GB (Releases) |
+| **Gitea** | Personal Access Token | Gitea API (self-hosted) | Instance-dependent |
 | **Google Drive** | OAuth2 token | Drive API v3 multipart upload via `curl` | 5TB |
 | **Google Photos** | OAuth2 token | Upload endpoint via `curl` | 200MB (photos), 10GB (videos) |
+| **Telegram** | Bot token | Bot API via `curl` | 50MB |
+| **Mega** | Email + password | megalib crate | 20GB (free tier) |
 
 ---
 
