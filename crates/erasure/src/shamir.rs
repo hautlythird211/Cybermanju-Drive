@@ -75,7 +75,10 @@ impl ShamirScheme {
                 "total_shards must be >= threshold and <= 255".into(),
             ));
         }
-        Ok(Self { threshold, total_shards })
+        Ok(Self {
+            threshold,
+            total_shards,
+        })
     }
 
     /// Split secret bytes into `total_shards` shares, any `threshold` can reconstruct
@@ -182,10 +185,14 @@ mod tests {
         let shares = scheme.split(secret).unwrap();
 
         // Try different combinations
-        let r1 = scheme.combine(&[shares[0].clone(), shares[2].clone(), shares[4].clone()]).unwrap();
+        let r1 = scheme
+            .combine(&[shares[0].clone(), shares[2].clone(), shares[4].clone()])
+            .unwrap();
         assert_eq!(&r1, secret);
 
-        let r2 = scheme.combine(&[shares[1].clone(), shares[3].clone(), shares[0].clone()]).unwrap();
+        let r2 = scheme
+            .combine(&[shares[1].clone(), shares[3].clone(), shares[0].clone()])
+            .unwrap();
         assert_eq!(&r2, secret);
     }
 

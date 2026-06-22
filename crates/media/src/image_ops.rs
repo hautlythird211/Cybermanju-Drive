@@ -1,5 +1,6 @@
-use anyhow::{anyhow, Result};
-use image::DynamicImage;
+use anyhow::Result;
+use image::codecs::jpeg::JpegEncoder;
+use image::{DynamicImage, ImageFormat};
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;
 
@@ -52,22 +53,22 @@ pub fn extract_image_info(data: &[u8]) -> Result<ImageInfo> {
         DynamicImage::ImageLumaA8(_) => "grayscale_alpha",
         DynamicImage::ImageRgb8(_) => "rgb",
         DynamicImage::ImageRgba8(_) => "rgba",
-        DynamicImage::ImageBgr8(_) => "bgr",
-        DynamicImage::ImageBgra8(_) => "bgra",
         DynamicImage::ImageLuma16(_) => "luma16",
         DynamicImage::ImageLumaA16(_) => "luma_alpha16",
         DynamicImage::ImageRgb16(_) => "rgb16",
         DynamicImage::ImageRgba16(_) => "rgba16",
+        DynamicImage::ImageRgb32F(_) => "rgb32f",
+        DynamicImage::ImageRgba32F(_) => "rgba32f",
         _ => "unknown",
     };
 
     let has_alpha = matches!(
         img,
         DynamicImage::ImageRgba8(_)
-            | DynamicImage::ImageBgra8(_)
             | DynamicImage::ImageLumaA8(_)
             | DynamicImage::ImageRgba16(_)
             | DynamicImage::ImageLumaA16(_)
+            | DynamicImage::ImageRgba32F(_)
     );
 
     let exif = extract_exif_data(data);
@@ -113,7 +114,7 @@ fn extract_exif_data(data: &[u8]) -> Option<ExifData> {
         gps_lon,
         exposure_time: get_str(exif::Tag::ExposureTime),
         f_number: get_f64(exif::Tag::FNumber),
-        iso: get_u32(exif::Tag::ISOSpeedRatings),
+        iso: get_u32(exif::Tag::ISOSpeed),
         focal_length: get_f64(exif::Tag::FocalLength),
         orientation: get_u32(exif::Tag::Orientation),
         image_width: get_u32(exif::Tag::PixelXDimension),
@@ -152,7 +153,7 @@ fn parse_dms_to_decimal(dms: &str) -> Option<f64> {
 }
 
 pub fn transform_image(data: &[u8], transform: &ImageTransform) -> Result<Vec<u8>> {
-    let img = image::load_from_memory(data)?;
+    let mut img = image::load_from_memory(data)?;
 
     let transformed = match transform {
         ImageTransform::RotateCW => img.rotate90(),
@@ -163,14 +164,12 @@ pub fn transform_image(data: &[u8], transform: &ImageTransform) -> Result<Vec<u8
         ImageTransform::Resize { width, height } => {
             img.resize_exact(*width, *height, image::imageops::FilterType::Lanczos3)
         }
-        ImageTransform::Crop { x, y, w, h } => {
-            img.crop(*x, *y, *w, *h)
-        }
+        ImageTransform::Crop { x, y, w, h } => img.crop(*x, *y, *w, *h),
     };
 
     let mut buf = Vec::new();
     let mut cursor = Cursor::new(&mut buf);
-    transformed.write_to(&mut cursor, image::ImageOutputFormat::Png)?;
+    transformed.write_to(&mut cursor, ImageFormat::Png)?;
     Ok(buf)
 }
 
@@ -189,7 +188,8 @@ pub fn resize_image(data: &[u8], max_width: u32, max_height: u32, quality: u8) -
 
     let mut buf = Vec::new();
     let mut cursor = Cursor::new(&mut buf);
-    resized.write_to(&mut cursor, image::ImageOutputFormat::Jpeg(quality))?;
+    let encoder = JpegEncoder::new_with_quality(&mut cursor, quality);
+    resized.write_with_encoder(encoder)?;
     Ok(buf)
 }
 

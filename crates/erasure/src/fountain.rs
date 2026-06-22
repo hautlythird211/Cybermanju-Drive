@@ -20,7 +20,11 @@ impl FountainEncoder {
             sym[..len].copy_from_slice(&source_data[start..end]);
             source.push(sym);
         }
-        Self { source, symbol_size, source_symbols }
+        Self {
+            source,
+            symbol_size,
+            source_symbols,
+        }
     }
 
     /// Generate all coded symbols (2x source count for rateless property)
@@ -84,7 +88,11 @@ pub struct FountainDecoder;
 
 impl FountainDecoder {
     /// Decode source data from any sufficient set of linearly independent coded symbols
-    pub fn decode(symbols: &[Vec<u8>], source_len: usize, symbol_size: usize) -> Result<Vec<u8>, ErasureError> {
+    pub fn decode(
+        symbols: &[Vec<u8>],
+        source_len: usize,
+        symbol_size: usize,
+    ) -> Result<Vec<u8>, ErasureError> {
         let source_symbols = (source_len + symbol_size - 1) / symbol_size;
         if symbols.len() < source_symbols {
             return Err(ErasureError::FountainError(format!(
@@ -201,11 +209,8 @@ mod tests {
         let encoder = FountainEncoder::new(data, 8);
         let coded = encoder.encode();
         // First K symbols are systematic
-        let decoded = FountainDecoder::decode(
-            &coded[..encoder.source_symbols],
-            data.len(),
-            8,
-        ).unwrap();
+        let decoded =
+            FountainDecoder::decode(&coded[..encoder.source_symbols], data.len(), 8).unwrap();
         assert_eq!(&decoded[..data.len()], data.as_slice());
     }
 
@@ -215,7 +220,11 @@ mod tests {
         let encoder = FountainEncoder::new(data, 8);
         let coded = encoder.encode();
         // Use a mix of coded symbols
-        let selected: Vec<Vec<u8>> = coded.iter().take(encoder.source_symbols + 2).cloned().collect();
+        let selected: Vec<Vec<u8>> = coded
+            .iter()
+            .take(encoder.source_symbols + 2)
+            .cloned()
+            .collect();
         let decoded = FountainDecoder::decode(&selected, data.len(), 8).unwrap();
         assert_eq!(&decoded[..data.len()], data.as_slice());
     }

@@ -16,7 +16,6 @@ pub mod tree_sitter; // parse_file, get_symbols (tauri commands)
 pub mod web_dashboard;
 
 use commands::faces as face_cmd;
-use commands::media as media_cmd;
 use commands::sync as sync_cmd;
 use commands::{
     accounts, audit, batch, collections, dashboard, encryption, files, import as import_cmd, map,
@@ -367,13 +366,13 @@ pub fn run() {
             commands::web::web_search,
             commands::web::fetch_page,
             // Media
-            media::get_media_info,
-            media::get_resolution_data,
-            media::transform_image_file,
-            media::generate_thumbnail_cmd,
-            media::detect_media_type_cmd,
-            media::get_image_dimensions_cmd,
-            media::batch_generate_thumbnails_cmd,
+            commands::media::get_media_info,
+            commands::media::get_resolution_data,
+            commands::media::transform_image_file,
+            commands::media::generate_thumbnail_cmd,
+            commands::media::detect_media_type_cmd,
+            commands::media::get_image_dimensions_cmd,
+            commands::media::batch_generate_thumbnails_cmd,
         ])
         .run(tauri::generate_context!())
         .expect("Fatal error while running Cybermanju Drive — see logs above");

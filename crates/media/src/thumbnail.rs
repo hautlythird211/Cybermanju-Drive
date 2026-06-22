@@ -1,5 +1,6 @@
 use anyhow::Result;
-use image::DynamicImage;
+use image::codecs::jpeg::JpegEncoder;
+use image::{DynamicImage, ImageFormat};
 use serde::{Deserialize, Serialize};
 use std::io::Cursor;
 
@@ -36,17 +37,15 @@ pub fn generate_image_thumbnail(
     let mut cursor = Cursor::new(&mut buf);
 
     match output_format {
-        "webp" => {
-            thumbnail.write_to(&mut cursor, image::ImageOutputFormat::WebP(quality))?;
-        }
         "jpeg" | "jpg" => {
-            thumbnail.write_to(&mut cursor, image::ImageOutputFormat::Jpeg(quality))?;
+            let encoder = JpegEncoder::new_with_quality(&mut cursor, quality);
+            thumbnail.write_with_encoder(encoder)?;
         }
         "png" => {
-            thumbnail.write_to(&mut cursor, image::ImageOutputFormat::Png)?;
+            thumbnail.write_to(&mut cursor, ImageFormat::Png)?;
         }
         _ => {
-            thumbnail.write_to(&mut cursor, image::ImageOutputFormat::WebP(quality))?;
+            thumbnail.write_to(&mut cursor, ImageFormat::Png)?;
         }
     }
 
@@ -59,14 +58,11 @@ pub fn generate_image_thumbnail(
     })
 }
 
-pub fn generate_video_thumbnail_placeholder(
-    width: u32,
-    height: u32,
-) -> Result<ThumbnailResult> {
+pub fn generate_video_thumbnail_placeholder(width: u32, height: u32) -> Result<ThumbnailResult> {
     let img = DynamicImage::new_rgb8(width, height);
     let mut buf = Vec::new();
     let mut cursor = Cursor::new(&mut buf);
-    img.write_to(&mut cursor, image::ImageOutputFormat::Png)?;
+    img.write_to(&mut cursor, ImageFormat::Png)?;
 
     Ok(ThumbnailResult {
         data: buf,

@@ -70,7 +70,9 @@ fn gf_inv(a: u8) -> Result<u8, ErasureError> {
 
 fn gf_div(a: u8, b: u8) -> Result<u8, ErasureError> {
     if b == 0 {
-        return Err(ErasureError::EncodingFailed("division by zero in GF(2^8)".into()));
+        return Err(ErasureError::EncodingFailed(
+            "division by zero in GF(2^8)".into(),
+        ));
     }
     Ok(gf_mul(a, gf_inv(b)?))
 }
@@ -125,7 +127,8 @@ impl ReedSolomonCodec {
     /// Split data into equal-sized data shards (pad last with zeros)
     fn split_data(data: &[u8]) -> Vec<Vec<u8>> {
         // This is called externally, we keep it as a utility
-        let chunk_size = (data.len() + Self::num_shards_hint(data) - 1) / Self::num_shards_hint(data);
+        let chunk_size =
+            (data.len() + Self::num_shards_hint(data) - 1) / Self::num_shards_hint(data);
         Self::split_data_with_count(data, Self::num_shards_hint(data), chunk_size)
     }
 
@@ -136,7 +139,11 @@ impl ReedSolomonCodec {
     }
 
     /// Split data into `num_shards` chunks of `chunk_size` bytes each
-    pub fn split_data_with_count(data: &[u8], num_shards: usize, chunk_size: usize) -> Vec<Vec<u8>> {
+    pub fn split_data_with_count(
+        data: &[u8],
+        num_shards: usize,
+        chunk_size: usize,
+    ) -> Vec<Vec<u8>> {
         let mut shards: Vec<Vec<u8>> = (0..num_shards)
             .map(|i| {
                 let start = i * chunk_size;
@@ -199,14 +206,17 @@ impl ReedSolomonCodec {
             )));
         }
 
-        let chunk_size = shards.iter()
+        let chunk_size = shards
+            .iter()
             .filter_map(|s| s.as_ref())
             .next()
             .map(|s| s.len())
             .unwrap_or(0);
 
         // Find missing indices
-        let missing: Vec<usize> = shards.iter().enumerate()
+        let missing: Vec<usize> = shards
+            .iter()
+            .enumerate()
             .filter_map(|(i, s)| if s.is_none() { Some(i) } else { None })
             .collect();
 
@@ -221,10 +231,10 @@ impl ReedSolomonCodec {
             // Build the system: for each byte position in the chunk
             for byte_pos in 0..chunk_size {
                 // Build decoding matrix for this byte position
-                let available: Vec<(usize, Vec<u8>)> = shards.iter().enumerate()
-                    .filter_map(|(i, s)| {
-                        s.as_ref().map(|data| (i, data.to_vec()))
-                    })
+                let available: Vec<(usize, Vec<u8>)> = shards
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, s)| s.as_ref().map(|data| (i, data.to_vec())))
                     .collect();
 
                 if available.len() < self.data_shards {
@@ -255,8 +265,10 @@ impl ReedSolomonCodec {
                 // Forward elimination
                 for col in 0..cols.min(rows) {
                     // Find pivot
-                    let pivot_row = (col..rows).find(|&r| matrix[r][col] != 0)
-                        .ok_or_else(|| ErasureError::ReconstructionFailed("singular matrix".into()))?;
+                    let pivot_row =
+                        (col..rows).find(|&r| matrix[r][col] != 0).ok_or_else(|| {
+                            ErasureError::ReconstructionFailed("singular matrix".into())
+                        })?;
 
                     // Swap
                     matrix.swap(col, pivot_row);

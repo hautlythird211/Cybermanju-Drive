@@ -1,9 +1,9 @@
-pub mod shard;
-pub mod root;
-pub mod merkle;
 pub mod errors;
+pub mod merkle;
+pub mod root;
+pub mod shard;
 
-pub use shard::*;
-pub use root::*;
-pub use merkle::*;
 pub use errors::*;
+pub use merkle::*;
+pub use root::*;
+pub use shard::*;

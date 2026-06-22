@@ -18,7 +18,7 @@ pub fn detect_media_type(data: &[u8], filename: &str) -> Result<MediaInfo> {
     let matcher = Infer::new();
 
     let mime = if let Some(kind) = matcher.get(data) {
-        kind.mime_type.to_string()
+        kind.mime_type().to_string()
     } else {
         mime_guess::from_path(filename)
             .first_or_octet_stream()
@@ -27,7 +27,11 @@ pub fn detect_media_type(data: &[u8], filename: &str) -> Result<MediaInfo> {
 
     let ext = mime_guess::from_path(filename)
         .first()
-        .map(|m| m.suffix().unwrap_or("bin").to_string())
+        .map(|m| {
+            m.suffix()
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "bin".to_string())
+        })
         .unwrap_or_else(|| "bin".to_string());
 
     let is_image = mime.starts_with("image/");
@@ -42,11 +46,7 @@ pub fn detect_media_type(data: &[u8], filename: &str) -> Result<MediaInfo> {
             "r3".to_string(),
         ]
     } else if is_video {
-        vec![
-            "r0".to_string(),
-            "r1".to_string(),
-            "r2".to_string(),
-        ]
+        vec!["r0".to_string(), "r1".to_string(), "r2".to_string()]
     } else {
         vec!["r3".to_string()]
     };
@@ -73,41 +73,67 @@ pub fn detect_media_type(data: &[u8], filename: &str) -> Result<MediaInfo> {
 }
 
 pub fn is_media_file(filename: &str) -> bool {
-    let ext = filename
-        .rsplit('.')
-        .next()
-        .unwrap_or("")
-        .to_lowercase();
+    let ext = filename.rsplit('.').next().unwrap_or("").to_lowercase();
 
     matches!(
         ext.as_str(),
-        "jpg" | "jpeg" | "png" | "gif" | "webp" | "bmp" | "svg" | "tiff" | "avif" | "heic"
-            | "heif" | "ico" | "mp4" | "mov" | "avi" | "mkv" | "webm" | "wmv" | "flv" | "m4v"
-            | "3gp" | "ogv" | "mp3" | "wav" | "ogg" | "flac" | "aac" | "m4a" | "wma" | "opus"
-            | "mid" | "midi"
+        "jpg"
+            | "jpeg"
+            | "png"
+            | "gif"
+            | "webp"
+            | "bmp"
+            | "svg"
+            | "tiff"
+            | "avif"
+            | "heic"
+            | "heif"
+            | "ico"
+            | "mp4"
+            | "mov"
+            | "avi"
+            | "mkv"
+            | "webm"
+            | "wmv"
+            | "flv"
+            | "m4v"
+            | "3gp"
+            | "ogv"
+            | "mp3"
+            | "wav"
+            | "ogg"
+            | "flac"
+            | "aac"
+            | "m4a"
+            | "wma"
+            | "opus"
+            | "mid"
+            | "midi"
     )
 }
 
 pub fn is_image_file(filename: &str) -> bool {
-    let ext = filename
-        .rsplit('.')
-        .next()
-        .unwrap_or("")
-        .to_lowercase();
+    let ext = filename.rsplit('.').next().unwrap_or("").to_lowercase();
 
     matches!(
         ext.as_str(),
-        "jpg" | "jpeg" | "png" | "gif" | "webp" | "bmp" | "svg" | "tiff" | "avif" | "heic"
-            | "heif" | "ico"
+        "jpg"
+            | "jpeg"
+            | "png"
+            | "gif"
+            | "webp"
+            | "bmp"
+            | "svg"
+            | "tiff"
+            | "avif"
+            | "heic"
+            | "heif"
+            | "ico"
     )
 }
 
 pub fn is_video_file(filename: &str) -> bool {
-    let ext = filename
-        .rsplit('.')
-        .next()
-        .unwrap_or("")
-        .to_lowercase();
+    let ext = filename.rsplit('.').next().unwrap_or("").to_lowercase();
 
     matches!(
         ext.as_str(),
@@ -116,11 +142,7 @@ pub fn is_video_file(filename: &str) -> bool {
 }
 
 pub fn is_audio_file(filename: &str) -> bool {
-    let ext = filename
-        .rsplit('.')
-        .next()
-        .unwrap_or("")
-        .to_lowercase();
+    let ext = filename.rsplit('.').next().unwrap_or("").to_lowercase();
 
     matches!(
         ext.as_str(),

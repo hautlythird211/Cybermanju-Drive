@@ -72,12 +72,7 @@ impl ResolutionMerkleTree {
     }
 
     /// Verify that a resolution leaf is part of this tree.
-    pub fn verify_leaf(
-        &self,
-        level: &str,
-        data: &[u8],
-        proof: &MerkleProof,
-    ) -> bool {
+    pub fn verify_leaf(&self, level: &str, data: &[u8], proof: &MerkleProof) -> bool {
         let leaf_hash = blake3::hash(data);
 
         // Find the expected leaf hash
@@ -206,10 +201,22 @@ mod tests {
 
     fn sample_hashes() -> HashMap<String, String> {
         let mut h = HashMap::new();
-        h.insert("r0".into(), blake3::hash(b"thumb_data").to_hex().to_string());
-        h.insert("r1".into(), blake3::hash(b"preview_data").to_hex().to_string());
-        h.insert("r2".into(), blake3::hash(b"medium_data").to_hex().to_string());
-        h.insert("r3".into(), blake3::hash(b"original_data").to_hex().to_string());
+        h.insert(
+            "r0".into(),
+            blake3::hash(b"thumb_data").to_hex().to_string(),
+        );
+        h.insert(
+            "r1".into(),
+            blake3::hash(b"preview_data").to_hex().to_string(),
+        );
+        h.insert(
+            "r2".into(),
+            blake3::hash(b"medium_data").to_hex().to_string(),
+        );
+        h.insert(
+            "r3".into(),
+            blake3::hash(b"original_data").to_hex().to_string(),
+        );
         h
     }
 

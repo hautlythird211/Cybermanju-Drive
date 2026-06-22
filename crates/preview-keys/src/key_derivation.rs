@@ -1,10 +1,10 @@
-use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
 use aes_gcm::aead::Aead;
-use chacha20poly1305::{ChaCha20Poly1305, Key as ChaChaKey, Nonce as ChaChaNonce};
+use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
 use chacha20poly1305::aead::Aead as ChaChaAead;
+use chacha20poly1305::{ChaCha20Poly1305, Key as ChaChaKey, Nonce as ChaChaNonce};
 use hkdf::Hkdf;
-use sha2::Sha256;
 use rand::RngCore;
+use sha2::Sha256;
 
 use crate::errors::PreviewKeyError;
 
@@ -22,7 +22,8 @@ impl KeyHierarchy {
     pub fn derive_index_key(&self, library_id: &str) -> [u8; 32] {
         let hk = Hkdf::<Sha256>::new(Some(b"cybermanju-index-v1"), &self.master_key);
         let mut key = [0u8; 32];
-        hk.expand(library_id.as_bytes(), &mut key).expect("HKDF expand failed");
+        hk.expand(library_id.as_bytes(), &mut key)
+            .expect("HKDF expand failed");
         key
     }
 
@@ -30,7 +31,8 @@ impl KeyHierarchy {
     pub fn derive_content_key(&self, file_id: &str) -> [u8; 32] {
         let hk = Hkdf::<Sha256>::new(Some(b"cybermanju-content-v1"), &self.master_key);
         let mut key = [0u8; 32];
-        hk.expand(file_id.as_bytes(), &mut key).expect("HKDF expand failed");
+        hk.expand(file_id.as_bytes(), &mut key)
+            .expect("HKDF expand failed");
         key
     }
 
@@ -38,7 +40,8 @@ impl KeyHierarchy {
     pub fn derive_preview_key(&self, file_id: &str) -> [u8; 32] {
         let hk = Hkdf::<Sha256>::new(Some(b"cybermanju-preview-v1"), &self.master_key);
         let mut key = [0u8; 32];
-        hk.expand(file_id.as_bytes(), &mut key).expect("HKDF expand failed");
+        hk.expand(file_id.as_bytes(), &mut key)
+            .expect("HKDF expand failed");
         key
     }
 
@@ -47,7 +50,8 @@ impl KeyHierarchy {
         let info = format!("{}:{}", file_id, token_id);
         let hk = Hkdf::<Sha256>::new(Some(b"cybermanju-view-token-v1"), &self.master_key);
         let mut key = [0u8; 32];
-        hk.expand(info.as_bytes(), &mut key).expect("HKDF expand failed");
+        hk.expand(info.as_bytes(), &mut key)
+            .expect("HKDF expand failed");
         key
     }
 }
@@ -68,7 +72,8 @@ pub fn encrypt_index(data: &[u8], key: &[u8; 32]) -> Result<Vec<u8>, PreviewKeyE
     rand::thread_rng().fill_bytes(&mut nonce_bytes);
     let nonce = Nonce::from_slice(&nonce_bytes);
 
-    let mut ciphertext = cipher.encrypt(nonce, data)
+    let mut ciphertext = cipher
+        .encrypt(nonce, data)
         .map_err(|e| PreviewKeyError::EncryptionFailed(e.to_string()))?;
 
     // Prepend nonce
@@ -88,12 +93,17 @@ pub fn decrypt_index(data: &[u8], key: &[u8; 32]) -> Result<Vec<u8>, PreviewKeyE
         .map_err(|e| PreviewKeyError::DecryptionFailed(e.to_string()))?;
 
     let nonce = Nonce::from_slice(&data[..12]);
-    cipher.decrypt(nonce, &data[12..])
+    cipher
+        .decrypt(nonce, &data[12..])
         .map_err(|e| PreviewKeyError::DecryptionFailed(e.to_string()))
 }
 
 /// Encrypt preview data with ChaCha20-Poly1305, nonce derived from file_id
-pub fn encrypt_preview(data: &[u8], key: &[u8; 32], file_id: &str) -> Result<Vec<u8>, PreviewKeyError> {
+pub fn encrypt_preview(
+    data: &[u8],
+    key: &[u8; 32],
+    file_id: &str,
+) -> Result<Vec<u8>, PreviewKeyError> {
     let cipher = ChaCha20Poly1305::new(ChaChaKey::from_slice(key));
 
     // Derive nonce from file_id: BLAKE3(file_id)[0..12]
@@ -102,7 +112,8 @@ pub fn encrypt_preview(data: &[u8], key: &[u8; 32], file_id: &str) -> Result<Vec
     nonce_bytes.copy_from_slice(&hash.as_bytes()[..12]);
     let nonce = ChaChaNonce::from_slice(&nonce_bytes);
 
-    let mut ciphertext = cipher.encrypt(nonce, data)
+    let mut ciphertext = cipher
+        .encrypt(nonce, data)
         .map_err(|e| PreviewKeyError::EncryptionFailed(e.to_string()))?;
 
     // Prepend nonce
@@ -113,7 +124,11 @@ pub fn encrypt_preview(data: &[u8], key: &[u8; 32], file_id: &str) -> Result<Vec
 }
 
 /// Decrypt preview data with ChaCha20-Poly1305
-pub fn decrypt_preview(data: &[u8], key: &[u8; 32], file_id: &str) -> Result<Vec<u8>, PreviewKeyError> {
+pub fn decrypt_preview(
+    data: &[u8],
+    key: &[u8; 32],
+    file_id: &str,
+) -> Result<Vec<u8>, PreviewKeyError> {
     if data.len() < 12 {
         return Err(PreviewKeyError::DecryptionFailed("data too short".into()));
     }
@@ -125,7 +140,8 @@ pub fn decrypt_preview(data: &[u8], key: &[u8; 32], file_id: &str) -> Result<Vec
     nonce_bytes.copy_from_slice(&hash.as_bytes()[..12]);
     let nonce = ChaChaNonce::from_slice(&nonce_bytes);
 
-    cipher.decrypt(nonce, &data[12..])
+    cipher
+        .decrypt(nonce, &data[12..])
         .map_err(|e| PreviewKeyError::DecryptionFailed(e.to_string()))
 }
 
@@ -147,7 +163,8 @@ pub fn encrypt_content(
     nonce_bytes.copy_from_slice(&hash.as_bytes()[..12]);
     let nonce = ChaChaNonce::from_slice(&nonce_bytes);
 
-    let mut ciphertext = cipher.encrypt(nonce, data)
+    let mut ciphertext = cipher
+        .encrypt(nonce, data)
         .map_err(|e| PreviewKeyError::EncryptionFailed(e.to_string()))?;
 
     let mut result = Vec::with_capacity(12 + ciphertext.len());
@@ -177,7 +194,8 @@ pub fn decrypt_content(
     nonce_bytes.copy_from_slice(&hash.as_bytes()[..12]);
     let nonce = ChaChaNonce::from_slice(&nonce_bytes);
 
-    cipher.decrypt(nonce, &data[12..])
+    cipher
+        .decrypt(nonce, &data[12..])
         .map_err(|e| PreviewKeyError::DecryptionFailed(e.to_string()))
 }
 

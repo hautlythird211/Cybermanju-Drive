@@ -1,8 +1,7 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use tokio::sync::mpsc;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -61,11 +60,13 @@ pub struct VideoPlayerState {
     pub available_tracks: Vec<TrackInfo>,
 }
 
+#[allow(dead_code)]
 pub struct VideoEngine {
     state: Arc<Mutex<VideoPlayerState>>,
-    command_tx: Option<mpsc::Sender<VideoCommand>>,
+    command_tx: Option<tokio::sync::mpsc::Sender<VideoCommand>>,
 }
 
+#[allow(dead_code)]
 enum VideoCommand {
     Play(String),
     Pause,

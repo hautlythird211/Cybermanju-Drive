@@ -1,6 +1,5 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 use tauri::State;
 
 use crate::AppState;
@@ -48,7 +47,7 @@ pub async fn get_media_info(
     file_id: String,
     filename: String,
     data: Vec<u8>,
-    state: State<'_, AppState>,
+    _state: State<'_, AppState>,
 ) -> Result<FileMediaData, String> {
     let media_info =
         cybermanju_media::detect_media_type(&data, &filename).map_err(|e| e.to_string())?;
@@ -142,22 +141,27 @@ pub async fn get_resolution_data(
         "r0" => 200,
         "r1" => 640,
         "r2" => 1920,
-        "r3" => return Ok(ResolutionData {
-            file_id,
-            level,
-            data_base64: base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &data),
-            width: width.unwrap_or(0),
-            height: height.unwrap_or(0),
-            format: "original".to_string(),
-        }),
+        "r3" => {
+            return Ok(ResolutionData {
+                file_id,
+                level,
+                data_base64: base64::Engine::encode(
+                    &base64::engine::general_purpose::STANDARD,
+                    &data,
+                ),
+                width: width.unwrap_or(0),
+                height: height.unwrap_or(0),
+                format: "original".to_string(),
+            })
+        }
         _ => 640,
     };
 
     let target_w = width.unwrap_or(max_dim);
     let target_h = height.unwrap_or(max_dim);
 
-    let resized = cybermanju_media::resize_image(&data, target_w, target_h, 85)
-        .map_err(|e| e.to_string())?;
+    let resized =
+        cybermanju_media::resize_image(&data, target_w, target_h, 85).map_err(|e| e.to_string())?;
 
     let dims = cybermanju_media::get_image_dimensions(&resized).unwrap_or((target_w, target_h));
 
@@ -172,10 +176,7 @@ pub async fn get_resolution_data(
 }
 
 #[tauri::command]
-pub async fn transform_image_file(
-    data: Vec<u8>,
-    transform: String,
-) -> Result<Vec<u8>, String> {
+pub async fn transform_image_file(data: Vec<u8>, transform: String) -> Result<Vec<u8>, String> {
     let t = match transform.as_str() {
         "rotate_cw" => cybermanju_media::ImageTransform::RotateCW,
         "rotate_ccw" => cybermanju_media::ImageTransform::RotateCCW,
@@ -208,9 +209,7 @@ pub async fn detect_media_type_cmd(
 }
 
 #[tauri::command]
-pub async fn get_image_dimensions_cmd(
-    data: Vec<u8>,
-) -> Result<(u32, u32), String> {
+pub async fn get_image_dimensions_cmd(data: Vec<u8>) -> Result<(u32, u32), String> {
     cybermanju_media::get_image_dimensions(&data).map_err(|e| e.to_string())
 }
 
@@ -222,8 +221,5 @@ pub async fn batch_generate_thumbnails_cmd(
     quality: u8,
 ) -> Result<Vec<(String, Option<cybermanju_media::ThumbnailResult>)>, String> {
     let results = cybermanju_media::batch_generate_thumbnails(&items, max_size, &format, quality);
-    Ok(results
-        .into_iter()
-        .map(|(id, r)| (id, r.ok()))
-        .collect())
+    Ok(results.into_iter().map(|(id, r)| (id, r.ok())).collect())
 }

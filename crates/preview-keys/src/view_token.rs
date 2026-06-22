@@ -1,6 +1,6 @@
-use std::collections::HashSet;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use uuid::Uuid;
 
 use crate::errors::PreviewKeyError;
@@ -30,7 +30,9 @@ pub struct TokenStore {
 
 impl TokenStore {
     pub fn new() -> Self {
-        Self { revoked_tokens: HashSet::new() }
+        Self {
+            revoked_tokens: HashSet::new(),
+        }
     }
 }
 
@@ -63,7 +65,8 @@ pub fn generate_view_token(
 
     // Encrypt preview data with the file's preview key
     let preview_key = hierarchy.derive_preview_key(file_id);
-    let encrypted_preview = crate::key_derivation::encrypt_preview(preview_data, &preview_key, file_id)?;
+    let encrypted_preview =
+        crate::key_derivation::encrypt_preview(preview_data, &preview_key, file_id)?;
 
     let claims = ViewTokenClaims {
         sub: file_id.to_string(),
