@@ -7,8 +7,8 @@ fn build_gf_tables() -> ([u8; 512], [u8; 256]) {
     let mut exp = [0u8; 512];
     let mut log = [0u8; 256];
     let mut x: u16 = 1;
-    for i in 0..255 {
-        exp[i] = x as u8;
+    for (i, item) in exp.iter_mut().enumerate().take(255) {
+        *item = x as u8;
         log[x as usize] = i as u8;
         x <<= 1;
         if x & 256 != 0 {
@@ -83,6 +83,7 @@ pub struct ReedSolomonCodec {
     parity_shards: usize,
     total_shards: usize,
     /// Generator polynomial coefficients (excluding leading x^n term)
+    #[allow(dead_code)]
     gen_poly: Vec<u8>,
 }
 
@@ -125,6 +126,7 @@ impl ReedSolomonCodec {
     }
 
     /// Split data into equal-sized data shards (pad last with zeros)
+    #[allow(dead_code)]
     fn split_data(data: &[u8]) -> Vec<Vec<u8>> {
         // This is called externally, we keep it as a utility
         let chunk_size =
@@ -132,6 +134,7 @@ impl ReedSolomonCodec {
         Self::split_data_with_count(data, Self::num_shards_hint(data), chunk_size)
     }
 
+    #[allow(dead_code)]
     fn num_shards_hint(data: &[u8]) -> usize {
         // We need the caller to specify; this is a helper
         // In practice, split_data_with_count is used
@@ -144,7 +147,7 @@ impl ReedSolomonCodec {
         num_shards: usize,
         chunk_size: usize,
     ) -> Vec<Vec<u8>> {
-        let mut shards: Vec<Vec<u8>> = (0..num_shards)
+        let shards: Vec<Vec<u8>> = (0..num_shards)
             .map(|i| {
                 let start = i * chunk_size;
                 let end = ((i + 1) * chunk_size).min(data.len());

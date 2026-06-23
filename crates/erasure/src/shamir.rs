@@ -8,8 +8,8 @@ fn build_gf_tables() -> ([u8; 512], [u8; 256]) {
     let mut exp = [0u8; 512];
     let mut log = [0u8; 256];
     let mut x: u16 = 1;
-    for i in 0..255 {
-        exp[i] = x as u8;
+    for (i, item) in exp.iter_mut().enumerate().take(255) {
+        *item = x as u8;
         log[x as usize] = i as u8;
         x <<= 1;
         if x & 256 != 0 {
@@ -34,14 +34,16 @@ fn gf_mul(a: u8, b: u8) -> u8 {
     exp[idx % 255]
 }
 
+#[allow(dead_code)]
 fn gf_inv(a: u8) -> Result<u8, ErasureError> {
     if a == 0 {
         return Err(ErasureError::ShamirError("cannot invert zero".into()));
     }
     let (exp, _) = &*GF_TABLES;
-    Ok(exp[255 - (log_lookup(a) as usize)])
+    Ok(exp[255 - log_lookup(a)])
 }
 
+#[allow(dead_code)]
 fn log_lookup(a: u8) -> usize {
     let (_, log) = &*GF_TABLES;
     log[a as usize] as usize
@@ -145,7 +147,6 @@ impl ShamirScheme {
                     if i != j {
                         // basis *= (0 - xj) / (xi - xj) = xj / (xi - xj) in GF(2^8)
                         let num = *xj;
-                        let denom = gf_div(*xi, *xj)?;
                         // Actually: (0 - xj) = xj in GF(2^8) since -1 = 1
                         // (xi - xj) = xi + xj in GF(2^8)
                         let diff = xi ^ xj;
