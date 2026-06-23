@@ -26,7 +26,7 @@ pub struct RecoveryResponse {
     pub processing_time_ms: u64,
 }
 
-pub async fn recover_file(
+pub async fn recover_from_chunks(
     file_id: String,
     chunks: Vec<Vec<u8>>,
     request: RecoveryRequest,

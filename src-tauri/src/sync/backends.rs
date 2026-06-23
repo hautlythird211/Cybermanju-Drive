@@ -20,7 +20,7 @@ pub fn create_backend(config: &SyncConfig) -> Result<Box<dyn StorageBackend>, St
         }
         SyncBackendType::GitHub => {
             let cfg = serde_json::json!({
-                "repo": config.repo_name,
+                "repo": config.repo_name.as_deref(),
                 "branch": config.branch,
                 "use_git_lfs": config.use_git_lfs,
                 "repo_layout": config.repo_layout,
@@ -30,25 +30,25 @@ pub fn create_backend(config: &SyncConfig) -> Result<Box<dyn StorageBackend>, St
         }
         SyncBackendType::GitLab => {
             let cfg = serde_json::json!({
-                "project": config.repo_name,
+                "project": config.repo_name.as_deref(),
                 "branch": config.branch,
-                "base_url": config.base_path,
+                "base_url": config.base_path.as_deref(),
                 "use_git_lfs": config.use_git_lfs,
             });
             cybermanju_backends::create_backend(&config.backend_type, token, &cfg)
         }
         SyncBackendType::Codeberg => {
             let cfg = serde_json::json!({
-                "repo": config.repo_name,
+                "repo": config.repo_name.as_deref(),
                 "branch": config.branch,
             });
             cybermanju_backends::create_backend(&config.backend_type, token, &cfg)
         }
         SyncBackendType::Gitea => {
             let cfg = serde_json::json!({
-                "repo": config.repo_name,
+                "repo": config.repo_name.as_deref(),
                 "branch": config.branch,
-                "base_url": config.base_path,
+                "base_url": config.base_path.as_deref(),
             });
             cybermanju_backends::create_backend(&config.backend_type, token, &cfg)
         }
@@ -79,13 +79,13 @@ pub fn create_backend(config: &SyncConfig) -> Result<Box<dyn StorageBackend>, St
         SyncBackendType::Nostr => {
             let cfg = serde_json::json!({
                 "relays": [],
-                "nip96_host": config.base_path,
+                "nip96_host": config.base_path.as_deref(),
             });
             cybermanju_backends::create_backend(&config.backend_type, token, &cfg)
         }
         SyncBackendType::Iroh => {
             let cfg = serde_json::json!({
-                "gateway_url": config.base_path,
+                "gateway_url": config.base_path.as_deref(),
             });
             cybermanju_backends::create_backend(&config.backend_type, token, &cfg)
         }
@@ -93,7 +93,7 @@ pub fn create_backend(config: &SyncConfig) -> Result<Box<dyn StorageBackend>, St
             let cfg = serde_json::json!({
                 "save_dir": config.base_path.as_deref().unwrap_or("/tmp/torrents"),
                 "seed_port": 6881u64,
-                "tracker_url": config.repo_name,
+                "tracker_url": config.repo_name.as_deref(),
             });
             cybermanju_backends::create_backend(&config.backend_type, token, &cfg)
         }
@@ -113,7 +113,7 @@ pub fn create_backend(config: &SyncConfig) -> Result<Box<dyn StorageBackend>, St
         }
         SyncBackendType::Rclone => {
             let cfg = serde_json::json!({
-                "remote_name": config.repo_name,
+                "remote_name": config.repo_name.as_deref(),
                 "rclone_path": config.base_path.as_deref().unwrap_or("rclone"),
             });
             cybermanju_backends::create_backend(&config.backend_type, token, &cfg)
