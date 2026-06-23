@@ -869,7 +869,7 @@ fn decode_dns_name(data: &[u8], offset: usize) -> Result<(String, usize), String
             if pos + 1 >= data.len() {
                 return Err("truncated compression pointer".into());
             }
-            let pointer = ((len & 0x3F) << 8) as usize | data[pos + 1] as usize;
+            let pointer = ((len & 0x3F) << 8) | data[pos + 1] as usize;
             if pointer >= data.len() {
                 return Err("invalid compression pointer".into());
             }
