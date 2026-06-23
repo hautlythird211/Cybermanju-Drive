@@ -10,7 +10,7 @@ pub struct FountainEncoder {
 
 impl FountainEncoder {
     pub fn new(source_data: &[u8], symbol_size: usize) -> Self {
-        let source_symbols = (source_data.len() + symbol_size - 1) / symbol_size;
+        let source_symbols = source_data.len().div_ceil(symbol_size);
         let mut source = Vec::with_capacity(source_symbols);
         for i in 0..source_symbols {
             let start = i * symbol_size;
@@ -49,8 +49,8 @@ impl FountainEncoder {
                 indices.swap(i, j);
             }
             for &idx in indices.iter().take(subset_size) {
-                for byte in 0..self.symbol_size {
-                    coded_sym[byte] ^= self.source[idx][byte];
+                for (coded_byte, src_byte) in coded_sym.iter_mut().zip(self.source[idx].iter()).take(self.symbol_size) {
+                    *coded_byte ^= *src_byte;
                 }
             }
             coded.push(coded_sym);
@@ -73,8 +73,8 @@ impl FountainEncoder {
                 indices.swap(i, j);
             }
             for &idx in indices.iter().take(subset_size) {
-                for byte in 0..self.symbol_size {
-                    coded_sym[byte] ^= self.source[idx][byte];
+                for (coded_byte, src_byte) in coded_sym.iter_mut().zip(self.source[idx].iter()).take(self.symbol_size) {
+                    *coded_byte ^= *src_byte;
                 }
             }
             packets.push(coded_sym);
@@ -93,7 +93,7 @@ impl FountainDecoder {
         source_len: usize,
         symbol_size: usize,
     ) -> Result<Vec<u8>, ErasureError> {
-        let source_symbols = (source_len + symbol_size - 1) / symbol_size;
+        let source_symbols = source_len.div_ceil(symbol_size);
         if symbols.len() < source_symbols {
             return Err(ErasureError::FountainError(format!(
                 "need at least {} symbols to decode, got {}",
@@ -136,8 +136,8 @@ impl FountainDecoder {
         }
 
         // For systematic symbols (index < k), set the corresponding column
-        for i in 0..k.min(n) {
-            matrix[i][i] = 1;
+        for (i, row) in matrix.iter_mut().enumerate().take(k.min(n)) {
+            row[i] = 1;
         }
 
         // Gaussian elimination over GF(2)

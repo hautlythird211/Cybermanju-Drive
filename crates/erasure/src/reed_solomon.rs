@@ -130,7 +130,7 @@ impl ReedSolomonCodec {
     fn split_data(data: &[u8]) -> Vec<Vec<u8>> {
         // This is called externally, we keep it as a utility
         let chunk_size =
-            (data.len() + Self::num_shards_hint(data) - 1) / Self::num_shards_hint(data);
+            data.len().div_ceil(Self::num_shards_hint(data));
         Self::split_data_with_count(data, Self::num_shards_hint(data), chunk_size)
     }
 
@@ -177,7 +177,7 @@ impl ReedSolomonCodec {
 
     /// Encode data: split into data shards and compute parity shards
     pub fn encode(&self, data: &[u8]) -> Result<Vec<Vec<u8>>, ErasureError> {
-        let chunk_size = (data.len() + self.data_shards - 1) / self.data_shards;
+        let chunk_size = data.len().div_ceil(self.data_shards);
         let data_shards = Self::split_data_with_count(data, self.data_shards, chunk_size);
         let mut result = data_shards.clone();
 
@@ -282,8 +282,8 @@ impl ReedSolomonCodec {
                     for row in (col + 1)..rows {
                         if matrix[row][col] != 0 {
                             let factor = gf_div(matrix[row][col], pivot_val)?;
-                            for c in col..cols {
-                                matrix[row][c] ^= gf_mul(factor, matrix[col][c]);
+                            for (c, col_val) in matrix[row][col..cols].iter_mut().enumerate() {
+                                *col_val ^= gf_mul(factor, matrix[col][col + c]);
                             }
                             rhs[row] ^= gf_mul(factor, rhs[col]);
                         }
