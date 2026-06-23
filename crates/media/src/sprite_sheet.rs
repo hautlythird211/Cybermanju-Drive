@@ -51,7 +51,7 @@ impl SpriteSheetBuilder {
     /// Pack all tiles into a single RGBA canvas, then encode as PNG.
     pub fn build(&self) -> Result<SpriteSheetResult> {
         let tile_count = self.tiles.len() as u32;
-        let rows = (tile_count + self.grid_cols - 1) / self.grid_cols;
+        let rows = tile_count.div_ceil(self.grid_cols);
         let width = self.grid_cols * self.tile_size;
         let height = rows * self.tile_size;
 
