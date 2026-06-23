@@ -3,6 +3,8 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
+type ProgressCallback = Arc<dyn Fn(f64, &str) + Send + Sync>;
+
 /// Create a secure temporary directory with restricted permissions (0o700).
 /// Uses a unique subdirectory per transfer to avoid collisions.
 fn secure_tmp_dir() -> Result<PathBuf, String> {
@@ -33,6 +35,7 @@ fn secure_tmp_dir() -> Result<PathBuf, String> {
 
 /// Sanitize a filename for temp storage: reject path components.
 fn sanitize_filename(name: &str) -> String {
+    #[allow(clippy::collapsible_str_replace)]
     name.replace('/', "_")
         .replace('\\', "_")
         .replace("..", "_")
@@ -104,7 +107,7 @@ pub fn transfer_files_parallel(
     src: &(dyn StorageBackend + Sync + Send),
     dst: &(dyn StorageBackend + Sync + Send),
     max_parallel: usize,
-    progress: Arc<dyn Fn(f64, &str) + Send + Sync>,
+    progress: ProgressCallback,
 ) -> Result<usize, String> {
     let files = src.list_files("")?;
     let total = files.len();

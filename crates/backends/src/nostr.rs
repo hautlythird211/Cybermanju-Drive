@@ -166,7 +166,7 @@ impl NostrBackend {
             }
         }
 
-        let secp = Secp256k1::new();
+    let _secp = Secp256k1::new();
         let secret_key = SecretKey::from_slice(&private_key)
             .expect("invalid Nostr private key: must be 32 bytes");
         let keypair = Keypair::from_secret_key(&secp, &secret_key);
@@ -446,8 +446,6 @@ pub fn gift_wrap_file(
     recipient_pubkey_hex: &str,
     _sender_keypair: &Keypair,
 ) -> Result<serde_json::Value, String> {
-    use secp256k1::{SecretKey, XOnlyPublicKey};
-
     if data.len() > 65536 {
         return Err("NIP-59 gift-wrap only supports files up to 64KB".into());
     }
@@ -573,7 +571,7 @@ pub fn unwrap_gift_wrap(
         .decode(content_b64)
         .map_err(|e| format!("base64 decode: {}", e))?;
 
-    let secp = Secp256k1::new();
+    let _secp = Secp256k1::new();
     let ephemeral_pubkey_hex = outer_event
         .get("pubkey")
         .and_then(|v| v.as_str())
@@ -746,7 +744,7 @@ impl StorageBackend for NostrBackend {
 
     fn get_file_url(&self, remote_path: &str) -> Result<String, String> {
         let id = remote_path.strip_prefix("nostr://").unwrap_or(remote_path);
-        for relay_url in &self.relays {
+        if let Some(relay_url) = self.relays.first() {
             let ws_url = relay_url
                 .replace("wss://", "https://")
                 .replace("ws://", "http://");

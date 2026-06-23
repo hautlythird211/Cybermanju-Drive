@@ -6,6 +6,7 @@ use tokio::runtime::Runtime;
 
 pub struct TorrentBackend {
     save_dir: PathBuf,
+    #[allow(dead_code)]
     seed_port: u16,
     tracker_url: Option<String>,
     rt: Runtime,
@@ -56,6 +57,7 @@ impl TorrentBackend {
         }
 
         let torrent_bytes = self.rt.block_on(async {
+            #[allow(clippy::struct_field_assingments)]
             let mut opts = CreateTorrentOptions::default();
             opts.name = path.file_name().and_then(|n| n.to_str());
             if let Some(ref tracker) = self.tracker_url {
@@ -318,7 +320,7 @@ impl StorageBackend for TorrentBackend {
     fn test_connection(&self) -> Result<bool, String> {
         let session = self.session.clone();
         self.rt.block_on(async {
-            let count = session.with_torrents(|iter| iter.count());
+            let _count = session.with_torrents(|iter| iter.count());
             Ok(true)
         })
     }

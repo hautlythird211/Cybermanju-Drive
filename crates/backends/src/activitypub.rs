@@ -279,20 +279,20 @@ impl StorageBackend for ActivityPubBackend {
                 .and_then(|v| v.as_array())
                 .map(|arr| {
                     arr.iter()
-                        .filter_map(|item| {
+                        .map(|item| {
                             let name = item
                                 .get("name")
                                 .and_then(|v| v.as_str())
                                 .unwrap_or("unknown");
                             let url = item.get("url").and_then(|v| v.as_str()).unwrap_or("");
                             let size = item.get("size").and_then(|v| v.as_u64()).unwrap_or(0);
-                            Some(RemoteFile {
+                            RemoteFile {
                                 name: name.to_string(),
                                 path: url.to_string(),
                                 size_bytes: size,
                                 modified_at: String::new(),
                                 url: url.to_string(),
-                            })
+                            }
                         })
                         .collect()
                 })

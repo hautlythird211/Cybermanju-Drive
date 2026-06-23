@@ -1,6 +1,6 @@
 use cybermanju_types::sync::{RemoteFile, StorageBackend, SyncBackendType};
 use sha2::{Digest, Sha256};
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket, UdpSocket as _};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
 use std::time::Duration;
 
 /// Validate a LAN peer address: must be a valid SocketAddr.
@@ -141,6 +141,7 @@ pub struct LanBackend {
     local_port: u16,
     discovery_mode: std::sync::Mutex<DiscoveryMode>,
     manual_peers: std::sync::Mutex<Vec<SocketAddr>>,
+    #[allow(dead_code)]
     bound_interface: std::sync::Mutex<Option<String>>,
 }
 
@@ -169,12 +170,12 @@ impl LanBackend {
         self
     }
 
-    pub fn with_discovery_mode(mut self, mode: DiscoveryMode) -> Self {
+    pub fn with_discovery_mode(self, mode: DiscoveryMode) -> Self {
         *self.discovery_mode.lock().unwrap() = mode;
         self
     }
 
-    pub fn with_manual_peers(mut self, peers: Vec<SocketAddr>) -> Self {
+    pub fn with_manual_peers(self, peers: Vec<SocketAddr>) -> Self {
         *self.manual_peers.lock().unwrap() = peers;
         self
     }
@@ -290,8 +291,8 @@ impl LanBackend {
 
         let verified_count = peers.iter().filter(|p| p.verified).count();
         log::info!(
-            "Discovery ({}): found {} peers, {} verified",
-            format!("{:?}", mode),
+            "Discovery ({:?}): found {} peers, {} verified",
+            mode,
             peers.len(),
             verified_count
         );
@@ -317,16 +318,11 @@ impl LanBackend {
         let mut peers = Vec::new();
         let mut buf = [0u8; 4096];
 
-        loop {
-            match socket.recv_from(&mut buf) {
-                Ok((len, from)) => {
-                    if let Some(peer) = parse_mdns_response(&buf[..len], from) {
-                        if !peers.iter().any(|p: &DiscoveredPeer| p.addr == peer.addr) {
-                            peers.push(peer);
-                        }
-                    }
+        while let Ok((len, from)) = socket.recv_from(&mut buf) {
+            if let Some(peer) = parse_mdns_response(&buf[..len], from) {
+                if !peers.iter().any(|p: &DiscoveredPeer| p.addr == peer.addr) {
+                    peers.push(peer);
                 }
-                Err(_) => break,
             }
         }
 
@@ -873,7 +869,7 @@ fn decode_dns_name(data: &[u8], offset: usize) -> Result<(String, usize), String
             if pos + 1 >= data.len() {
                 return Err("truncated compression pointer".into());
             }
-            let pointer = ((len & 0x3F) as usize) << 8 | data[pos + 1] as usize;
+            let pointer = ((len & 0x3F) << 8) as usize | data[pos + 1] as usize;
             if pointer >= data.len() {
                 return Err("invalid compression pointer".into());
             }
@@ -985,10 +981,8 @@ fn parse_mdns_response(data: &[u8], from: SocketAddr) -> Option<DiscoveredPeer> 
                     txt_pos += txt_len;
                 }
             }
-            DNS_TYPE_A => {
-                if rdlength == 4 {
+            DNS_TYPE_A if rdlength == 4 => {
                     let _ip = Ipv4Addr::new(data[pos], data[pos + 1], data[pos + 2], data[pos + 3]);
-                }
             }
             _ => {}
         }
