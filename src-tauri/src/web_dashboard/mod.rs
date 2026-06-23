@@ -157,7 +157,8 @@ pub struct WebDashboard {
     pub jwt_secret: [u8; 32],
     /// Shared database handle — opened once, shared across all request threads.
     /// Using Arc<Mutex<>> since redb requires exclusive access for writes.
-    pub db: Arc<Mutex<RedbDb>>,
+    /// `None` when another process holds the lock (e.g. main Tauri app).
+    pub db: Option<Arc<Mutex<RedbDb>>>,
     #[allow(dead_code)]
     pub running: AtomicBool,
     /// Per-IP rate limit counters: IP → (count, window_start)
@@ -172,17 +173,13 @@ pub struct WebDashboard {
 
 impl WebDashboard {
     pub fn new(port: u16, db_path: &str) -> Self {
-        let db = RedbDb::open(db_path)
-            .or_else(|_| RedbDb::create(db_path))
-            .expect("Failed to open web dashboard database");
-
-        let jwt_secret = load_or_create_jwt_secret(&db);
+        let (db, jwt_secret) = open_dashboard_db(db_path);
 
         Self {
             port,
             bind_addr: "127.0.0.1".to_string(),
             jwt_secret,
-            db: Arc::new(Mutex::new(db)),
+            db,
             running: AtomicBool::new(false),
             rate_limits: Mutex::new(HashMap::new()),
             server_thread: Mutex::new(None),
@@ -194,17 +191,13 @@ impl WebDashboard {
     /// Constructor that allows specifying a bind address (for Docker use case).
     #[allow(dead_code)]
     pub fn new_with_bind_addr(port: u16, db_path: &str, bind_addr: &str) -> Self {
-        let db = RedbDb::open(db_path)
-            .or_else(|_| RedbDb::create(db_path))
-            .expect("Failed to open web dashboard database");
-
-        let jwt_secret = load_or_create_jwt_secret(&db);
+        let (db, jwt_secret) = open_dashboard_db(db_path);
 
         Self {
             port,
             bind_addr: bind_addr.to_string(),
             jwt_secret,
-            db: Arc::new(Mutex::new(db)),
+            db,
             running: AtomicBool::new(false),
             rate_limits: Mutex::new(HashMap::new()),
             server_thread: Mutex::new(None),
@@ -221,7 +214,7 @@ impl WebDashboard {
             port,
             bind_addr: bind_addr.to_string(),
             jwt_secret,
-            db: Arc::new(Mutex::new(db)),
+            db: Some(Arc::new(Mutex::new(db))),
             running: AtomicBool::new(false),
             rate_limits: Mutex::new(HashMap::new()),
             server_thread: Mutex::new(None),
@@ -232,7 +225,7 @@ impl WebDashboard {
 
     /// Accessor for the shared database handle.
     #[allow(dead_code)]
-    pub fn db(&self) -> &Arc<Mutex<RedbDb>> {
+    pub fn db(&self) -> &Option<Arc<Mutex<RedbDb>>> {
         &self.db
     }
 
@@ -356,6 +349,24 @@ impl WebDashboard {
     }
 }
 
+/// Try to open the dashboard database, falling back to a random JWT secret
+/// when the database cannot be opened (e.g. main app already holds the lock).
+fn open_dashboard_db(db_path: &str) -> (Option<Arc<Mutex<RedbDb>>>, [u8; 32]) {
+    match RedbDb::open(db_path).or_else(|_| RedbDb::create(db_path)) {
+        Ok(db) => {
+            let secret = load_or_create_jwt_secret(&db);
+            (Some(Arc::new(Mutex::new(db))), secret)
+        }
+        Err(e) => {
+            warn!("Web Dashboard database unavailable: {}. Using ephemeral JWT secret.", e);
+            let mut secret = [0u8; 32];
+            use rand_core::{OsRng, RngCore};
+            OsRng.fill_bytes(&mut secret);
+            (None, secret)
+        }
+    }
+}
+
 impl Drop for WebDashboard {
     fn drop(&mut self) {
         self.stop();
@@ -404,25 +415,30 @@ fn handle_connection(dashboard: &WebDashboard, mut stream: TcpStream) {
 
     let effective_origin = effective_origin.as_deref();
 
-    // Handle the request — use the shared DB handle
-    let db_guard = match dashboard.db.lock() {
-        Ok(g) => g,
-        Err(_) => {
-            let _ = stream
-                .write_all(json_error(500, "Database lock poisoned", effective_origin).as_bytes());
-            return;
-        }
+    // Handle the request — use the shared DB handle (if available)
+    let response = match &dashboard.db {
+        Some(db) => match db.lock() {
+            Ok(guard) => {
+                let resp = handle_request(
+                    dashboard,
+                    &guard,
+                    &method,
+                    &path,
+                    &body,
+                    auth_header.as_deref(),
+                    effective_origin,
+                );
+                drop(guard);
+                resp
+            }
+            Err(_) => json_error(500, "Database lock poisoned", effective_origin),
+        },
+        None => json_error(
+            503,
+            "Database unavailable — another app instance holds the lock",
+            effective_origin,
+        ),
     };
-    let response = handle_request(
-        dashboard,
-        &db_guard,
-        &method,
-        &path,
-        &body,
-        auth_header.as_deref(),
-        effective_origin,
-    );
-    drop(db_guard);
 
     let _ = stream.write_all(response.as_bytes());
 }
