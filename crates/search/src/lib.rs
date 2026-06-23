@@ -8,7 +8,6 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use std::path::Path;
 use std::sync::RwLock;
 use tantivy::{
     collector::{Count, TopDocs},
