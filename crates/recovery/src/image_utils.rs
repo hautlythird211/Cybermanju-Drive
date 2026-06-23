@@ -107,7 +107,7 @@ pub fn estimate_jpeg_size(width: u32, height: u32, quality: u8) -> u64 {
         81..=95 => 0.4,
         _ => 0.7,
     };
-    (pixels * 3 / 8) as u64 * (ratio * 100.0) as u64 / 100
+    (pixels * 3 / 8) * (ratio * 100.0) as u64 / 100
 }
 
 /// Rough estimate of WebP output size in bytes
@@ -138,7 +138,7 @@ pub fn calculate_psnr(original: &[u8], reconstructed: &[u8]) -> f64 {
 }
 
 /// Calculate Structural Similarity Index (simplified)
-pub fn calculate_ssim(original: &[u8], reconstructed: &[u8], width: u32, height: u32) -> f64 {
+pub fn calculate_ssim(original: &[u8], reconstructed: &[u8], _width: u32, _height: u32) -> f64 {
     if original.len() != reconstructed.len() || original.is_empty() {
         return 0.0;
     }
@@ -168,10 +168,8 @@ pub fn calculate_ssim(original: &[u8], reconstructed: &[u8], width: u32, height:
     let c1 = (0.01_f64 * 255.0).powi(2);
     let c2 = (0.03_f64 * 255.0).powi(2);
 
-    let ssim = ((2.0 * mean_o * mean_r + c1) * (2.0 * cov + c2))
-        / ((mean_o.powi(2) + mean_r.powi(2) + c1) * (var_o + var_r + c2));
-
-    ssim
+    ((2.0 * mean_o * mean_r + c1) * (2.0 * cov + c2))
+        / ((mean_o.powi(2) + mean_r.powi(2) + c1) * (var_o + var_r + c2))
 }
 
 /// Helper: decode input bytes to DynamicImage, handling different channel counts

@@ -55,7 +55,7 @@ impl RecoveryPipeline {
         }
 
         // Decode the image to get dimensions
-        let (rgba_data, width, height, channels) = image_utils::from_bytes(&data)?;
+        let (rgba_data, width, height, _channels) = image_utils::from_bytes(&data)?;
 
         let mut result_data = rgba_data.clone();
         let mut method = "direct".to_string();
