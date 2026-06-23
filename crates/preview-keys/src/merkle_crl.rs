@@ -272,14 +272,12 @@ impl MerkleAccumulatorCRL {
 
     /// Serialize the accumulator to bytes for storage.
     pub fn to_bytes(&self) -> Result<Vec<u8>, PreviewKeyError> {
-        serde_json::to_vec(self)
-            .map_err(|e| PreviewKeyError::SerializationError(e.to_string()))
+        serde_json::to_vec(self).map_err(|e| PreviewKeyError::SerializationError(e.to_string()))
     }
 
     /// Deserialize the accumulator from bytes.
     pub fn from_bytes(data: &[u8]) -> Result<Self, PreviewKeyError> {
-        serde_json::from_slice(data)
-            .map_err(|e| PreviewKeyError::SerializationError(e.to_string()))
+        serde_json::from_slice(data).map_err(|e| PreviewKeyError::SerializationError(e.to_string()))
     }
 
     /// Rebuild the internal cache from leaf hashes.
@@ -306,7 +304,11 @@ impl MerkleAccumulatorCRL {
                 let left_path = vec![h - 1, i * 2];
                 let right_path = vec![h - 1, i * 2 + 1];
                 let left = self.cache.get(&left_path).copied().unwrap_or(default_empty);
-                let right = self.cache.get(&right_path).copied().unwrap_or(default_empty);
+                let right = self
+                    .cache
+                    .get(&right_path)
+                    .copied()
+                    .unwrap_or(default_empty);
 
                 let mut hasher = Hasher::new();
                 hasher.update(&left);

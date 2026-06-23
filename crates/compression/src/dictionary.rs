@@ -32,7 +32,13 @@ mod tests {
     #[test]
     fn test_dictionary_train_and_compress() {
         let samples: Vec<Vec<u8>> = (0..10)
-            .map(|i| format!("sample data {} with repeated content and common patterns", i).into_bytes())
+            .map(|i| {
+                format!(
+                    "sample data {} with repeated content and common patterns",
+                    i
+                )
+                .into_bytes()
+            })
             .collect();
         let dict = train_dictionary(&samples, 1024).unwrap();
         assert!(!dict.is_empty());

@@ -1,7 +1,5 @@
 use cybermanju_types::sync::{RemoteFile, StorageBackend, SyncBackendType};
-use librqbit::{
-    AddTorrent, AddTorrentOptions, CreateTorrentOptions, Session, SessionOptions,
-};
+use librqbit::{AddTorrent, AddTorrentOptions, CreateTorrentOptions, Session, SessionOptions};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::runtime::Runtime;
@@ -93,9 +91,10 @@ impl TorrentBackend {
         data: &[u8],
         _name: &str,
     ) -> Result<(Vec<u8>, String), String> {
-        let temp_path = self.save_dir.join(format!("tmp_{}.dat", &blake3::hash(data).to_hex()[..16]));
-        std::fs::write(&temp_path, data)
-            .map_err(|e| format!("write temp file: {}", e))?;
+        let temp_path = self
+            .save_dir
+            .join(format!("tmp_{}.dat", &blake3::hash(data).to_hex()[..16]));
+        std::fs::write(&temp_path, data).map_err(|e| format!("write temp file: {}", e))?;
 
         let result = self.create_torrent_from_file(temp_path.to_str().unwrap_or(""));
         std::fs::remove_file(&temp_path).ok();
@@ -160,7 +159,9 @@ impl TorrentBackend {
 
             let info_hash = handle.info_hash().as_string();
 
-            handle.wait_until_completed().await
+            handle
+                .wait_until_completed()
+                .await
                 .map_err(|e| format!("download failed: {}", e))?;
 
             let dest_path = std::path::Path::new(&dest);
@@ -192,8 +193,16 @@ impl TorrentBackend {
                             state: format!("{:?}", stats.state),
                             progress_bytes: stats.progress_bytes,
                             total_bytes: stats.total_bytes,
-                            upload_speed: stats.live.as_ref().map(|l| l.upload_speed.as_bytes()).unwrap_or(0),
-                            download_speed: stats.live.as_ref().map(|l| l.download_speed.as_bytes()).unwrap_or(0),
+                            upload_speed: stats
+                                .live
+                                .as_ref()
+                                .map(|l| l.upload_speed.as_bytes())
+                                .unwrap_or(0),
+                            download_speed: stats
+                                .live
+                                .as_ref()
+                                .map(|l| l.download_speed.as_bytes())
+                                .unwrap_or(0),
                         });
                     }
                 }
@@ -256,12 +265,17 @@ impl StorageBackend for TorrentBackend {
             .strip_prefix("magnet:?xt=urn:btih:")
             .unwrap_or("")
             .to_string();
-        self.uploaded.lock().unwrap()
+        self.uploaded
+            .lock()
+            .unwrap()
             .push((remote_path.to_string(), info_hash));
 
         self.start_seeding(&torrent_bytes)?;
 
-        log::info!("Torrent created and seeding: {}", &magnet[..64.min(magnet.len())]);
+        log::info!(
+            "Torrent created and seeding: {}",
+            &magnet[..64.min(magnet.len())]
+        );
         Ok(magnet)
     }
 
@@ -329,9 +343,7 @@ mod tests {
         let backend = TorrentBackend::new(dir, 0, None);
 
         let data = b"Hello, Cybermanju torrent test!";
-        let (torrent_bytes, magnet) = backend
-            .create_torrent_from_data(data, "test.txt")
-            .unwrap();
+        let (torrent_bytes, magnet) = backend.create_torrent_from_data(data, "test.txt").unwrap();
 
         assert!(!torrent_bytes.is_empty());
         assert!(magnet.starts_with("magnet:?xt=urn:btih:"));
@@ -358,7 +370,12 @@ mod tests {
         let torrent_files: Vec<_> = std::fs::read_dir(&dir)
             .unwrap()
             .filter_map(|e| e.ok())
-            .filter(|e| e.path().extension().map(|ext| ext == "torrent").unwrap_or(false))
+            .filter(|e| {
+                e.path()
+                    .extension()
+                    .map(|ext| ext == "torrent")
+                    .unwrap_or(false)
+            })
             .collect();
         assert!(!torrent_files.is_empty());
     }

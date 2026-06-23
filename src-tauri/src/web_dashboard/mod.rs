@@ -29,8 +29,8 @@ use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation}
 use log::{error, info, warn};
 use rand_core::{OsRng, RngCore};
 use redb::{Database as RedbDb, ReadableTable, TableDefinition};
-use sha2::{Sha256, Digest};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 // ─── Table definitions (must match db/mod.rs) ────────────────────────
 
@@ -706,9 +706,7 @@ pub fn handle_request(
         }
 
         // ─── LAN peer challenge-response (no auth required for LAN peers) ───
-        ["api", "lan", "challenge"] if method == "POST" => {
-            handle_lan_challenge(db, body, origin)
-        }
+        ["api", "lan", "challenge"] if method == "POST" => handle_lan_challenge(db, body, origin),
 
         // ─── Root / health check ─────────────────────────────────
         ["api"] | ["api", "health"] if method == "GET" => {
@@ -1768,7 +1766,9 @@ fn handle_lan_challenge(db: &RedbDb, body: &str, origin: Option<&str>) -> String
                 {
                     let mut wt = match tx_write.open_table(META_TABLE) {
                         Ok(t) => t,
-                        Err(e) => return json_error(500, &format!("Table open error: {}", e), origin),
+                        Err(e) => {
+                            return json_error(500, &format!("Table open error: {}", e), origin)
+                        }
                     };
                     if wt.insert("device_signing_key", key_hex.as_str()).is_err() {
                         return json_error(500, "Failed to store device signing key", origin);

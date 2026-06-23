@@ -114,28 +114,18 @@ impl ShardBrowserState {
             .enumerate()
             .map(|(i, shard)| {
                 let style = if i == self.selected {
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD)
                 } else {
                     Style::default()
                 };
                 let size_mb = shard.size_bytes as f64 / 1024.0 / 1024.0;
                 let line = Line::from(vec![
-                    Span::styled(
-                        format!("{:<20} ", shard.shard_id),
-                        style,
-                    ),
-                    Span::styled(
-                        format!("{:<10} ", shard.backend),
-                        style,
-                    ),
-                    Span::styled(
-                        format!("{:>6} files  ", shard.file_count),
-                        style,
-                    ),
-                    Span::styled(
-                        format!("{:>6.0}MB ", size_mb),
-                        style,
-                    ),
+                    Span::styled(format!("{:<20} ", shard.shard_id), style),
+                    Span::styled(format!("{:<10} ", shard.backend), style),
+                    Span::styled(format!("{:>6} files  ", shard.file_count), style),
+                    Span::styled(format!("{:>6.0}MB ", size_mb), style),
                     Span::styled(
                         format!("{}", shard.health),
                         style.fg(match shard.health.as_str() {
@@ -210,7 +200,11 @@ impl ShardBrowserState {
             Line::from(vec![
                 Span::styled("MAC:     ", Style::default().fg(Color::Gray)),
                 Span::styled(
-                    if detail.mac_valid { "✓ valid" } else { "✗ invalid" },
+                    if detail.mac_valid {
+                        "✓ valid"
+                    } else {
+                        "✗ invalid"
+                    },
                     Style::default().fg(if detail.mac_valid {
                         Color::Green
                     } else {

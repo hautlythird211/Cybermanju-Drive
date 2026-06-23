@@ -155,7 +155,7 @@ impl PortableDatabase {
         inner_size_bytes: u64,
     ) -> Result<Self> {
         use chacha20poly1305::aead::Aead;
-        use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Key, Nonce};
+        use chacha20poly1305::{ChaCha20Poly1305, Key, KeyInit, Nonce};
 
         let p = Self::resolve(path);
         if p.exists() {

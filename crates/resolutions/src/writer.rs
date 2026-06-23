@@ -218,7 +218,11 @@ impl ShardWriter {
             blob_regions,
             content_total_bytes,
             compression_ratio: 1.0,
-            encrypted_ratio: if self.key_hierarchy.is_some() { 1.0 } else { 0.0 },
+            encrypted_ratio: if self.key_hierarchy.is_some() {
+                1.0
+            } else {
+                0.0
+            },
         };
 
         // Build index
@@ -230,7 +234,9 @@ impl ShardWriter {
                 clay_shards: Vec::new(),
                 fountain_packets: Vec::new(),
             },
-            merkle_root: blake3::hash(self.content_buf.as_slice()).to_hex().to_string(),
+            merkle_root: blake3::hash(self.content_buf.as_slice())
+                .to_hex()
+                .to_string(),
         };
 
         // Build erasure meta
@@ -251,7 +257,9 @@ impl ShardWriter {
                 repair_symbols_per_shard: 2,
                 min_packets_for_recovery: 4,
             },
-            shard_blake3: blake3::hash(self.content_buf.as_slice()).to_hex().to_string(),
+            shard_blake3: blake3::hash(self.content_buf.as_slice())
+                .to_hex()
+                .to_string(),
         };
 
         // Build header
@@ -360,7 +368,16 @@ mod tests {
         let r3 = vec![0u8; 1000];
 
         writer
-            .add_file("file1", "photo.jpg", "image/jpeg", "/photos", &r0, &r1, &r2, &r3)
+            .add_file(
+                "file1",
+                "photo.jpg",
+                "image/jpeg",
+                "/photos",
+                &r0,
+                &r1,
+                &r2,
+                &r3,
+            )
             .unwrap();
 
         assert!(writer.files.contains_key("file1"));
@@ -379,7 +396,16 @@ mod tests {
         let r3 = vec![0u8; 1000];
 
         writer
-            .add_file("file1", "photo.jpg", "image/jpeg", "/photos", &r0, &r1, &r2, &r3)
+            .add_file(
+                "file1",
+                "photo.jpg",
+                "image/jpeg",
+                "/photos",
+                &r0,
+                &r1,
+                &r2,
+                &r3,
+            )
             .unwrap();
 
         let tmp = env::temp_dir().join("test_shard.cybermanju");

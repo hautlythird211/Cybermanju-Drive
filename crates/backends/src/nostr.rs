@@ -1,10 +1,10 @@
-use cybermanju_types::sync::{RemoteFile, StorageBackend, SyncBackendType};
 use base64::Engine;
-use chacha20poly1305::{ChaCha20Poly1305, Key as ChaChaKey, Nonce as ChaChaNonce, KeyInit};
 use chacha20poly1305::aead::Aead;
+use chacha20poly1305::{ChaCha20Poly1305, Key as ChaChaKey, KeyInit, Nonce as ChaChaNonce};
+use cybermanju_types::sync::{RemoteFile, StorageBackend, SyncBackendType};
 use futures_util::{SinkExt, StreamExt};
 use rustls::{ClientConfig, RootCertStore};
-use secp256k1::{Secp256k1, SecretKey, Keypair, XOnlyPublicKey, Message as SecpMessage};
+use secp256k1::{Keypair, Message as SecpMessage, Secp256k1, SecretKey, XOnlyPublicKey};
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use std::time::Duration;
@@ -63,18 +63,21 @@ impl NostrBackend {
         let msg_owned = msg.to_string();
 
         self.rt.block_on(async move {
-            let (mut ws_stream, _) = timeout(Duration::from_secs(10), connect_async_tls_with_config(
-                &url,
-                None,
-                false,
-                Some(Connector::Rustls(Arc::new(
-                    ClientConfig::builder()
-                        .with_root_certificates(RootCertStore::from_iter(
-                            TLS_SERVER_ROOTS.iter().cloned(),
-                        ))
-                        .with_no_client_auth(),
-                ))),
-            ))
+            let (mut ws_stream, _) = timeout(
+                Duration::from_secs(10),
+                connect_async_tls_with_config(
+                    &url,
+                    None,
+                    false,
+                    Some(Connector::Rustls(Arc::new(
+                        ClientConfig::builder()
+                            .with_root_certificates(RootCertStore::from_iter(
+                                TLS_SERVER_ROOTS.iter().cloned(),
+                            ))
+                            .with_no_client_auth(),
+                    ))),
+                ),
+            )
             .await
             .map_err(|e| format!("TLS WebSocket connect timeout to {}: {}", url, e))?
             .map_err(|e| format!("TLS WebSocket connect to {}: {}", url, e))?;
@@ -101,18 +104,21 @@ impl NostrBackend {
         let msg_owned = msg.to_string();
 
         self.rt.block_on(async move {
-            let (mut ws_stream, _) = timeout(Duration::from_secs(10), connect_async_tls_with_config(
-                &url,
-                None,
-                false,
-                Some(Connector::Rustls(Arc::new(
-                    ClientConfig::builder()
-                        .with_root_certificates(RootCertStore::from_iter(
-                            TLS_SERVER_ROOTS.iter().cloned(),
-                        ))
-                        .with_no_client_auth(),
-                ))),
-            ))
+            let (mut ws_stream, _) = timeout(
+                Duration::from_secs(10),
+                connect_async_tls_with_config(
+                    &url,
+                    None,
+                    false,
+                    Some(Connector::Rustls(Arc::new(
+                        ClientConfig::builder()
+                            .with_root_certificates(RootCertStore::from_iter(
+                                TLS_SERVER_ROOTS.iter().cloned(),
+                            ))
+                            .with_no_client_auth(),
+                    ))),
+                ),
+            )
             .await
             .map_err(|e| format!("TLS WebSocket connect timeout to {}: {}", url, e))?
             .map_err(|e| format!("TLS WebSocket connect to {}: {}", url, e))?;
@@ -184,15 +190,20 @@ impl NostrBackend {
         to_hex_string(self.pubkey_xonly.serialize())
     }
 
-    fn publish_event(&self, kind: u32, content: &str, tags: Vec<Vec<String>>) -> Result<String, String> {
+    fn publish_event(
+        &self,
+        kind: u32,
+        content: &str,
+        tags: Vec<Vec<String>>,
+    ) -> Result<String, String> {
         let pubkey = self.pubkey_hex();
         let created_at = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
 
-        let tags_json = serde_json::to_string(&tags)
-            .map_err(|e| format!("tags serialize: {}", e))?;
+        let tags_json =
+            serde_json::to_string(&tags).map_err(|e| format!("tags serialize: {}", e))?;
         let event_id = compute_event_id(&pubkey, created_at, kind, &tags_json, content);
         let sig = sign_event_schnorr(&event_id, &self.keypair);
 
@@ -223,7 +234,11 @@ impl NostrBackend {
         if published_to.is_empty() {
             log::warn!("Event published to no relays — content may not be available");
         } else {
-            log::info!("Published event {} to {} relays", &event_id[..16], published_to.len());
+            log::info!(
+                "Published event {} to {} relays",
+                &event_id[..16],
+                published_to.len()
+            );
         }
 
         *self.connected_relays.lock().unwrap() = published_to;
@@ -245,7 +260,10 @@ impl NostrBackend {
                                     if verify_nostr_event(event).is_ok() {
                                         return Ok(Some(event.clone()));
                                     } else {
-                                        log::warn!("relay {} returned event with invalid signature", relay_url);
+                                        log::warn!(
+                                            "relay {} returned event with invalid signature",
+                                            relay_url
+                                        );
                                     }
                                 }
                             }
@@ -268,11 +286,20 @@ impl NostrBackend {
 
         let upload_url = format!("{}/upload", host.trim_end_matches('/'));
 
-        let boundary = format!("----Cybermanju{}", &blake3::hash(filename.as_bytes()).to_hex()[..16]);
+        let boundary = format!(
+            "----Cybermanju{}",
+            &blake3::hash(filename.as_bytes()).to_hex()[..16]
+        );
         let mut body = Vec::new();
 
         body.extend_from_slice(format!("--{}\r\n", boundary).as_bytes());
-        body.extend_from_slice(format!("Content-Disposition: form-data; name=\"file\"; filename=\"{}\"\r\n", filename).as_bytes());
+        body.extend_from_slice(
+            format!(
+                "Content-Disposition: form-data; name=\"file\"; filename=\"{}\"\r\n",
+                filename
+            )
+            .as_bytes(),
+        );
         body.extend_from_slice(b"Content-Type: application/octet-stream\r\n\r\n");
         body.extend_from_slice(data);
         body.extend_from_slice(format!("\r\n--{}--\r\n", boundary).as_bytes());
@@ -280,7 +307,10 @@ impl NostrBackend {
         let resp = self
             .http_client
             .post(&upload_url)
-            .header("Content-Type", format!("multipart/form-data; boundary={}", boundary))
+            .header(
+                "Content-Type",
+                format!("multipart/form-data; boundary={}", boundary),
+            )
             .body(body)
             .send()
             .map_err(|e| format!("NIP-96 upload: {}", e))?;
@@ -351,31 +381,32 @@ fn sign_event_schnorr(event_id_hex: &str, keypair: &Keypair) -> String {
 /// Verify a Nostr event's signature (NIP-01).
 /// Recomputes the event ID from fields and verifies the Schnorr signature.
 fn verify_nostr_event(event: &serde_json::Value) -> Result<(), String> {
-    let pubkey = event.get("pubkey")
+    let pubkey = event
+        .get("pubkey")
         .and_then(|v| v.as_str())
         .ok_or("missing pubkey")?;
-    let created_at = event.get("created_at")
+    let created_at = event
+        .get("created_at")
         .and_then(|v| v.as_u64())
         .ok_or("missing created_at")?;
-    let kind = event.get("kind")
+    let kind = event
+        .get("kind")
         .and_then(|v| v.as_u64())
         .ok_or("missing kind")?;
-    let tags = event.get("tags")
-        .ok_or("missing tags")?;
-    let content = event.get("content")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    let sig_hex = event.get("sig")
+    let tags = event.get("tags").ok_or("missing tags")?;
+    let content = event.get("content").and_then(|v| v.as_str()).unwrap_or("");
+    let sig_hex = event
+        .get("sig")
         .and_then(|v| v.as_str())
         .ok_or("missing sig")?;
 
     // Recompute event ID
-    let tags_json = serde_json::to_string(tags)
-        .map_err(|e| format!("tags serialize: {}", e))?;
+    let tags_json = serde_json::to_string(tags).map_err(|e| format!("tags serialize: {}", e))?;
     let expected_id = compute_event_id(pubkey, created_at, kind as u32, &tags_json, content);
 
     // Verify ID matches
-    let event_id = event.get("id")
+    let event_id = event
+        .get("id")
         .and_then(|v| v.as_str())
         .ok_or("missing id")?;
     if event_id != expected_id {
@@ -384,20 +415,15 @@ fn verify_nostr_event(event: &serde_json::Value) -> Result<(), String> {
 
     // Verify Schnorr signature
     let secp = Secp256k1::new();
-    let msg_bytes = hex::decode(&expected_id)
-        .map_err(|_| "invalid event ID hex")?;
-    let msg = SecpMessage::from_digest_slice(&msg_bytes)
-        .map_err(|_| "invalid event ID length")?;
+    let msg_bytes = hex::decode(&expected_id).map_err(|_| "invalid event ID hex")?;
+    let msg = SecpMessage::from_digest_slice(&msg_bytes).map_err(|_| "invalid event ID length")?;
 
-    let sig_bytes = hex::decode(sig_hex)
-        .map_err(|_| "invalid signature hex")?;
+    let sig_bytes = hex::decode(sig_hex).map_err(|_| "invalid signature hex")?;
     let sig = secp256k1::schnorr::Signature::from_slice(&sig_bytes)
         .map_err(|_| "invalid signature length")?;
 
-    let pubkey_bytes = hex::decode(pubkey)
-        .map_err(|_| "invalid pubkey hex")?;
-    let xonly = XOnlyPublicKey::from_slice(&pubkey_bytes)
-        .map_err(|_| "invalid pubkey")?;
+    let pubkey_bytes = hex::decode(pubkey).map_err(|_| "invalid pubkey hex")?;
+    let xonly = XOnlyPublicKey::from_slice(&pubkey_bytes).map_err(|_| "invalid pubkey")?;
 
     secp.verify_schnorr(&sig, &msg, &xonly)
         .map_err(|e| format!("signature verification failed: {}", e))
@@ -429,13 +455,14 @@ pub fn gift_wrap_file(
     let secp = Secp256k1::new();
 
     // Generate ephemeral keypair for the wrapping
-    let (ephemeral_secret, ephemeral_pubkey) = secp.generate_keypair(&mut secp256k1::rand::thread_rng());
+    let (ephemeral_secret, ephemeral_pubkey) =
+        secp.generate_keypair(&mut secp256k1::rand::thread_rng());
     let ephemeral_keypair = Keypair::from_secret_key(&secp, &ephemeral_secret);
     let (ephemeral_xonly, _) = ephemeral_pubkey.x_only_public_key();
 
     // Parse recipient pubkey
-    let recipient_bytes = hex::decode(recipient_pubkey_hex)
-        .map_err(|_| "invalid recipient pubkey hex")?;
+    let recipient_bytes =
+        hex::decode(recipient_pubkey_hex).map_err(|_| "invalid recipient pubkey hex")?;
     let recipient_pubkey = secp256k1::PublicKey::from_slice(&recipient_bytes)
         .map_err(|_| "invalid recipient pubkey")?;
 
@@ -461,7 +488,10 @@ pub fn gift_wrap_file(
     let mut file_nonce = [0u8; 12];
     file_nonce.copy_from_slice(&nonce[..12]);
     let encrypted_inner = cipher
-        .encrypt(ChaChaNonce::from_slice(&file_nonce), inner_content_str.as_bytes())
+        .encrypt(
+            ChaChaNonce::from_slice(&file_nonce),
+            inner_content_str.as_bytes(),
+        )
         .map_err(|e| format!("inner encryption failed: {}", e))?;
 
     // Build inner event (kind 13 = ephemeral direct message)
@@ -499,7 +529,10 @@ pub fn gift_wrap_file(
     let mut outer_nonce = [0u8; 12];
     outer_nonce.copy_from_slice(&nonce[..12]);
     let encrypted_outer = outer_cipher
-        .encrypt(ChaChaNonce::from_slice(&outer_nonce), inner_event_str.as_bytes())
+        .encrypt(
+            ChaChaNonce::from_slice(&outer_nonce),
+            inner_event_str.as_bytes(),
+        )
         .map_err(|e| format!("outer encryption failed: {}", e))?;
 
     // Build outer event (kind 1059 = gift wrap)
@@ -536,7 +569,8 @@ pub fn unwrap_gift_wrap(
         .and_then(|v| v.as_str())
         .ok_or("missing content")?;
 
-    let encrypted = base64::engine::general_purpose::STANDARD.decode(content_b64)
+    let encrypted = base64::engine::general_purpose::STANDARD
+        .decode(content_b64)
         .map_err(|e| format!("base64 decode: {}", e))?;
 
     let secp = Secp256k1::new();
@@ -544,8 +578,8 @@ pub fn unwrap_gift_wrap(
         .get("pubkey")
         .and_then(|v| v.as_str())
         .ok_or("missing pubkey")?;
-    let ephemeral_bytes = hex::decode(ephemeral_pubkey_hex)
-        .map_err(|_| "invalid ephemeral pubkey")?;
+    let ephemeral_bytes =
+        hex::decode(ephemeral_pubkey_hex).map_err(|_| "invalid ephemeral pubkey")?;
     let ephemeral_pubkey = secp256k1::PublicKey::from_slice(&ephemeral_bytes)
         .map_err(|_| "invalid ephemeral pubkey")?;
 
@@ -571,10 +605,7 @@ pub fn unwrap_gift_wrap(
 }
 
 fn to_hex_string(data: impl AsRef<[u8]>) -> String {
-    data.as_ref()
-        .iter()
-        .map(|b| format!("{:02x}", b))
-        .collect()
+    data.as_ref().iter().map(|b| format!("{:02x}", b)).collect()
 }
 
 impl StorageBackend for NostrBackend {
@@ -587,8 +618,7 @@ impl StorageBackend for NostrBackend {
     }
 
     fn upload_file(&self, local_path: &str, _remote_path: &str) -> Result<String, String> {
-        let data = std::fs::read(local_path)
-            .map_err(|e| format!("read {}: {}", local_path, e))?;
+        let data = std::fs::read(local_path).map_err(|e| format!("read {}: {}", local_path, e))?;
 
         if data.is_empty() {
             return Err("cannot upload empty file".into());
@@ -620,9 +650,7 @@ impl StorageBackend for NostrBackend {
     }
 
     fn download_file(&self, remote_path: &str, local_path: &str) -> Result<(), String> {
-        let identifier = remote_path
-            .strip_prefix("nostr://")
-            .unwrap_or(remote_path);
+        let identifier = remote_path.strip_prefix("nostr://").unwrap_or(remote_path);
 
         if identifier.starts_with("http") {
             let data = self.download_nip96(identifier)?;
@@ -635,10 +663,7 @@ impl StorageBackend for NostrBackend {
             .fetch_event(identifier)?
             .ok_or_else(|| format!("event {} not found on any relay", identifier))?;
 
-        let content = event
-            .get("content")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let content = event.get("content").and_then(|v| v.as_str()).unwrap_or("");
 
         if let Some(rest) = content.strip_prefix("cybermanju:shard:") {
             let parts: Vec<&str> = rest.splitn(3, ':').collect();
@@ -657,9 +682,7 @@ impl StorageBackend for NostrBackend {
     }
 
     fn delete_file(&self, remote_path: &str) -> Result<(), String> {
-        let identifier = remote_path
-            .strip_prefix("nostr://")
-            .unwrap_or(remote_path);
+        let identifier = remote_path.strip_prefix("nostr://").unwrap_or(remote_path);
         let tags = vec![vec!["e".to_string(), identifier.to_string()]];
         self.publish_event(5, "", tags)?;
         Ok(())
@@ -671,7 +694,8 @@ impl StorageBackend for NostrBackend {
             "authors": [pubkey],
             "kinds": [1063],
             "limit": 100
-        }]).to_string();
+        }])
+        .to_string();
 
         let mut files = Vec::new();
 
@@ -687,8 +711,7 @@ impl StorageBackend for NostrBackend {
                                         if content.starts_with("cybermanju:shard:")
                                             && content.contains(prefix)
                                         {
-                                            let parts: Vec<&str> =
-                                                content.splitn(4, ':').collect();
+                                            let parts: Vec<&str> = content.splitn(4, ':').collect();
                                             if parts.len() >= 4 {
                                                 files.push(RemoteFile {
                                                     name: parts[2].to_string(),
@@ -699,9 +722,7 @@ impl StorageBackend for NostrBackend {
                                                             .and_then(|v| v.as_str())
                                                             .unwrap_or("")
                                                     ),
-                                                    size_bytes: parts[3]
-                                                        .parse()
-                                                        .unwrap_or(0),
+                                                    size_bytes: parts[3].parse().unwrap_or(0),
                                                     modified_at: String::new(),
                                                     url: String::new(),
                                                 });
@@ -724,11 +745,11 @@ impl StorageBackend for NostrBackend {
     }
 
     fn get_file_url(&self, remote_path: &str) -> Result<String, String> {
-        let id = remote_path
-            .strip_prefix("nostr://")
-            .unwrap_or(remote_path);
+        let id = remote_path.strip_prefix("nostr://").unwrap_or(remote_path);
         for relay_url in &self.relays {
-            let ws_url = relay_url.replace("wss://", "https://").replace("ws://", "http://");
+            let ws_url = relay_url
+                .replace("wss://", "https://")
+                .replace("ws://", "http://");
             return Ok(format!("{}/e/{}", ws_url, id));
         }
         Ok(format!("nostr://{}", id))

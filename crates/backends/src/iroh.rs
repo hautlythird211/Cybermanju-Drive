@@ -47,9 +47,7 @@ impl IrohBackend {
 
     /// Validate a CID string: must start with "b3-" followed by 64 hex chars.
     fn validate_cid(cid: &str) -> bool {
-        cid.starts_with("b3-")
-            && cid.len() == 67
-            && cid[3..].bytes().all(|b| b.is_ascii_hexdigit())
+        cid.starts_with("b3-") && cid.len() == 67 && cid[3..].bytes().all(|b| b.is_ascii_hexdigit())
     }
 
     /// Compute BLAKE3 CID for content addressing.
@@ -124,7 +122,10 @@ impl IrohBackend {
         }
 
         // Content is still accessible via gateways even without explicit pinning
-        log::warn!("Could not pin {} — content may not persist without pinning", cid);
+        log::warn!(
+            "Could not pin {} — content may not persist without pinning",
+            cid
+        );
         Ok(())
     }
 
@@ -149,8 +150,7 @@ impl StorageBackend for IrohBackend {
     }
 
     fn upload_file(&self, local_path: &str, _remote_path: &str) -> Result<String, String> {
-        let data = std::fs::read(local_path)
-            .map_err(|e| format!("read {}: {}", local_path, e))?;
+        let data = std::fs::read(local_path).map_err(|e| format!("read {}: {}", local_path, e))?;
 
         if data.is_empty() {
             return Err("cannot upload empty file".into());
@@ -166,13 +166,10 @@ impl StorageBackend for IrohBackend {
 
     fn download_file(&self, remote_path: &str, local_path: &str) -> Result<(), String> {
         // Extract CID from ipfs:// or bare CID
-        let cid = remote_path
-            .strip_prefix("ipfs://")
-            .unwrap_or(remote_path);
+        let cid = remote_path.strip_prefix("ipfs://").unwrap_or(remote_path);
 
         let data = self.fetch_from_gateways(cid)?;
-        std::fs::write(local_path, &data)
-            .map_err(|e| format!("write {}: {}", local_path, e))?;
+        std::fs::write(local_path, &data).map_err(|e| format!("write {}: {}", local_path, e))?;
         Ok(())
     }
 
@@ -188,10 +185,12 @@ impl StorageBackend for IrohBackend {
     }
 
     fn get_file_url(&self, remote_path: &str) -> Result<String, String> {
-        let cid = remote_path
-            .strip_prefix("ipfs://")
-            .unwrap_or(remote_path);
-        Ok(format!("{}/{}", self.gateway_url.trim_end_matches('/'), cid))
+        let cid = remote_path.strip_prefix("ipfs://").unwrap_or(remote_path);
+        Ok(format!(
+            "{}/{}",
+            self.gateway_url.trim_end_matches('/'),
+            cid
+        ))
     }
 
     fn test_connection(&self) -> Result<bool, String> {

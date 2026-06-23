@@ -277,7 +277,7 @@ async function openInViewer() {
     openMediaOverlay(type, mediaData, fileBytes)
   } catch (e) {
     console.error('Failed to open in viewer:', e)
-    store.notifyError?.(`Failed to open: ${e}`)
+    store.notifyError?.(`Failed to open`, e)
   } finally {
     openingInViewer.value = false
   }

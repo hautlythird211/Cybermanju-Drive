@@ -18,8 +18,8 @@ fn bench_ml_kem_encap(c: &mut Criterion) {
 }
 
 fn bench_chacha20poly1305(c: &mut Criterion) {
-    use chacha20poly1305::{Key, XChaCha20Poly1305, XNonce};
     use chacha20poly1305::aead::Aead;
+    use chacha20poly1305::{Key, XChaCha20Poly1305, XNonce};
 
     let key = Key::from_slice(b"0123456789abcdef0123456789abcdef");
     let cipher = XChaCha20Poly1305::new(key);
@@ -37,5 +37,10 @@ fn bench_chacha20poly1305(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_ml_kem_keygen, bench_ml_kem_encap, bench_chacha20poly1305);
+criterion_group!(
+    benches,
+    bench_ml_kem_keygen,
+    bench_ml_kem_encap,
+    bench_chacha20poly1305
+);
 criterion_main!(benches);

@@ -95,7 +95,7 @@ async function openMedia(file: FileNode) {
     openMediaOverlay(type, mediaData, fileBytes)
   } catch (e) {
     console.error('Failed to open media:', e)
-    store.notifyError?.(`Failed to open ${file.name}: ${e}`)
+    store.notifyError?.(`Failed to open ${file.name}`, e)
   } finally {
     loading.value = false
     openingFileId.value = null

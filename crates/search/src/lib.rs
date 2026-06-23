@@ -12,9 +12,9 @@ use std::path::Path;
 use std::sync::RwLock;
 use tantivy::{
     collector::{Count, TopDocs},
+    directory::MmapDirectory,
     query::QueryParser,
     schema::*,
-    directory::MmapDirectory,
     Index, IndexReader, IndexSettings, IndexWriter, ReloadPolicy, TantivyDocument,
 };
 

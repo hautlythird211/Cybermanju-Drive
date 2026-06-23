@@ -18,15 +18,27 @@ pub struct NeuralUpscaler {
 
 impl NeuralUpscaler {
     pub fn new(model: UpscaleModel) -> Self {
-        Self { model, model_path: None }
+        Self {
+            model,
+            model_path: None,
+        }
     }
 
     pub fn with_model_path(model: UpscaleModel, path: &str) -> Self {
-        Self { model, model_path: Some(path.to_string()) }
+        Self {
+            model,
+            model_path: Some(path.to_string()),
+        }
     }
 
     /// Upscale image data by the given scale factor
-    pub fn upscale(&self, input: &[u8], width: u32, height: u32, scale: u32) -> Result<Vec<u8>, RecoveryError> {
+    pub fn upscale(
+        &self,
+        input: &[u8],
+        width: u32,
+        height: u32,
+        scale: u32,
+    ) -> Result<Vec<u8>, RecoveryError> {
         let target_w = width * scale;
         let target_h = height * scale;
 

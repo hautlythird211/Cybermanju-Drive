@@ -378,11 +378,7 @@ impl IncrementalMerkleTree {
     }
 
     /// Generate a Merkle proof for one file's resolution.
-    pub fn prove_file_resolution(
-        &self,
-        file_id: &str,
-        _resolution: &str,
-    ) -> Option<MerkleProof> {
+    pub fn prove_file_resolution(&self, file_id: &str, _resolution: &str) -> Option<MerkleProof> {
         let leaf_idx = self.file_id_to_leaf_index(file_id);
         let mut path = Vec::new();
         let mut idx = leaf_idx;

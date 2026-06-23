@@ -1,6 +1,6 @@
 use cybermanju_types::sync::{RemoteFile, StorageBackend, SyncBackendType};
 use sha2::{Digest, Sha256};
-use std::net::{SocketAddr, UdpSocket, IpAddr, Ipv4Addr, UdpSocket as _};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket, UdpSocket as _};
 use std::time::Duration;
 
 /// Validate a LAN peer address: must be a valid SocketAddr.
@@ -14,11 +14,7 @@ fn validate_peer_addr(addr: &SocketAddr) -> bool {
                 || ip == Ipv4Addr::new(0, 0, 0, 0)
                 || is_vpn_ip(&ip)
         }
-        IpAddr::V6(ip) => {
-            ip.is_loopback()
-                || ip.is_unique_local()
-                || is_vpn_ipv6(&ip)
-        }
+        IpAddr::V6(ip) => ip.is_loopback() || ip.is_unique_local() || is_vpn_ipv6(&ip),
     }
 }
 
@@ -261,7 +257,10 @@ impl LanBackend {
         let interfaces = Self::detect_interfaces();
         for iface in &interfaces {
             if matches!(iface.interface_type, InterfaceType::Tailscale) {
-                log::info!("Found Tailscale interface {} — using Tailscale discovery", iface.name);
+                log::info!(
+                    "Found Tailscale interface {} — using Tailscale discovery",
+                    iface.name
+                );
                 return DiscoveryMode::Tailscale;
             }
         }
@@ -305,8 +304,7 @@ impl LanBackend {
     fn discover_via_mdns(&self) -> Result<Vec<DiscoveredPeer>, String> {
         let query = build_mdns_query(MDNS_SERVICE);
 
-        let socket = UdpSocket::bind("0.0.0.0:0")
-            .map_err(|e| format!("mDNS bind: {}", e))?;
+        let socket = UdpSocket::bind("0.0.0.0:0").map_err(|e| format!("mDNS bind: {}", e))?;
         socket
             .set_read_timeout(Some(Duration::from_secs(3)))
             .map_err(|e| format!("mDNS timeout: {}", e))?;
@@ -358,20 +356,23 @@ impl LanBackend {
         if let Some(peers_map) = status.get("Peer") {
             if let Some(obj) = peers_map.as_object() {
                 for (ts_pubkey, peer_info) in obj {
-                    let online = peer_info.get("Online")
+                    let online = peer_info
+                        .get("Online")
                         .and_then(|v| v.as_bool())
                         .unwrap_or(false);
                     if !online {
                         continue;
                     }
 
-                    let tailscale_ip = peer_info.get("TailscaleIPs")
+                    let tailscale_ip = peer_info
+                        .get("TailscaleIPs")
                         .and_then(|v| v.as_array())
                         .and_then(|arr| arr.first())
                         .and_then(|v| v.as_str())
                         .and_then(|ip| ip.parse::<Ipv4Addr>().ok());
 
-                    let hostname = peer_info.get("HostName")
+                    let hostname = peer_info
+                        .get("HostName")
                         .and_then(|v| v.as_str())
                         .unwrap_or("unknown");
 
@@ -436,16 +437,18 @@ impl LanBackend {
     /// Use manually configured peers.
     fn discover_via_manual(&self) -> Result<Vec<DiscoveredPeer>, String> {
         let addrs = self.manual_peers.lock().unwrap().clone();
-        let peers = addrs.into_iter().enumerate().map(|(i, addr)| {
-            DiscoveredPeer {
+        let peers = addrs
+            .into_iter()
+            .enumerate()
+            .map(|(i, addr)| DiscoveredPeer {
                 name: format!("manual-{}", i),
                 addr,
                 public_key: Vec::new(),
                 port: addr.port(),
                 verified: false,
                 interface: Some("manual".to_string()),
-            }
-        }).collect();
+            })
+            .collect();
         Ok(peers)
     }
 
@@ -460,8 +463,7 @@ impl LanBackend {
         }
 
         let mut nonce = [0u8; 32];
-        getrandom::getrandom(&mut nonce)
-            .map_err(|e| format!("failed to generate nonce: {}", e))?;
+        getrandom::getrandom(&mut nonce).map_err(|e| format!("failed to generate nonce: {}", e))?;
         let nonce_hex = hex::encode(nonce);
 
         let url = format!("https://{}/challenge", peer.addr);
@@ -470,7 +472,8 @@ impl LanBackend {
             "service": "cybermanju-drive",
         });
 
-        let resp = self.http_client
+        let resp = self
+            .http_client
             .post(&url)
             .json(&challenge_body)
             .timeout(Duration::from_secs(CHALLENGE_TIMEOUT))
@@ -481,14 +484,15 @@ impl LanBackend {
             return Err(format!("challenge failed: {}", resp.status()));
         }
 
-        let body: serde_json::Value = resp.json()
-            .map_err(|e| format!("challenge parse: {}", e))?;
+        let body: serde_json::Value = resp.json().map_err(|e| format!("challenge parse: {}", e))?;
 
-        let signature = body.get("signature")
+        let signature = body
+            .get("signature")
             .and_then(|v| v.as_str())
             .ok_or("no signature in challenge response")?;
 
-        let peer_pubkey = body.get("pubkey")
+        let peer_pubkey = body
+            .get("pubkey")
             .and_then(|v| v.as_str())
             .ok_or("no pubkey in challenge response")?;
 
@@ -519,14 +523,22 @@ impl LanBackend {
 
     /// Get only verified peers.
     pub fn get_verified_peers(&self) -> Vec<DiscoveredPeer> {
-        self.peers.lock().unwrap().iter()
+        self.peers
+            .lock()
+            .unwrap()
+            .iter()
             .filter(|p| p.verified)
             .cloned()
             .collect()
     }
 
     /// Send a file to a verified peer via HTTPS POST.
-    fn send_to_peer(&self, peer: &DiscoveredPeer, data: &[u8], filename: &str) -> Result<String, String> {
+    fn send_to_peer(
+        &self,
+        peer: &DiscoveredPeer,
+        data: &[u8],
+        filename: &str,
+    ) -> Result<String, String> {
         if !peer.verified && peer.interface.as_deref() != Some("manual") {
             return Err(format!("peer {} is not verified", peer.name));
         }
@@ -542,9 +554,7 @@ impl LanBackend {
             .map_err(|e| format!("peer upload: {}", e))?;
 
         if resp.status().is_success() {
-            let body: serde_json::Value = resp
-                .json()
-                .unwrap_or(serde_json::json!({"ok": true}));
+            let body: serde_json::Value = resp.json().unwrap_or(serde_json::json!({"ok": true}));
             let path = body
                 .get("path")
                 .and_then(|v| v.as_str())
@@ -556,7 +566,11 @@ impl LanBackend {
     }
 
     /// Download a file from a peer via HTTPS GET.
-    fn fetch_from_peer(&self, peer_addr: &SocketAddr, remote_path: &str) -> Result<Vec<u8>, String> {
+    fn fetch_from_peer(
+        &self,
+        peer_addr: &SocketAddr,
+        remote_path: &str,
+    ) -> Result<Vec<u8>, String> {
         let url = format!("https://{}/files/{}", peer_addr, remote_path);
         let resp = self
             .http_client
@@ -581,8 +595,8 @@ impl LanBackend {
             &self.device_signing_key,
         );
 
-        let socket = UdpSocket::bind("0.0.0.0:0")
-            .map_err(|e| format!("mDNS advertise bind: {}", e))?;
+        let socket =
+            UdpSocket::bind("0.0.0.0:0").map_err(|e| format!("mDNS advertise bind: {}", e))?;
         let multicast_addr = "224.0.0.251:5353";
         socket
             .send_to(&response, multicast_addr)
@@ -598,8 +612,7 @@ impl LanBackend {
 
     /// Respond to a peer's challenge (called by the HTTP server).
     pub fn respond_to_challenge(&self, nonce_hex: &str) -> Result<serde_json::Value, String> {
-        let nonce = hex::decode(nonce_hex)
-            .map_err(|e| format!("invalid nonce hex: {}", e))?;
+        let nonce = hex::decode(nonce_hex).map_err(|e| format!("invalid nonce hex: {}", e))?;
         if nonce.len() != 32 {
             return Err("nonce must be 32 bytes".into());
         }
@@ -634,15 +647,20 @@ fn detect_tailscale() -> Option<VpnStatus> {
 
     let status: serde_json::Value = serde_json::from_slice(&output.stdout).ok()?;
     let self_info = status.get("Self")?;
-    let online = self_info.get("Online").and_then(|v| v.as_bool()).unwrap_or(false);
+    let online = self_info
+        .get("Online")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
 
-    let tailscale_ip = self_info.get("TailscaleIPs")
+    let tailscale_ip = self_info
+        .get("TailscaleIPs")
         .and_then(|v| v.as_array())
         .and_then(|arr| arr.first())
         .and_then(|v| v.as_str())
         .and_then(|ip| ip.parse::<Ipv4Addr>().ok());
 
-    let interface = self_info.get("InterfaceName")
+    let interface = self_info
+        .get("InterfaceName")
         .and_then(|v| v.as_str())
         .map(String::from);
 
@@ -674,7 +692,8 @@ fn detect_wireguard() -> Option<VpnStatus> {
     }
 
     // Try to extract the listening port as proof it's active
-    let interface_name = stdout.lines()
+    let interface_name = stdout
+        .lines()
         .find_map(|l| l.trim().strip_prefix("interface: "))
         .unwrap_or("wg0")
         .to_string();
@@ -705,12 +724,18 @@ fn detect_openvpn() -> Option<VpnStatus> {
     }
 
     // Extract IP from tun interface
-    let ip = stdout.lines()
+    let ip = stdout
+        .lines()
         .filter(|l| l.contains("inet "))
         .filter_map(|l| {
             let parts: Vec<&str> = l.split_whitespace().collect();
             parts.iter().position(|p| *p == "inet").and_then(|i| {
-                parts.get(i + 1)?.split('/').next()?.parse::<Ipv4Addr>().ok()
+                parts
+                    .get(i + 1)?
+                    .split('/')
+                    .next()?
+                    .parse::<Ipv4Addr>()
+                    .ok()
             })
         })
         .next();
@@ -731,8 +756,10 @@ fn classify_interface(name: &str) -> InterfaceType {
         InterfaceType::WireGuard
     } else if name.starts_with("tun") || name.starts_with("tap") {
         InterfaceType::OpenVpn
-    } else if name.starts_with("eth") || name.starts_with("wlan")
-        || name.starts_with("en") || name.starts_with("wl")
+    } else if name.starts_with("eth")
+        || name.starts_with("wlan")
+        || name.starts_with("en")
+        || name.starts_with("wl")
     {
         InterfaceType::Lan
     } else {
@@ -753,12 +780,18 @@ fn get_interface_addrs(name: &str) -> Result<Vec<Ipv4Addr>, String> {
         .map_err(|e| format!("ip addr failed: {}", e))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let addrs: Vec<Ipv4Addr> = stdout.lines()
+    let addrs: Vec<Ipv4Addr> = stdout
+        .lines()
         .filter(|l| l.contains("inet "))
         .filter_map(|l| {
             let parts: Vec<&str> = l.split_whitespace().collect();
             parts.iter().position(|p| *p == "inet").and_then(|i| {
-                parts.get(i + 1)?.split('/').next()?.parse::<Ipv4Addr>().ok()
+                parts
+                    .get(i + 1)?
+                    .split('/')
+                    .next()?
+                    .parse::<Ipv4Addr>()
+                    .ok()
             })
         })
         .collect();
@@ -774,7 +807,8 @@ fn get_default_interface() -> Result<NetworkInterface, String> {
         .map_err(|e| format!("ip route failed: {}", e))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let name = stdout.split_whitespace()
+    let name = stdout
+        .split_whitespace()
         .nth(4)
         .unwrap_or("eth0")
         .to_string();
@@ -1034,8 +1068,7 @@ impl StorageBackend for LanBackend {
     }
 
     fn upload_file(&self, local_path: &str, remote_path: &str) -> Result<String, String> {
-        let data = std::fs::read(local_path)
-            .map_err(|e| format!("read {}: {}", local_path, e))?;
+        let data = std::fs::read(local_path).map_err(|e| format!("read {}: {}", local_path, e))?;
         if data.is_empty() {
             return Err("cannot upload empty file".into());
         }
@@ -1050,7 +1083,8 @@ impl StorageBackend for LanBackend {
             }
         };
 
-        let verified_peers: Vec<_> = peers.iter()
+        let verified_peers: Vec<_> = peers
+            .iter()
             .filter(|p| p.verified || p.interface.as_deref() == Some("manual"))
             .collect();
         if verified_peers.is_empty() {
@@ -1078,8 +1112,7 @@ impl StorageBackend for LanBackend {
 
         let file_path = sanitize_peer_path(parts.get(1).unwrap_or(&"file"))?;
         let data = self.fetch_from_peer(&peer_addr, &file_path)?;
-        std::fs::write(local_path, &data)
-            .map_err(|e| format!("write {}: {}", local_path, e))?;
+        std::fs::write(local_path, &data).map_err(|e| format!("write {}: {}", local_path, e))?;
         Ok(())
     }
 
@@ -1096,7 +1129,9 @@ impl StorageBackend for LanBackend {
 
         let file_path = sanitize_peer_path(parts.get(1).unwrap_or(&"file"))?;
         let url = format!("https://{}/delete/{}", peer_addr, file_path);
-        self.http_client.delete(&url).send()
+        self.http_client
+            .delete(&url)
+            .send()
             .map_err(|e| format!("peer delete: {}", e))?;
         Ok(())
     }
@@ -1109,27 +1144,34 @@ impl StorageBackend for LanBackend {
 
         let peer = &peers[0];
         let url = format!("https://{}/files?prefix={}", peer.addr, prefix);
-        let resp = self.http_client.get(&url).send()
+        let resp = self
+            .http_client
+            .get(&url)
+            .send()
             .map_err(|e| format!("peer list: {}", e))?;
 
         if resp.status().is_success() {
-            let body: serde_json::Value = resp.json()
-                .map_err(|e| format!("peer list parse: {}", e))?;
-            let files = body.get("files")
+            let body: serde_json::Value =
+                resp.json().map_err(|e| format!("peer list parse: {}", e))?;
+            let files = body
+                .get("files")
                 .and_then(|v| v.as_array())
                 .map(|arr| {
-                    arr.iter().filter_map(|item| {
-                        let name = item.get("name").and_then(|v| v.as_str())?;
-                        let size = item.get("size").and_then(|v| v.as_u64()).unwrap_or(0);
-                        Some(RemoteFile {
-                            name: name.to_string(),
-                            path: format!("lan://{}/{}", peer.addr, name),
-                            size_bytes: size,
-                            modified_at: String::new(),
-                            url: format!("https://{}/files/{}", peer.addr, name),
+                    arr.iter()
+                        .filter_map(|item| {
+                            let name = item.get("name").and_then(|v| v.as_str())?;
+                            let size = item.get("size").and_then(|v| v.as_u64()).unwrap_or(0);
+                            Some(RemoteFile {
+                                name: name.to_string(),
+                                path: format!("lan://{}/{}", peer.addr, name),
+                                size_bytes: size,
+                                modified_at: String::new(),
+                                url: format!("https://{}/files/{}", peer.addr, name),
+                            })
                         })
-                    }).collect()
-                }).unwrap_or_default();
+                        .collect()
+                })
+                .unwrap_or_default();
             Ok(files)
         } else {
             Ok(Vec::new())
@@ -1142,7 +1184,8 @@ impl StorageBackend for LanBackend {
 
     fn test_connection(&self) -> Result<bool, String> {
         let peers = self.discover_peers()?;
-        let verified = peers.iter()
+        let verified = peers
+            .iter()
             .filter(|p| p.verified || p.interface.as_deref() == Some("manual"))
             .count();
         if verified == 0 {
@@ -1188,12 +1231,12 @@ mod tests {
 
     #[test]
     fn test_is_vpn_ip() {
-        assert!(is_vpn_ip(&Ipv4Addr::new(100, 64, 0, 1)));   // Tailscale
-        assert!(is_vpn_ip(&Ipv4Addr::new(100, 127, 0, 1)));  // Tailscale
-        assert!(is_vpn_ip(&Ipv4Addr::new(10, 0, 0, 1)));     // WireGuard/OpenVPN
-        assert!(is_vpn_ip(&Ipv4Addr::new(172, 16, 0, 1)));   // WireGuard/OpenVPN
+        assert!(is_vpn_ip(&Ipv4Addr::new(100, 64, 0, 1))); // Tailscale
+        assert!(is_vpn_ip(&Ipv4Addr::new(100, 127, 0, 1))); // Tailscale
+        assert!(is_vpn_ip(&Ipv4Addr::new(10, 0, 0, 1))); // WireGuard/OpenVPN
+        assert!(is_vpn_ip(&Ipv4Addr::new(172, 16, 0, 1))); // WireGuard/OpenVPN
         assert!(!is_vpn_ip(&Ipv4Addr::new(192, 168, 1, 1))); // LAN
-        assert!(!is_vpn_ip(&Ipv4Addr::new(8, 8, 8, 8)));     // Public
+        assert!(!is_vpn_ip(&Ipv4Addr::new(8, 8, 8, 8))); // Public
     }
 
     #[test]
@@ -1207,8 +1250,14 @@ mod tests {
 
     #[test]
     fn test_classify_interface() {
-        assert!(matches!(classify_interface("tailscale0"), InterfaceType::Tailscale));
-        assert!(matches!(classify_interface("wg0"), InterfaceType::WireGuard));
+        assert!(matches!(
+            classify_interface("tailscale0"),
+            InterfaceType::Tailscale
+        ));
+        assert!(matches!(
+            classify_interface("wg0"),
+            InterfaceType::WireGuard
+        ));
         assert!(matches!(classify_interface("tun0"), InterfaceType::OpenVpn));
         assert!(matches!(classify_interface("eth0"), InterfaceType::Lan));
         assert!(matches!(classify_interface("wlan0"), InterfaceType::Lan));

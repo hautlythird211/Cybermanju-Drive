@@ -241,8 +241,7 @@ pub async fn get_file_bytes_for_preview(
         .get(file_id.as_str())
         .map_err(|e| e.to_string())?
         .ok_or_else(|| format!("File not found: {}", file_id))?;
-    let file_node: DbFileNode =
-        serde_json::from_str(value.value()).map_err(|e| e.to_string())?;
+    let file_node: DbFileNode = serde_json::from_str(value.value()).map_err(|e| e.to_string())?;
     drop(tx);
 
     // Resolve file path from context_data
@@ -300,8 +299,7 @@ pub async fn get_file_raw_bytes(
         .get(file_id.as_str())
         .map_err(|e| e.to_string())?
         .ok_or_else(|| format!("File not found: {}", file_id))?;
-    let file_node: DbFileNode =
-        serde_json::from_str(value.value()).map_err(|e| e.to_string())?;
+    let file_node: DbFileNode = serde_json::from_str(value.value()).map_err(|e| e.to_string())?;
     drop(tx);
 
     let file_path = file_node
@@ -309,12 +307,7 @@ pub async fn get_file_raw_bytes(
         .as_ref()
         .and_then(|ctx| ctx.get("original_path").and_then(|v| v.as_str()))
         .filter(|p| std::path::Path::new(p).exists())
-        .ok_or_else(|| {
-            format!(
-                "File '{}' has no accessible path on disk.",
-                file_node.name
-            )
-        })?;
+        .ok_or_else(|| format!("File '{}' has no accessible path on disk.", file_node.name))?;
 
     std::fs::read(file_path).map_err(|e| format!("Failed to read file at {}: {}", file_path, e))
 }

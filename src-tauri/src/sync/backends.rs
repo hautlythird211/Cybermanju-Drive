@@ -124,6 +124,6 @@ pub fn create_backend(config: &SyncConfig) -> Result<Box<dyn StorageBackend>, St
 // Re-export all shared backend structs for any code that references them directly.
 pub use cybermanju_backends::{
     transfer_files, ActivityPubBackend, CodebergBackend, GitHubBackend, GitLabBackend,
-    GiteaBackend, GoogleDriveBackend, GooglePhotosBackend, IrohBackend, LanBackend,
-    LocalBackend, MegaBackend, NostrBackend, RcloneBackend, TelegramBackend, TorrentBackend,
+    GiteaBackend, GoogleDriveBackend, GooglePhotosBackend, IrohBackend, LanBackend, LocalBackend,
+    MegaBackend, NostrBackend, RcloneBackend, TelegramBackend, TorrentBackend,
 };

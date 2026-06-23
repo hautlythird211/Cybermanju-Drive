@@ -2116,7 +2116,8 @@ pub fn ensure_onnx_models() -> Result<OnnxModelPaths> {
     let scrfd_path = model_dir.join("scrfd_2.5g.onnx");
     let arcface_path = model_dir.join("arcface_mfacenet.onnx");
 
-    let scrfd_url = "https://github.com/deepinsight/insightface/releases/download/v0.7/scrfd_2.5g.onnx";
+    let scrfd_url =
+        "https://github.com/deepinsight/insightface/releases/download/v0.7/scrfd_2.5g.onnx";
     let arcface_url = "https://github.com/siriusday/arcface-models/releases/download/v1.0/arcface_mobilefacenet.onnx";
 
     ensure_model_with_hash(&scrfd_path, scrfd_url, None)?;

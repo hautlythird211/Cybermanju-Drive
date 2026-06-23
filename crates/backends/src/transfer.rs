@@ -9,8 +9,7 @@ fn secure_tmp_dir() -> Result<PathBuf, String> {
     let base = std::env::temp_dir().join("cybermanju-transfer");
 
     // Create base dir with restricted permissions
-    fs::create_dir_all(&base)
-        .map_err(|e| format!("create tmp dir: {}", e))?;
+    fs::create_dir_all(&base).map_err(|e| format!("create tmp dir: {}", e))?;
 
     // Set permissions to owner-only (Unix)
     #[cfg(unix)]
@@ -22,14 +21,12 @@ fn secure_tmp_dir() -> Result<PathBuf, String> {
     // Create unique subdirectory for this transfer session
     let session_id = {
         let mut buf = [0u8; 8];
-        getrandom::getrandom(&mut buf)
-            .map_err(|e| format!("generate session id: {}", e))?;
+        getrandom::getrandom(&mut buf).map_err(|e| format!("generate session id: {}", e))?;
         hex::encode(buf)
     };
 
     let session_dir = base.join(session_id);
-    fs::create_dir_all(&session_dir)
-        .map_err(|e| format!("create session dir: {}", e))?;
+    fs::create_dir_all(&session_dir).map_err(|e| format!("create session dir: {}", e))?;
 
     Ok(session_dir)
 }

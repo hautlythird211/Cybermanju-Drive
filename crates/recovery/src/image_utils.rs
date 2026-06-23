@@ -1,7 +1,7 @@
-use image::codecs::webp::WebPEncoder;
 use image::codecs::jpeg::JpegEncoder;
-use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb, Rgba, RgbaImage};
+use image::codecs::webp::WebPEncoder;
 use image::imageops::FilterType;
+use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb, Rgba, RgbaImage};
 
 use crate::errors::RecoveryError;
 
@@ -34,7 +34,12 @@ pub fn resize_bilinear(
 }
 
 /// Encode raw RGBA bytes to WebP format (lossless)
-pub fn to_webp(input: &[u8], width: u32, height: u32, _quality: u8) -> Result<Vec<u8>, RecoveryError> {
+pub fn to_webp(
+    input: &[u8],
+    width: u32,
+    height: u32,
+    _quality: u8,
+) -> Result<Vec<u8>, RecoveryError> {
     let img = RgbaImage::from_raw(width, height, input.to_vec())
         .ok_or_else(|| RecoveryError::ImageError("invalid image dimensions".into()))?;
 
@@ -43,13 +48,19 @@ pub fn to_webp(input: &[u8], width: u32, height: u32, _quality: u8) -> Result<Ve
 
     let mut buf = Vec::new();
     let encoder = WebPEncoder::new_lossless(&mut buf);
-    encoder.encode(&rgb, width, height, image::ExtendedColorType::Rgb8)
+    encoder
+        .encode(&rgb, width, height, image::ExtendedColorType::Rgb8)
         .map_err(|e| RecoveryError::ImageError(e.to_string()))?;
     Ok(buf)
 }
 
 /// Encode raw RGBA bytes to JPEG format
-pub fn to_jpeg(input: &[u8], width: u32, height: u32, quality: u8) -> Result<Vec<u8>, RecoveryError> {
+pub fn to_jpeg(
+    input: &[u8],
+    width: u32,
+    height: u32,
+    quality: u8,
+) -> Result<Vec<u8>, RecoveryError> {
     let img = RgbaImage::from_raw(width, height, input.to_vec())
         .ok_or_else(|| RecoveryError::ImageError("invalid image dimensions".into()))?;
 
@@ -58,15 +69,16 @@ pub fn to_jpeg(input: &[u8], width: u32, height: u32, quality: u8) -> Result<Vec
 
     let mut buf = Vec::new();
     let mut encoder = JpegEncoder::new_with_quality(&mut buf, quality);
-    encoder.encode(&rgb, width, height, image::ExtendedColorType::Rgb8)
+    encoder
+        .encode(&rgb, width, height, image::ExtendedColorType::Rgb8)
         .map_err(|e| RecoveryError::ImageError(e.to_string()))?;
     Ok(buf)
 }
 
 /// Decode any image format to raw RGBA bytes
 pub fn from_bytes(input: &[u8]) -> Result<(Vec<u8>, u32, u32, u8), RecoveryError> {
-    let img = image::load_from_memory(input)
-        .map_err(|e| RecoveryError::ImageError(e.to_string()))?;
+    let img =
+        image::load_from_memory(input).map_err(|e| RecoveryError::ImageError(e.to_string()))?;
     let rgba = img.to_rgba8();
     let (w, h) = rgba.dimensions();
     Ok((rgba.to_vec(), w, h, 4))
@@ -135,12 +147,23 @@ pub fn calculate_ssim(original: &[u8], reconstructed: &[u8], width: u32, height:
     let mean_o: f64 = original.iter().map(|&x| x as f64).sum::<f64>() / n;
     let mean_r: f64 = reconstructed.iter().map(|&x| x as f64).sum::<f64>() / n;
 
-    let var_o: f64 = original.iter().map(|&x| (x as f64 - mean_o).powi(2)).sum::<f64>() / n;
-    let var_r: f64 = reconstructed.iter().map(|&x| (x as f64 - mean_r).powi(2)).sum::<f64>() / n;
+    let var_o: f64 = original
+        .iter()
+        .map(|&x| (x as f64 - mean_o).powi(2))
+        .sum::<f64>()
+        / n;
+    let var_r: f64 = reconstructed
+        .iter()
+        .map(|&x| (x as f64 - mean_r).powi(2))
+        .sum::<f64>()
+        / n;
 
-    let cov: f64 = original.iter().zip(reconstructed.iter())
+    let cov: f64 = original
+        .iter()
+        .zip(reconstructed.iter())
         .map(|(&o, &r)| (o as f64 - mean_o) * (r as f64 - mean_r))
-        .sum::<f64>() / n;
+        .sum::<f64>()
+        / n;
 
     let c1 = (0.01_f64 * 255.0).powi(2);
     let c2 = (0.03_f64 * 255.0).powi(2);
@@ -152,7 +175,12 @@ pub fn calculate_ssim(original: &[u8], reconstructed: &[u8], width: u32, height:
 }
 
 /// Helper: decode input bytes to DynamicImage, handling different channel counts
-fn decode_to_rgba(input: &[u8], width: u32, height: u32, channels: u8) -> Result<DynamicImage, RecoveryError> {
+fn decode_to_rgba(
+    input: &[u8],
+    width: u32,
+    height: u32,
+    channels: u8,
+) -> Result<DynamicImage, RecoveryError> {
     match channels {
         4 => {
             let img = RgbaImage::from_raw(width, height, input.to_vec())
@@ -164,7 +192,10 @@ fn decode_to_rgba(input: &[u8], width: u32, height: u32, channels: u8) -> Result
                 .ok_or_else(|| RecoveryError::ImageError("invalid RGB dimensions".into()))?;
             Ok(DynamicImage::ImageRgb8(img))
         }
-        _ => Err(RecoveryError::ImageError(format!("unsupported channel count: {}", channels))),
+        _ => Err(RecoveryError::ImageError(format!(
+            "unsupported channel count: {}",
+            channels
+        ))),
     }
 }
 

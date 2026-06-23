@@ -47,10 +47,7 @@ pub fn compress_adaptive(
         }
 
         // Text/code: Brotli is best
-        m if m.starts_with("text/")
-            || m == "application/json"
-            || m == "application/javascript" =>
-        {
+        m if m.starts_with("text/") || m == "application/json" || m == "application/javascript" => {
             compressor.compress_brotli(data).map(|compressed| {
                 let hash = blake3::hash(data);
                 let duration_ms = start.elapsed().as_millis() as u64;

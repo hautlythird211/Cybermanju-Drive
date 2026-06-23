@@ -1,5 +1,5 @@
-use tauri::command;
 use crate::AppState;
+use tauri::command;
 use tauri::State;
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
@@ -70,7 +70,10 @@ pub async fn upscale_file(
         return Err(format!("file {}: empty data", file_id));
     }
     if scale == 0 || scale > 8 {
-        return Err(format!("file {}: scale must be 1-8, got {}", file_id, scale));
+        return Err(format!(
+            "file {}: scale must be 1-8, got {}",
+            file_id, scale
+        ));
     }
     let upscale_model = match model.as_str() {
         "real-esrgan-x2" => cybermanju_recovery::UpscaleModel::RealEsrganX2,
@@ -78,7 +81,14 @@ pub async fn upscale_file(
         "real-cugan" => cybermanju_recovery::UpscaleModel::RealCugan,
         _ => cybermanju_recovery::UpscaleModel::LanczosFallback,
     };
-    log::info!("Upscaling file {} ({}x{}) with {:?} x{}", file_id, width, height, upscale_model, scale);
+    log::info!(
+        "Upscaling file {} ({}x{}) with {:?} x{}",
+        file_id,
+        width,
+        height,
+        upscale_model,
+        scale
+    );
     let upscaler = cybermanju_recovery::NeuralUpscaler::new(upscale_model);
     upscaler
         .upscale(&data, width, height, scale)
@@ -103,10 +113,16 @@ pub async fn upscale_region(
         return Err(format!("file {}: empty data", file_id));
     }
     if scale == 0 || scale > 8 {
-        return Err(format!("file {}: scale must be 1-8, got {}", file_id, scale));
+        return Err(format!(
+            "file {}: scale must be 1-8, got {}",
+            file_id, scale
+        ));
     }
     if x + region_w > width || y + region_h > height {
-        return Err(format!("file {}: region ({},{},{},{}) exceeds image bounds ({}x{})", file_id, x, y, region_w, region_h, width, height));
+        return Err(format!(
+            "file {}: region ({},{},{},{}) exceeds image bounds ({}x{})",
+            file_id, x, y, region_w, region_h, width, height
+        ));
     }
     let upscale_model = match model.as_str() {
         "real-esrgan-x2" => cybermanju_recovery::UpscaleModel::RealEsrganX2,
@@ -114,7 +130,16 @@ pub async fn upscale_region(
         "real-cugan" => cybermanju_recovery::UpscaleModel::RealCugan,
         _ => cybermanju_recovery::UpscaleModel::LanczosFallback,
     };
-    log::info!("Upscaling region of file {} ({},{},{},{}) with {:?} x{}", file_id, x, y, region_w, region_h, upscale_model, scale);
+    log::info!(
+        "Upscaling region of file {} ({},{},{},{}) with {:?} x{}",
+        file_id,
+        x,
+        y,
+        region_w,
+        region_h,
+        upscale_model,
+        scale
+    );
     let upscaler = cybermanju_recovery::NeuralUpscaler::new(upscale_model);
     upscaler
         .upscale_region(&data, width, height, x, y, region_w, region_h, scale)

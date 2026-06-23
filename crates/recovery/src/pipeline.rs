@@ -85,7 +85,8 @@ impl RecoveryPipeline {
 
         // Calculate quality score using PSNR if we have original
         let quality_score = if !rgba_data.is_empty() && !output_data.is_empty() {
-            let (recovered_rgba, _, _, _) = image_utils::from_bytes(&output_data).unwrap_or_default();
+            let (recovered_rgba, _, _, _) =
+                image_utils::from_bytes(&output_data).unwrap_or_default();
             if !recovered_rgba.is_empty() {
                 image_utils::calculate_psnr(&rgba_data, &recovered_rgba)
             } else {
@@ -125,8 +126,12 @@ impl RecoveryPipeline {
         let upscaled = upscaler.upscale(&rgba_data, width, height, scale)?;
 
         let output_data = match request.output_format.as_str() {
-            "webp" => image_utils::to_webp(&upscaled, width * scale, height * scale, request.quality)?,
-            "jpeg" | "jpg" => image_utils::to_jpeg(&upscaled, width * scale, height * scale, request.quality)?,
+            "webp" => {
+                image_utils::to_webp(&upscaled, width * scale, height * scale, request.quality)?
+            }
+            "jpeg" | "jpg" => {
+                image_utils::to_jpeg(&upscaled, width * scale, height * scale, request.quality)?
+            }
             _ => upscaled,
         };
 
@@ -165,7 +170,8 @@ impl RecoveryPipeline {
             }
         }
 
-        codec.reconstruct(&mut shards)
+        codec
+            .reconstruct(&mut shards)
             .map_err(|e| RecoveryError::ReconstructionError(e.to_string()))?;
 
         Ok(shards.into_iter().map(|s| s.unwrap_or_default()).collect())

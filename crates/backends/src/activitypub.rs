@@ -96,9 +96,7 @@ impl ActivityPubBackend {
                 return Ok(location);
             }
             // Parse response body for the created activity URL
-            let body: serde_json::Value = resp
-                .json()
-                .unwrap_or(serde_json::json!({"ok": true}));
+            let body: serde_json::Value = resp.json().unwrap_or(serde_json::json!({"ok": true}));
             let id = body
                 .get("id")
                 .and_then(|v| v.as_str())
@@ -174,13 +172,14 @@ impl ActivityPubBackend {
             .map_err(|e| format!("fetch followers: {}", e))?;
 
         if resp.status().is_success() {
-            let bytes = resp.bytes()
+            let bytes = resp
+                .bytes()
                 .map_err(|e| format!("fetch followers body: {}", e))?;
             if bytes.len() > MAX_RESPONSE_BODY {
                 return Err(format!("response too large: {} bytes", bytes.len()));
             }
-            let body: serde_json::Value = serde_json::from_slice(&bytes)
-                .map_err(|e| format!("parse followers: {}", e))?;
+            let body: serde_json::Value =
+                serde_json::from_slice(&bytes).map_err(|e| format!("parse followers: {}", e))?;
             let followers = body
                 .get("items")
                 .and_then(|v| v.as_array())
@@ -207,8 +206,7 @@ impl StorageBackend for ActivityPubBackend {
     }
 
     fn upload_file(&self, local_path: &str, _remote_path: &str) -> Result<String, String> {
-        let data = std::fs::read(local_path)
-            .map_err(|e| format!("read {}: {}", local_path, e))?;
+        let data = std::fs::read(local_path).map_err(|e| format!("read {}: {}", local_path, e))?;
 
         let filename = std::path::Path::new(local_path)
             .file_name()
@@ -286,10 +284,7 @@ impl StorageBackend for ActivityPubBackend {
                                 .get("name")
                                 .and_then(|v| v.as_str())
                                 .unwrap_or("unknown");
-                            let url = item
-                                .get("url")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("");
+                            let url = item.get("url").and_then(|v| v.as_str()).unwrap_or("");
                             let size = item.get("size").and_then(|v| v.as_u64()).unwrap_or(0);
                             Some(RemoteFile {
                                 name: name.to_string(),
@@ -332,10 +327,7 @@ impl StorageBackend for ActivityPubBackend {
             .map_err(|e| format!("connection test: {}", e))?;
 
         if resp.status().is_success() {
-            log::info!(
-                "ActivityPub connection OK: {}",
-                self.share.endpoint
-            );
+            log::info!("ActivityPub connection OK: {}", self.share.endpoint);
             Ok(true)
         } else {
             Err(format!(

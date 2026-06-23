@@ -40,7 +40,9 @@ fn extract_frame_ffmpeg(path: &Path, percent: f64) -> Result<ThumbnailResult> {
             .ok_or_else(|| anyhow::anyhow!("no video stream"))?;
         let context = ffmpeg::codec::context::Parameters::from_stream(&stream)
             .map_err(|e| anyhow::anyhow!("codec params: {}", e))?;
-        context.decoder().map_err(|e| anyhow::anyhow!("decoder: {}", e))?
+        context
+            .decoder()
+            .map_err(|e| anyhow::anyhow!("decoder: {}", e))?
     };
 
     let mut frame = ffmpeg::util::frame::video::Video::empty();

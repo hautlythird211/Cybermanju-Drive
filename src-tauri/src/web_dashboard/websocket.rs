@@ -1,11 +1,11 @@
 // WebSocket event bus for live push notifications.
 // Uses a minimal RFC 6455 handshake implementation.
 
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
-use sha2::{Sha256, Digest};
 
 /// WebSocket magic constant for handshake.
 const WS_MAGIC: &str = "258EAFA5-E914-47DA-95CA-5AB9D111CF85";
@@ -167,18 +167,13 @@ impl WebSocketEventBus {
     /// Broadcast a JSON event to all connected clients.
     pub fn broadcast(&self, json: &str) {
         if let Ok(mut subs) = self.subscribers.lock() {
-            subs.retain_mut(|stream| {
-                ws_send_text(stream, json).is_ok()
-            });
+            subs.retain_mut(|stream| ws_send_text(stream, json).is_ok());
         }
     }
 
     /// Get the number of connected clients.
     pub fn client_count(&self) -> usize {
-        self.subscribers
-            .lock()
-            .map(|s| s.len())
-            .unwrap_or(0)
+        self.subscribers.lock().map(|s| s.len()).unwrap_or(0)
     }
 }
 

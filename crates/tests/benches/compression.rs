@@ -26,9 +26,7 @@ fn bench_triple_decompress(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("decompress", size),
             &compressed,
-            |b, compressed| {
-                b.iter(|| compressor.decompress_triple(compressed).unwrap())
-            },
+            |b, compressed| b.iter(|| compressor.decompress_triple(compressed).unwrap()),
         );
     }
     group.finish();
@@ -47,5 +45,10 @@ fn bench_blake3_hash(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, bench_triple_compress, bench_triple_decompress, bench_blake3_hash);
+criterion_group!(
+    benches,
+    bench_triple_compress,
+    bench_triple_decompress,
+    bench_blake3_hash
+);
 criterion_main!(benches);

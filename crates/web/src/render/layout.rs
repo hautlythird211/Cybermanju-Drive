@@ -69,12 +69,11 @@ impl Default for StyleProps {
     }
 }
 
-pub struct LayoutEngine {
-}
+pub struct LayoutEngine {}
 
 impl LayoutEngine {
     pub fn new() -> Self {
-        Self { }
+        Self {}
     }
 
     pub fn layout(&self, doc: &HtmlDocument, width: u32) -> Vec<LayoutBox> {

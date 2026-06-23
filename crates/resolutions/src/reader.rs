@@ -55,7 +55,9 @@ impl ShardReader {
 
         // Content map
         if pos + 4 > mmap.len() {
-            return Err(ResolutionError::IoError("content map length missing".into()));
+            return Err(ResolutionError::IoError(
+                "content map length missing".into(),
+            ));
         }
         let cm_len =
             u32::from_le_bytes([mmap[pos], mmap[pos + 1], mmap[pos + 2], mmap[pos + 3]]) as usize;
@@ -120,16 +122,8 @@ impl ShardReader {
     }
 
     /// Get resolution info for a file.
-    pub fn get_resolution_info(
-        &self,
-        file_id: &str,
-        res: &str,
-    ) -> Option<&ResolutionLevel> {
-        self.index
-            .files
-            .get(file_id)?
-            .resolutions
-            .get(res)
+    pub fn get_resolution_info(&self, file_id: &str, res: &str) -> Option<&ResolutionLevel> {
+        self.index.files.get(file_id)?.resolutions.get(res)
     }
 
     /// Byte offset where content blobs begin in the mmap.
@@ -138,26 +132,42 @@ impl ShardReader {
         // header_len(4) + header_json
         pos += 4;
         if pos + 4 <= self.mmap.len() {
-            let hl =
-                u32::from_le_bytes([self.mmap[pos], self.mmap[pos + 1], self.mmap[pos + 2], self.mmap[pos + 3]]) as usize;
+            let hl = u32::from_le_bytes([
+                self.mmap[pos],
+                self.mmap[pos + 1],
+                self.mmap[pos + 2],
+                self.mmap[pos + 3],
+            ]) as usize;
             pos += 4 + hl;
         }
         // index_len(4) + index_json
         if pos + 4 <= self.mmap.len() {
-            let il =
-                u32::from_le_bytes([self.mmap[pos], self.mmap[pos + 1], self.mmap[pos + 2], self.mmap[pos + 3]]) as usize;
+            let il = u32::from_le_bytes([
+                self.mmap[pos],
+                self.mmap[pos + 1],
+                self.mmap[pos + 2],
+                self.mmap[pos + 3],
+            ]) as usize;
             pos += 4 + il;
         }
         // content_map_len(4) + content_map_json
         if pos + 4 <= self.mmap.len() {
-            let cl =
-                u32::from_le_bytes([self.mmap[pos], self.mmap[pos + 1], self.mmap[pos + 2], self.mmap[pos + 3]]) as usize;
+            let cl = u32::from_le_bytes([
+                self.mmap[pos],
+                self.mmap[pos + 1],
+                self.mmap[pos + 2],
+                self.mmap[pos + 3],
+            ]) as usize;
             pos += 4 + cl;
         }
         // erasure_meta_len(4) + erasure_meta_json
         if pos + 4 <= self.mmap.len() {
-            let el =
-                u32::from_le_bytes([self.mmap[pos], self.mmap[pos + 1], self.mmap[pos + 2], self.mmap[pos + 3]]) as usize;
+            let el = u32::from_le_bytes([
+                self.mmap[pos],
+                self.mmap[pos + 1],
+                self.mmap[pos + 2],
+                self.mmap[pos + 3],
+            ]) as usize;
             pos += 4 + el;
         }
         pos
