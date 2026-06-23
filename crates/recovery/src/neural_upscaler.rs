@@ -67,6 +67,7 @@ impl NeuralUpscaler {
     }
 
     /// Upscale only a specific region (tile-based processing)
+    #[allow(clippy::too_many_arguments)]
     pub fn upscale_region(
         &self,
         input: &[u8],

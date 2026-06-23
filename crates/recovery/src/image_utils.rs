@@ -1,7 +1,7 @@
 use image::codecs::jpeg::JpegEncoder;
 use image::codecs::webp::WebPEncoder;
 use image::imageops::FilterType;
-use image::{DynamicImage, GenericImageView, ImageBuffer, Rgb, Rgba, RgbaImage};
+use image::{DynamicImage, ImageBuffer, Rgb, RgbaImage};
 
 use crate::errors::RecoveryError;
 

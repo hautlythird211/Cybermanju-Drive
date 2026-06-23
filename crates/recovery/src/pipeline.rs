@@ -1,6 +1,4 @@
-use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::errors::RecoveryError;
 use crate::image_utils;
@@ -30,6 +28,12 @@ pub struct RecoveryResult {
 }
 
 pub struct RecoveryPipeline;
+
+impl Default for RecoveryPipeline {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl RecoveryPipeline {
     pub fn new() -> Self {
