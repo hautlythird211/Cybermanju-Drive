@@ -27,7 +27,7 @@ pub struct RecoveryResponse {
 }
 
 pub async fn recover_from_chunks(
-    file_id: String,
+    _file_id: String,
     chunks: Vec<Vec<u8>>,
     request: RecoveryRequest,
 ) -> Result<RecoveryResponse, String> {
@@ -96,6 +96,7 @@ pub async fn upscale_file(
 }
 
 #[command]
+#[allow(clippy::too_many_arguments)]
 pub async fn upscale_region(
     _state: State<'_, AppState>,
     file_id: String,

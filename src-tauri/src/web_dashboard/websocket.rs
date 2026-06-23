@@ -5,7 +5,7 @@ use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::TcpStream;
-use std::sync::{Arc, Mutex};
+use std::sync::Mutex;
 
 /// WebSocket magic constant for handshake.
 const WS_MAGIC: &str = "258EAFA5-E914-47DA-95CA-5AB9D111CF85";
@@ -34,7 +34,7 @@ pub fn websocket_handshake(stream: &mut TcpStream, key: &str) -> std::io::Result
     hasher.update(&accept_input);
     let accept_hash = base64::Engine::encode(
         &base64::engine::general_purpose::STANDARD,
-        &hasher.finalize(),
+        hasher.finalize(),
     );
 
     let response = format!(
