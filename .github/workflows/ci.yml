@@ -185,12 +185,20 @@ jobs:
           echo "Telegram ID:      ${VITE_OAUTH_TELEGRAM_CLIENT_ID:+SET(${#VITE_OAUTH_TELEGRAM_CLIENT_ID} chars)}${VITE_OAUTH_TELEGRAM_CLIENT_ID:-NOT SET}"
           echo "Telegram SEC:     ${VITE_OAUTH_TELEGRAM_CLIENT_SECRET:+SET(${#VITE_OAUTH_TELEGRAM_CLIENT_SECRET} chars)}${VITE_OAUTH_TELEGRAM_CLIENT_SECRET:-NOT SET}"
           echo "=== Building WASM ==="
+          BUILD_OK=false
           for attempt in 1 2 3; do
             echo "=== WASM build attempt $attempt/3 ==="
-            CARGO_NET_GIT_FETCH_WITH_CLI=true npm run wasm:build && break
+            if CARGO_NET_GIT_FETCH_WITH_CLI=true npm run wasm:build; then
+              BUILD_OK=true
+              break
+            fi
             echo "Attempt $attempt failed, retrying in 5s..."
             sleep 5
           done
+          if [ "$BUILD_OK" != "true" ]; then
+            echo "ERROR: All 3 WASM build attempts failed"
+            exit 1
+          fi
 
       - name: Upload WASM web artifacts
         uses: actions/upload-artifact@v6
