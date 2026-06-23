@@ -138,7 +138,7 @@ impl ReedSolomonCodec {
     fn num_shards_hint(data: &[u8]) -> usize {
         // We need the caller to specify; this is a helper
         // In practice, split_data_with_count is used
-        (data.len() / 1024).max(4).min(255)
+        (data.len() / 1024).clamp(4, 255)
     }
 
     /// Split data into `num_shards` chunks of `chunk_size` bytes each

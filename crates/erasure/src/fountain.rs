@@ -152,9 +152,11 @@ impl FountainDecoder {
                 // Eliminate
                 for row in (rank + 1)..n {
                     if matrix[row][col] != 0 {
+                        #[allow(clippy::needless_range_loop)]
                         for c in col..k {
                             matrix[row][c] ^= matrix[rank][c];
                         }
+                        #[allow(clippy::needless_range_loop)]
                         for b in 0..symbol_size {
                             rhs[row][b] ^= rhs[rank][b];
                         }
@@ -188,6 +190,7 @@ impl FountainDecoder {
         }
 
         // Copy result
+        #[allow(clippy::needless_range_loop)]
         for i in 0..k {
             let start = i * symbol_size;
             let end = ((i + 1) * symbol_size).min(source_len);
