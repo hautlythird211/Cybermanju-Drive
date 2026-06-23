@@ -213,6 +213,23 @@ impl WebDashboard {
         }
     }
 
+    /// Constructor that accepts a pre-opened redb database (shared with main app).
+    pub fn new_with_db(port: u16, db: RedbDb, bind_addr: &str) -> Self {
+        let jwt_secret = load_or_create_jwt_secret(&db);
+
+        Self {
+            port,
+            bind_addr: bind_addr.to_string(),
+            jwt_secret,
+            db: Arc::new(Mutex::new(db)),
+            running: AtomicBool::new(false),
+            rate_limits: Mutex::new(HashMap::new()),
+            server_thread: Mutex::new(None),
+            shutdown_tx: Mutex::new(None),
+            ws_event_bus: Arc::new(websocket::WebSocketEventBus::new()),
+        }
+    }
+
     /// Accessor for the shared database handle.
     #[allow(dead_code)]
     pub fn db(&self) -> &Arc<Mutex<RedbDb>> {

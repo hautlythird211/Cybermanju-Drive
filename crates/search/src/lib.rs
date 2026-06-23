@@ -84,6 +84,7 @@ impl SearchIndex {
     /// Create or open the Tantivy search index.
     /// Uses MmapDirectory for persistent storage across sessions.
     pub fn new(path: &str) -> Result<Self> {
+        std::fs::create_dir_all(path)?;
         let mut schema_builder = Schema::builder();
 
         // File ID (stored, not indexed — used for retrieval only)

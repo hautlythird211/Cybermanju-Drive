@@ -52,6 +52,10 @@ pub struct Database {
 }
 
 impl Database {
+    pub fn from_inner(db: RedbDatabase) -> Self {
+        Self { db }
+    }
+
     pub fn new(path: &str) -> Result<Self> {
         let db = RedbDatabase::create(path)?;
         let write_txn = db.begin_write()?;
@@ -84,6 +88,10 @@ impl Database {
 
     pub fn begin_read(&self) -> Result<ReadTransaction> {
         Ok(self.db.begin_read()?)
+    }
+
+    pub fn inner(&self) -> RedbDatabase {
+        self.db.clone()
     }
 
     pub fn begin_write(&self) -> Result<WriteTransaction> {
