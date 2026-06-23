@@ -282,8 +282,9 @@ impl ReedSolomonCodec {
                     for row in (col + 1)..rows {
                         if matrix[row][col] != 0 {
                             let factor = gf_div(matrix[row][col], pivot_val)?;
-                            for (c, col_val) in matrix[row][col..cols].iter_mut().enumerate() {
-                                *col_val ^= gf_mul(factor, matrix[col][col + c]);
+                            #[allow(clippy::needless_range_loop)]
+                            for c in col..cols {
+                                matrix[row][c] ^= gf_mul(factor, matrix[col][c]);
                             }
                             rhs[row] ^= gf_mul(factor, rhs[col]);
                         }
