@@ -166,7 +166,7 @@ impl NostrBackend {
             }
         }
 
-    let _secp = Secp256k1::new();
+    let secp = Secp256k1::new();
         let secret_key = SecretKey::from_slice(&private_key)
             .expect("invalid Nostr private key: must be 32 bytes");
         let keypair = Keypair::from_secret_key(&secp, &secret_key);

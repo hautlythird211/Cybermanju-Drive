@@ -57,9 +57,10 @@ impl TorrentBackend {
         }
 
         let torrent_bytes = self.rt.block_on(async {
-            #[allow(clippy::struct_field_assingments)]
-            let mut opts = CreateTorrentOptions::default();
-            opts.name = path.file_name().and_then(|n| n.to_str());
+            let mut opts = CreateTorrentOptions {
+                name: path.file_name().and_then(|n| n.to_str()),
+                ..CreateTorrentOptions::default()
+            };
             if let Some(ref tracker) = self.tracker_url {
                 opts.trackers = vec![tracker.clone()];
             }
